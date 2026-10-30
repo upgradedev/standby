@@ -2,12 +2,12 @@
 
 - Brief owner: ιδιοκτήτης προϊόντος / υπεύθυνος λειτουργίας οδικής βοήθειας.
 - Last updated: 2026-10-30.
-- Status: **OWNER-AGREED bounded MVP scope and assumption-based scenario mode; wireframe structure explicit OK pending**.
+- Status: **OWNER-AGREED bounded MVP scope and assumption-based scenario mode; wireframe structure OWNER-APPROVED; shell/overview review next**.
 - Route: **A / adapt**, ήδη εγκεκριμένο. Διατηρούνται router, tokens, auth, API conventions και TanStack Table.
 - Project: C:/dev/solutions/private_nebius_aiserverless_challenge/repos/aws-map-it. Το παρόν draft συντάχθηκε σε απομονωμένο worktree docs/capacity-design.
 - Template: αντίγραφο του ops-console-ui/assets/console-brief.md, με τα ίδια 17 τμήματα. Τα skills μένουν ανέπαφα.
 - Latest owner agreement: ενσωμάτωση της έρευνας και υλοποίηση MVP με μικτό στόλο, ταυτόχρονα incidents, ουρές, διαφοροποιημένους χρόνους και what-if, με εμφανείς επεξεργάσιμες παραδοχές όπου λείπουν δεδομένα. Δεν απαιτούνται πραγματικά insured/driver δεδομένα για αυτό το MVP.
-- Gate: το παραπάνω καλύπτει το bounded brief/scenario mode. Δεν εγκρίνει τη δομή του wireframe, private integrations, πραγματικό dispatch, δημοσίευση ή μεταγενέστερα UI/video checkpoints.
+- Gate: ο owner ενέκρινε ρητά και τη δομή του wireframe. Συνεχίζουμε Step4 Route A με shell/overview, που χρειάζονται το επόμενο explicit review πριν από list/detail. Private integrations, πραγματικό dispatch, δημοσίευση και μεταγενέστερα UI/video checkpoints διατηρούν τις χωριστές προϋποθέσεις τους.
 - Existing = frozen live release 5ad96cc. MVP = συμφωνημένο επόμενο increment, όχι ήδη deployed. Deferred = διατηρημένο αίτημα εκτός παρούσας υλοποίησης. Assumed = editable scenario input, όχι εμπειρική εκτίμηση ή SLA.
 
 ## 1. Product and users
@@ -216,7 +216,7 @@ WCAG2.2AA target: visible focus, keyboard drawer tabs, Back/Escape returns focus
 
 Existing React/TypeScript/Tailwind/TanStack Table/MapLibre/react-router stack and AWS serverless boundary remain. No fresh scaffold. Pure-domain simulator, explicit contracts/adapters and no duplicated enums/defaults between domain/API/UI. Validated request limits and bounded execution; result provenance binds scenario/model/dataset/matrix/seed/policy inputs. Results remain transient with no-store responses; a new result cache is unnecessary for this bounded MVP. Browser replay does not recalculate physics or retrieve paid route legs.
 
-Preserve public evaluator versus authorized writes, Cognito tenancy, raw/provider-data privacy/expiry, concurrency/idempotency/review checks. Domain/API work can proceed independently under current owner instruction. Product pages await explicit wireframe OK; later shell/overview and first-list review checkpoints still apply.
+Preserve public evaluator versus authorized writes, Cognito tenancy, raw/provider-data privacy/expiry, concurrency/idempotency/review checks. Domain/API work can proceed independently under current owner instruction. Wireframe structure is explicitly approved. Shell/overview and first-list review checkpoints still apply in order before further pages.
 
 No npm/pip/Playwright installation locally; heavy build/tests in CI. Scripts run with --help before use at their step. This brief/wireframe step uses no skill scripts and modifies no skill file. USD25total remains approved; no new routing, cloud resource, paid voice or video production here. Existing five-page release stays live until replacement verification.
 
@@ -237,7 +237,8 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 
 | Item | Status / default | Blocks what |
 | --- | --- | --- |
-| W1 wireframe structure | **Explicit owner OK pending** for six destinations, Capacity lab regions and detail/map | Product pages/scaffold, not independent domain/API work |
+| W1 wireframe structure | **OWNER APPROVED** six destinations, Capacity lab regions and detail/map | Resolved; shell/overview review is the next gate |
+| W1b shell/overview preview | Being built and captured in hosted CI with actual public historical data | Owner explicit OK before Capacity list/detail pages |
 | W2 final field/enum/bounds mapping | Resolved in `packages/contracts/src/capacity.ts`; defaults factory shared with future UI; domain/API typecheck/tests/build passed in CI41110905525 | UI must consume this single contract |
 | W3 real staffing targets / service logs | Deferred; editable scenario target/durations are sufficient for this MVP | Any real-world staffing/SLA claim |
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
@@ -255,9 +256,10 @@ No open item authorizes guessed measurements. Engine runtime limits and actual o
 |2026-10-30|Assumption-based scenario mode agreed; no private insured data prerequisite|Latest owner scope decision|
 |2026-10-30|Configured defaults/bounds in section6 remain editable Assumed, not estimates|Coordinator/domain implementation contract|
 |2026-10-30|Fixed-home renewal with explicit recovery; no invented reverse/moving routing|Bounded domain contract and matrix limitation|
-|2026-10-30|Preserve five routes and propose sixth Capacity lab, with no new Units/Calendar/Insights nav|Design proposal, wireframe OK pending|
+|2026-10-30|Preserve five routes and propose sixth Capacity lab, with no new Units/Calendar/Insights nav|Owner approved wireframe structure in latest explicit reply|
 |2026-10-30|C01-C14 retained with explicit MVP/deferred trace|Owner requests and research synthesis|
 |2026-10-30|No real dispatch/PII, no claimed SLA, no forecast/anomaly/product-RAG deployment|Agreed bounded scope and source limits|
-|2026-10-30|Wireframe approval remains a separate checkpoint before product pages|ops-console-ui step3|
+|2026-10-30|Wireframe structure explicitly approved: «Εγκρίνω τη δομή του wireframe»|Owner reply; Step3 complete|
+|2026-10-30|Step4 starts with shell/overview preview; Capacity list/detail follows owner review|ops-console-ui Step4 named checkpoint|
 
-Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops-console-ui/SKILL.md), step3: “The user walks through the wireframe and gives an explicit OK to the structure. Silence is not agreement; do not write pages before the OK.” The scope agreement above does not satisfy this separate gate. The review artifact is docs/console-wireframe.html in the isolated design branch.
+Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops-console-ui/SKILL.md), step4: “The user reviews the shell and the overview before you build further, and later the first list on real data, while changes are still cheap.” The owner-approved wireframe structure is complete; the next review uses actual built shell/overview screenshots, not the lowfi wireframe.
