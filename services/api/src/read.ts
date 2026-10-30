@@ -1,6 +1,7 @@
 import {evaluateScenario} from '../../../packages/domain/src/index';
 import type {MatrixMetadata} from '../../../packages/contracts/src/index';
 import {body,failure,HttpError,json,loadDataset,loadMatrix,type ApiEvent} from './common';
+import {capacityEvaluationHandler} from './capacity';
 function metadata(m:MatrixMetadata):MatrixMetadata {
   return {id:m.id,hash:m.hash,provider:m.provider,profile:m.profile,generatedAt:m.generatedAt,expiresAt:m.expiresAt};
 }
@@ -43,6 +44,7 @@ export async function handler(event:ApiEvent) {
       const [dataset,matrix]=await Promise.all([loadDataset(),loadMatrix()]);
       return json(200,evaluateScenario(dataset,matrix,input),requestId);
     }
+    if(method==='POST'&&path==='/v1/public/capacity-evaluations') return capacityEvaluationHandler(event);
     throw new HttpError(404,'NOT_FOUND','The requested API route does not exist.');
   }catch(error) {return failure(error,requestId);}
 }
