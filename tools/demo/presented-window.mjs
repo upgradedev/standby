@@ -19,3 +19,15 @@ export class PresentedWindow {
     return {method:'playwright-screencast',firstPresentedAtUnixMs:this.first,lastPresentedAtUnixMs:this.last,framesObserved:this.frames,actionsCompletedAtUnixMs};
   }
 }
+
+/** Reuse is accepted only from a complete matching receipt AND probed media. */
+export function validateCompletedCapture(metadata,{beat,releaseSha,datasetHash,capturedSeconds,viewport,fps}) {
+  if(metadata?.schemaVersion!==2||metadata.id!==beat.id||metadata.releaseSha!==releaseSha||metadata.datasetHash!==datasetHash||metadata.videoFile!==`${beat.id}.webm`||metadata.trimStartSeconds!==0||metadata.durationSeconds!==beat.seconds||metadata.fps!==fps||metadata.viewport?.width!==viewport.width||metadata.viewport?.height!==viewport.height)throw new Error('existing-capture-identity-disagrees');
+  if(!Number.isFinite(capturedSeconds)||capturedSeconds<beat.seconds)throw new Error('existing-capture-media-too-short');
+  const receipt=metadata.captureClock;
+  if(receipt?.method!=='playwright-screencast'||!Number.isInteger(receipt.framesObserved)||receipt.framesObserved<2)throw new Error('existing-capture-clock-receipt-invalid');
+  const clock=new PresentedWindow(viewport);
+  clock.observe({timestamp:receipt.firstPresentedAtUnixMs,viewportWidth:viewport.width,viewportHeight:viewport.height});
+  clock.observe({timestamp:receipt.lastPresentedAtUnixMs,viewportWidth:viewport.width,viewportHeight:viewport.height});
+  clock.receipt(beat.seconds,receipt.actionsCompletedAtUnixMs);
+}

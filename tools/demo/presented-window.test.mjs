@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {PresentedWindow} from './presented-window.mjs';
+import {PresentedWindow,validateCompletedCapture} from './presented-window.mjs';
 const viewport={width:1440,height:900};
 const frame=timestamp=>({timestamp,viewportWidth:1440,viewportHeight:900});
 test('presentation clock starts at the first captured frame, independent of earlier setup',()=>{
@@ -22,4 +22,13 @@ test('frame ordering and actual viewport are validated',()=>{
   const clock=new PresentedWindow(viewport);clock.observe(frame(1793370000123));
   assert.throws(()=>clock.observe(frame(1793370000000)),/went-backwards/);
   assert.throws(()=>clock.observe({...frame(1793370000223),viewportWidth:800}),/size-disagrees/);
+});
+test('only a complete matching receipt and actual sufficient media can be reused',()=>{
+  const epoch=1793370000123,metadata={schemaVersion:2,id:'history',releaseSha:'a'.repeat(40),datasetHash:'dataset-a',videoFile:'history.webm',trimStartSeconds:0,durationSeconds:25,fps:30,viewport,captureClock:{method:'playwright-screencast',firstPresentedAtUnixMs:epoch,lastPresentedAtUnixMs:epoch+25120,framesObserved:38,actionsCompletedAtUnixMs:epoch+23000}};
+  const expected={beat:{id:'history',seconds:25},releaseSha:'a'.repeat(40),datasetHash:'dataset-a',capturedSeconds:25.12,viewport,fps:30};
+  assert.doesNotThrow(()=>validateCompletedCapture(metadata,expected));
+  assert.throws(()=>validateCompletedCapture(metadata,{...expected,datasetHash:'dataset-b'}),/identity-disagrees/);
+  assert.throws(()=>validateCompletedCapture(metadata,{...expected,capturedSeconds:24.9}),/media-too-short/);
+  assert.throws(()=>validateCompletedCapture({...metadata,captureClock:undefined},expected),/receipt-invalid/);
+  assert.throws(()=>validateCompletedCapture({...metadata,schemaVersion:1,trimStartSeconds:23},expected),/identity-disagrees/);
 });

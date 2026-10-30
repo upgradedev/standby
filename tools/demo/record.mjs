@@ -3,6 +3,8 @@
  * STANDBY_DEMO_URL=https://... STANDBY_DEMO_RELEASE=<40-char SHA> \
  *   node tools/demo/record.mjs --out .runtime/demo/<release> --beat all
  * Re-render one independent beat with --beat history --replace.
+ * Resume all beats with --beat all --skip-existing; completed matching clips are
+ * probed and kept. An incomplete existing destination needs explicit --replace.
  * No credentials, source rows, matrices or API result payloads are persisted.
  * These clips intentionally show public, publishable app pixels; final review
  * and provider-display rights remain the coordinator's publication gate.
@@ -13,17 +15,19 @@ import path from 'node:path';
 import {performance} from 'node:perf_hooks';
 import {execFileSync} from 'node:child_process';
 import {BEATS, FPS, VIEWPORT, storyboard} from './beats.mjs';
-import {PresentedWindow} from './presented-window.mjs';
+import {PresentedWindow,validateCompletedCapture} from './presented-window.mjs';
 
 function argument(name, fallback) {const index=process.argv.indexOf(name);return index<0?fallback:process.argv[index+1];}
 const base=process.env.STANDBY_DEMO_URL?.replace(/\/$/,'');
 const releaseSha=process.env.STANDBY_DEMO_RELEASE;
 const selected=argument('--beat','all');
 const replace=process.argv.includes('--replace');
+const skipExisting=process.argv.includes('--skip-existing');
 const check=(condition,code)=>{if(!condition)throw new Error(code);};
 check(base&&new URL(base).protocol==='https:','demo-url-must-be-https');
 check(releaseSha&&/^[a-f0-9]{40}$/.test(releaseSha),'exact-release-sha-required');
 check(selected==='all'||BEATS.some(beat=>beat.id===selected),'unknown-beat');
+check(!skipExisting||selected==='all','skip-existing-requires-all-beats');
 const out=path.resolve(argument('--out',`.runtime/demo/${releaseSha}`));
 const raw=path.join(out,'raw');
 const exact=name=>({name,exact:true});
@@ -32,6 +36,10 @@ await mkdir(raw,{recursive:true});
 const api=await playwrightRequest.newContext({timeout:30_000,ignoreHTTPSErrors:false});
 
 async function json(url) {const response=await api.get(url);check(response.status()===200,'demo-readiness-http-failure');return response.json();}
+function mediaSeconds(filename) {
+  const probe=JSON.parse(execFileSync('ffprobe',['-v','error','-show_entries','format=duration','-of','json',filename],{encoding:'utf8',timeout:30_000}));
+  return Number(probe.format?.duration);
+}
 async function assertRelease() {
   const config=await json(`${base}/config.json`);
   const endpoint=new URL(config.apiBase.replace(/\/$/,'')+'/',base+'/').href.replace(/\/$/,'');
@@ -119,14 +127,14 @@ async function actions(page,id,anchor) {
     await at(19,()=>drawer.getByRole('tab',exact('Coverage')).click());
     await at(23,()=>page.keyboard.press('Escape'));
   } else if(id==='baseline') {
-    await at(5,()=>page.getByRole('button',exact('Spread')).click());
-    await at(11,()=>page.getByRole('button',exact('Depot')).click());
-    await at(17,()=>page.getByRole('combobox',exact('Road approach threshold')).selectOption('5'));
-    await at(21,()=>evaluation(page));
+    await at(4,()=>page.getByRole('button',exact('Spread')).click());
+    await at(8,()=>page.getByRole('button',exact('Depot')).click());
+    await at(11,()=>page.getByRole('combobox',exact('Road approach threshold')).selectOption('5'));
+    await at(14,()=>evaluation(page));
     // Restore the visibly demonstrated input before the edit to the next beat:
     // depot/proposal/unavailable all begin with 3 units, 10 minutes, held-out 2025.
-    await at(25,()=>page.getByRole('combobox',exact('Road approach threshold')).selectOption('10'));
-    await at(26,()=>evaluation(page));
+    await at(19,()=>page.getByRole('combobox',exact('Road approach threshold')).selectOption('10'));
+    await at(22,()=>evaluation(page));
   } else if(id==='proposal') {
     await at(4,()=>page.getByRole('button',exact('Proposal')).click());
     await at(12,()=>page.getByRole('combobox',exact('Map layer')).selectOption('difference'));
@@ -155,7 +163,17 @@ try {
   for(const beat of BEATS.filter(beat=>selected==='all'||beat.id===selected)) {
     step=`${beat.id}:prepare`;
     const destination=path.join(out,`${beat.id}.webm`);
-    try {await stat(destination);check(replace,'existing-beat-requires-replace');}catch(error){if(error.code!=='ENOENT')throw error;}
+    let exists=false;
+    try {await stat(destination);exists=true;}catch(error){if(error.code!=='ENOENT')throw error;}
+    if(exists&&skipExisting) {
+      try {
+        const metadata=JSON.parse(await readFile(path.join(out,`${beat.id}.json`),'utf8'));
+        validateCompletedCapture(metadata,{beat,releaseSha,datasetHash:manifest.dataset.hash,capturedSeconds:mediaSeconds(destination),viewport:VIEWPORT,fps:FPS});
+        console.log(`SKIP verified existing demo beat ${beat.id}; release ${releaseSha}`);
+        continue;
+      }catch(error){if(!replace)throw error;}
+    }
+    check(!exists||replace,'existing-beat-requires-replace');
     await assertRelease();
     context=await browser.newContext({viewport:VIEWPORT,deviceScaleFactor:1,reducedMotion:'reduce',serviceWorkers:'block'});
     const page=await context.newPage();activePage=page;
@@ -165,8 +183,7 @@ try {
     step=`${beat.id}:capture`;
     const captured=path.join(raw,`${beat.id}-${Date.now()}.webm`);
     const captureClock=await recordPresentedBeat(page,captured,beat);
-    const sourceProbe=JSON.parse(execFileSync('ffprobe',['-v','error','-show_entries','format=duration','-of','json',captured],{encoding:'utf8'}));
-    const capturedSeconds=Number(sourceProbe.format?.duration);
+    const capturedSeconds=mediaSeconds(captured);
     check(Number.isFinite(capturedSeconds)&&capturedSeconds>=beat.seconds,'actual-screencast-media-too-short');
     check(!pageError,'demo-page-runtime-error');
     check(await page.locator('.api-banner,.map-error').count()===0,'demo-visible-error-state');
