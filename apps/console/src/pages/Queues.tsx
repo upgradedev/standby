@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowUpRight, CheckCheck, Clock3, Cloud, Laptop, Layers3, Play, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { ApiError } from '../lib/api';
 import { integer, percent, quantile, timestamp } from '../lib/format';
-import { useEndpoint } from '../lib/useEndpoint';
 import type { LocalScenario, SavedPlan } from '../lib/types';
 import { useStandby } from '../state';
 import { Badge, Busy, DataGate, EmptyState, ErrorState, LoadingState, Modal, PageHeading, Panel, SourceNote } from '../components/ui';
@@ -13,7 +12,7 @@ function unwrap(value:SavedPlan|{plan:SavedPlan}){return 'plan'in value?value.pl
 export default function Queues(){
  const state=useStandby(),{workspace,membership,scenarios,input,api,toast,deleteScenario,runScenario,setInput,evaluating,manifest}=state;
  const[tab,setTab]=useState<typeof tabs[number]>('Draft'),[creating,setCreating]=useState(false),[name,setName]=useState(''),[busy,setBusy]=useState<string|null>(null),[selected,setSelected]=useState<SavedPlan|null>(null),[actionError,setActionError]=useState<ApiError|null>(null);
- const endpoint=useEndpoint<{plans:SavedPlan[]}>(workspace==='public'?null:`/workspaces/${encodeURIComponent(workspace)}/plans`),navigate=useNavigate();
+ const endpoint={data:{plans:state.cloudPlans},loading:state.cloudPlansLoading,error:state.cloudPlansError,reload:state.refreshCloudPlans},navigate=useNavigate();
  const local=workspace==='public',plans=local?scenarios:endpoint.data?.plans??[],canWrite=membership?.role==='Planner'||membership?.role==='Admin';
  const filtered=plans.filter(plan=>statusTab(plan)===tab),counts=useMemo(()=>Object.fromEntries(tabs.map(t=>[t,plans.filter(p=>statusTab(p)===t).length])),[plans]);
  async function create(){if(local){state.saveScenario(name);setCreating(false);setName('');return;}setBusy('create');setActionError(null);try{await api(`/workspaces/${encodeURIComponent(workspace)}/plans`,{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({name:name.trim()||`${input.fleetSize} units · ${input.thresholdMinutes} min`,input})});toast('Plan saved to the authorized workspace.');setCreating(false);setName('');endpoint.reload();setTab('Draft');}catch(e){const failure=e instanceof ApiError?e:new ApiError('The plan could not be saved.');setActionError(failure);toast(failure.message,'error');}finally{setBusy(null);}}

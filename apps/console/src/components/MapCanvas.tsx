@@ -6,10 +6,10 @@ import type { DemandZone, PlanResult } from '../lib/types';
 import { useStandby } from '../state';
 import { Busy } from './ui';
 
-interface Props {plan:PlanResult|undefined;layer:'coverage'|'demand'|'difference';selected:string|null;onSelect:(id:string)=>void}
-export default function MapCanvas({plan,layer,selected,onSelect}:Props){
+interface Props {plan:PlanResult|undefined;layer:'coverage'|'demand'|'difference';selected:string|null;selectedSite:string|null;onSelect:(id:string)=>void;onSelectSite:(id:string)=>void}
+export default function MapCanvas({plan,layer,selected,selectedSite,onSelect,onSelectSite}:Props){
  const{config,manifest,zones,result,input}=useStandby(),container=useRef<HTMLDivElement>(null),map=useRef<MapInstance|null>(null),markers=useRef<maplibregl.Marker[]>([]),callback=useRef(onSelect);
- const[ready,setReady]=useState(false),[mapError,setMapError]=useState<string|null>(null),[attempt,setAttempt]=useState(0);callback.current=onSelect;
+ const[ready,setReady]=useState(false),[mapError,setMapError]=useState<string|null>(null),[attempt,setAttempt]=useState(0),siteCallback=useRef(onSelectSite);callback.current=onSelect;siteCallback.current=onSelectSite;
  const bounds=manifest?.dataset.bounds;
  useEffect(()=>{
   if(!container.current||!config?.mapStyleUrl||!bounds){setMapError('The AWS map style is not configured. The zone list remains available.');return;}
@@ -38,8 +38,9 @@ export default function MapCanvas({plan,layer,selected,onSelect}:Props){
   (instance.getSource('representatives') as GeoJSONSource)?.setData({type:'FeatureCollection',features:features.map(({zone,properties})=>({type:'Feature',properties,geometry:{type:'Point',coordinates:zone.position}}))});
  },[features,ready]);
  useEffect(()=>{if(!ready||!map.current)return;markers.current.forEach(m=>m.remove());markers.current=[];
-  for(const site of manifest?.dataset.sites??[]){const units=plan?.units.filter(u=>u.siteId===site.id)??[];const active=units.some(u=>u.available);const element=document.createElement('button');element.className=`site-marker ${units.length?'selected':''} ${units.length&&!active?'unavailable':''}`;element.textContent=site.id.replace(/^site-/,'');element.title=`${site.name} · scenario-assumed site${units.length?` · ${units.length} unit(s), ${active?'available':'unavailable'}`:''}`;element.setAttribute('aria-label',element.title);element.addEventListener('click',()=>{map.current?.easeTo({center:site.position,zoom:12,duration:300});});markers.current.push(new maplibregl.Marker({element}).setLngLat(site.position).addTo(map.current));}
- },[manifest?.dataset.sites,plan,ready]);
+  for(const site of manifest?.dataset.sites??[]){const units=plan?.units.filter(u=>u.siteId===site.id)??[];const active=units.some(u=>u.available);const element=document.createElement('button');element.className=`site-marker ${units.length?'selected':''} ${units.length&&!active?'unavailable':''} ${selectedSite===site.id?'focused':''}`;element.textContent=site.id.replace(/^site-/,'');element.title=`${site.name} · scenario-assumed site${units.length?` · ${units.length} unit(s), ${active?'available':'unavailable'}`:''}`;element.setAttribute('aria-label',element.title);element.addEventListener('click',()=>{siteCallback.current(site.id);});markers.current.push(new maplibregl.Marker({element}).setLngLat(site.position).addTo(map.current));}
+ },[manifest?.dataset.sites,plan,ready,selectedSite]);
  useEffect(()=>{const zone=zones.find(z=>z.id===selected);if(zone&&ready)map.current?.easeTo({center:zone.position,zoom:12,duration:300});},[selected,zones,ready]);
+ useEffect(()=>{const site=manifest?.dataset.sites.find(s=>s.id===selectedSite);if(site&&ready)map.current?.easeTo({center:site.position,zoom:12,duration:300});},[selectedSite,manifest?.dataset.sites,ready]);
  return <div className="map-canvas-wrap"><div ref={container} className="map-canvas" aria-label="Austin demand zones and hypothetical standby sites" role="region"/>{!ready&&!mapError?<div className="map-loading"><Busy label="Loading AWS basemap"/></div>:null}{mapError?<div className="map-error" role="alert"><AlertCircle size={16}/><span>{mapError}</span><button onClick={()=>setAttempt(n=>n+1)}>Retry map</button></div>:null}<button className="map-fit icon-button" title="Fit study area" aria-label="Fit Austin study area" onClick={()=>bounds&&map.current?.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:35,duration:300})}><LocateFixed size={18}/></button><div className="map-study-label"><span className="status-dot"/><span>AUSTIN STUDY AREA</span><small>Zone representatives · not isochrones</small></div></div>;
 }

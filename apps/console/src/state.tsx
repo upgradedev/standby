@@ -3,7 +3,7 @@ import { ApiError, getConfig, normalizeManifest, normalizeZones, request } from 
 import { readSession, type Session } from './lib/auth';
 import { inputKey } from './lib/format';
 import { readPreferences, readScenarios, savePreferences, saveScenarios } from './lib/storage';
-import type { Config, DemandZone, EvaluationInput, EvaluationResult, LocalScenario, Manifest, Membership, PlanKey, Preferences } from './lib/types';
+import type { Config, DemandZone, EvaluationInput, EvaluationResult, LocalScenario, Manifest, Membership, PlanKey, Preferences, SavedPlan } from './lib/types';
 
 interface Toast {id:string; message:string; kind:'success'|'error'|'info'}
 interface State {
@@ -13,6 +13,7 @@ interface State {
  scenarios:LocalScenario[];saveScenario:(name?:string)=>void;deleteScenario:(id:string)=>void;runScenario:(id:string)=>Promise<boolean>;
  toasts:Toast[];toast:(message:string,kind?:Toast['kind'])=>void;dismissToast:(id:string)=>void;
  session:Session|null;setSession:(session:Session|null)=>void;memberships:Membership[];workspace:string;switchWorkspace:(id:string)=>void;membership:Membership|undefined;authError:string|null;
+ cloudPlans:SavedPlan[];cloudPlansLoading:boolean;cloudPlansError:ApiError|null;refreshCloudPlans:()=>void;
  api:<T>(path:string,options?:RequestInit)=>Promise<T>;
 }
 const Context = createContext<State|null>(null);
@@ -22,6 +23,7 @@ export function Provider({children}:{children:ReactNode}) {
  const [input,setInputState]=useState<EvaluationInput>(initialInput),[result,setResult]=useState<EvaluationResult|null>(null),[evaluating,setEvaluating]=useState(false),[evaluationError,setEvaluationError]=useState<ApiError|null>(null),[planKey,setPlanKey]=useState<PlanKey>('proposal');
  const [preferences,setPreferences]=useState(readPreferences),[scenarios,setScenarios]=useState(readScenarios),[toasts,setToasts]=useState<Toast[]>([]);
  const [session,setSession]=useState<Session|null>(readSession),[memberships,setMemberships]=useState<Membership[]>([]),[workspace,setWorkspace]=useState('public'),[authError,setAuthError]=useState<string|null>(null);
+ const [cloudPlans,setCloudPlans]=useState<SavedPlan[]>([]),[cloudPlansLoading,setCloudPlansLoading]=useState(false),[cloudPlansError,setCloudPlansError]=useState<ApiError|null>(null),[cloudRevision,setCloudRevision]=useState(0);
  const evaluationController=useRef<AbortController|null>(null),evaluationSequence=useRef(0),currentInput=useRef(input);
  const toast=useCallback((message:string,kind:Toast['kind']='success')=>setToasts(list=>[...list.slice(-3),{id:crypto.randomUUID(),message,kind}]),[]);
  const dismissToast=useCallback((id:string)=>setToasts(list=>list.filter(t=>t.id!==id)),[]);
@@ -38,6 +40,13 @@ export function Provider({children}:{children:ReactNode}) {
    const timer=setTimeout(()=>{setSession(null);setWorkspace('public');setResult(null);setAuthError('Your session expired. Sign in again.');},Math.max(0,session.expiresAt-Date.now()));
    return()=>{controller.abort();clearTimeout(timer);};
  },[session,config]);
+ useEffect(()=>{
+   const controller=new AbortController();setCloudPlans([]);setCloudPlansError(null);
+   if(workspace==='public'){setCloudPlansLoading(false);return;}
+   setCloudPlansLoading(true);
+   api<{plans:SavedPlan[]}>(`/workspaces/${encodeURIComponent(workspace)}/plans`,{signal:controller.signal}).then(value=>{if(!controller.signal.aborted)setCloudPlans(value.plans);}).catch(e=>{if(!controller.signal.aborted)setCloudPlansError(e instanceof ApiError?e:new ApiError('Workspace plans are unavailable.'));}).finally(()=>{if(!controller.signal.aborted)setCloudPlansLoading(false);});
+   return()=>controller.abort();
+ },[workspace,api,cloudRevision]);
  useEffect(()=>()=>evaluationController.current?.abort(),[]);
  useEffect(()=>{
    if(!result)return;const wait=new Date(result.matrix.expiresAt).getTime()-Date.now();
@@ -58,7 +67,7 @@ export function Provider({children}:{children:ReactNode}) {
  useEffect(()=>{if(manifest?.matrix&&config&&zones.length&&!loading&&autoEvaluated.current!==manifest.dataset.hash){autoEvaluated.current=manifest.dataset.hash;void evaluate(currentInput.current);}},[manifest,config,zones.length,loading,evaluate]);
  const updatePreferences=useCallback((value:Preferences)=>{try{savePreferences(value);setPreferences(value);return true;}catch{toast('Browser storage is unavailable. Preferences were not saved.','error');return false;}},[toast]);
  const persistScenarios=useCallback((value:LocalScenario[])=>{try{saveScenarios(value);setScenarios(value);return true;}catch{toast('Browser storage is unavailable. The local scenario was not saved.','error');return false;}},[toast]);
- const stale=!!result&&inputKey(result.input)!==inputKey(input);
+ const stale=!!result&&(inputKey(result.input)!==inputKey(input)||!!evaluationError);
  const saveScenario=useCallback((name?:string)=>{
    const successful=!!result&&!stale;
    const scenario:LocalScenario={id:crypto.randomUUID(),name:name?.trim().slice(0,100)||`${input.fleetSize} units · ${input.thresholdMinutes} min`,input:{...input},updatedAt:new Date().toISOString(),evaluationStatus:successful?'SUCCEEDED':'NOT_RUN',reviewStatus:successful?'NEEDS_REVIEW':'NOT_READY',...(successful?{inputHash:result.inputHash}:{})};
@@ -66,7 +75,7 @@ export function Provider({children}:{children:ReactNode}) {
  },[input,result,stale,scenarios,persistScenarios,toast]);
  const deleteScenario=useCallback((id:string)=>{if(persistScenarios(scenarios.filter(s=>s.id!==id)))toast('Local scenario removed.');},[scenarios,persistScenarios,toast]);
  const runScenario=useCallback(async(id:string)=>{const scenario=scenarios.find(s=>s.id===id);if(!scenario)return false;setInput(scenario.input);const response=await evaluate(scenario.input);const next=scenarios.map(s=>s.id===id?{...s,updatedAt:new Date().toISOString(),evaluationStatus:response?'SUCCEEDED' as const:'FAILED' as const,reviewStatus:response?'NEEDS_REVIEW' as const:'NOT_READY' as const,inputHash:response?.inputHash,error:response?undefined:'Evaluation failed. Retry to request a fresh result.'}:s);persistScenarios(next);if(response)toast('Local scenario evaluated against the active route snapshot.');return !!response;},[scenarios,setInput,evaluate,persistScenarios,toast]);
- const switchWorkspace=useCallback((id:string)=>{if(id!=='public'&&!memberships.some(m=>m.id===id))return;evaluationController.current?.abort();evaluationSequence.current++;setEvaluating(false);setResult(null);setEvaluationError(null);setWorkspace(id);},[memberships]);
- return <Context.Provider value={{config,manifest,zones,loading,error,reload:()=>setRevision(r=>r+1),input,setInput,result,evaluating,evaluationError,stale,evaluate,planKey,setPlanKey,preferences,updatePreferences,scenarios,saveScenario,deleteScenario,runScenario,toasts,toast,dismissToast,session,setSession,memberships,workspace,switchWorkspace,membership:memberships.find(m=>m.id===workspace),authError,api}}>{children}</Context.Provider>;
+ const switchWorkspace=useCallback((id:string)=>{if(id!=='public'&&!memberships.some(m=>m.id===id))return;evaluationController.current?.abort();evaluationSequence.current++;setEvaluating(false);setResult(null);setEvaluationError(null);setCloudPlans([]);setCloudPlansError(null);setCloudPlansLoading(id!=='public');setWorkspace(id);},[memberships]);
+ return <Context.Provider value={{config,manifest,zones,loading,error,reload:()=>setRevision(r=>r+1),input,setInput,result,evaluating,evaluationError,stale,evaluate,planKey,setPlanKey,preferences,updatePreferences,scenarios,saveScenario,deleteScenario,runScenario,toasts,toast,dismissToast,session,setSession,memberships,workspace,switchWorkspace,membership:memberships.find(m=>m.id===workspace),authError,cloudPlans,cloudPlansLoading,cloudPlansError,refreshCloudPlans:()=>setCloudRevision(value=>value+1),api}}>{children}</Context.Provider>;
 }
 export function useStandby(){const value=useContext(Context);if(!value)throw new Error('Standby context is required.');return value;}
