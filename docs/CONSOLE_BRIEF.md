@@ -238,7 +238,7 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 | Item | Status / default | Blocks what |
 | --- | --- | --- |
 | W1 wireframe structure | **OWNER APPROVED** six destinations, Capacity lab regions and detail/map | Resolved; shell/overview review is the next gate |
-| W1b shell/overview preview | Being built and captured in hosted CI with actual public historical data | Owner explicit OK before Capacity list/detail pages |
+| W1b shell/overview preview | Built source67673a8, hosted CI41118994064 passed; owner review requested with desktop/mobile images | Owner explicit OK before Capacity list/detail pages |
 | W2 final field/enum/bounds mapping | Resolved in `packages/contracts/src/capacity.ts`; defaults factory shared with future UI; domain/API typecheck/tests/build passed in CI41110905525 | UI must consume this single contract |
 | W3 real staffing targets / service logs | Deferred; editable scenario target/durations are sufficient for this MVP | Any real-world staffing/SLA claim |
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
@@ -263,3 +263,11 @@ No open item authorizes guessed measurements. Engine runtime limits and actual o
 |2026-10-30|Step4 starts with shell/overview preview; Capacity list/detail follows owner review|ops-console-ui Step4 named checkpoint|
 
 Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops-console-ui/SKILL.md), step4: “The user reviews the shell and the overview before you build further, and later the first list on real data, while changes are still cheap.” The owner-approved wireframe structure is complete; the next review uses actual built shell/overview screenshots, not the lowfi wireframe.
+
+### Step4 shell/overview review record
+
+- Real: the new UI reads the actual existing public AWS config/manifest/zones and historical coverage evaluator. Preview receipt binds source `67673a8d8677c3582b56ca6caf6d394e32b98455` to live API release `5ad96cc4c6e50503556bb706f1698477764d2dd2`. This is a CI preview, not a deployment.
+- Verified: [CI41118994064](https://github.com/upgradedev/standby/actions/runs/41118994064) passed typecheck, `npm test`44domain/API tests, source/data/demo gates, web/Lambda build and the Step4 preview. Copied skill lint on Shell/Overview has0errors/0warnings. Six shots at320/390/1440, dark/light;0console errors,0failed normal requests,0ready timeouts,0keyboard smoke warnings. Additional checks cover persisted rail, native dropdown, user dropdown, mobile navigation/Escape/focus return and a forced API outage without KPI fallback.
+- Review artifacts: [CI preview artifact](https://github.com/upgradedev/standby/actions/runs/41118994064/artifacts/13008140431), local `.runtime/console-review-67673a8/` with contact sheet, full desktop, mobile, dropdown and forced-error PNGs. Coordinator visually inspected the contact sheet, desktop/mobile, dropdowns and outage. Images are actual app captures.
+- Demo: no made-up historical data or outage fallback. Capacity lab currently shows an explicit scope/unavailable preview only; its editable scenario forms, queue/jobs/map and API connection follow the owner shell/overview OK.
+- Open: owner shell/overview approval; Capacity list/detail and subsequent first-list review; full-app strict lint, axe and human keyboard/role/deep-link/state release matrix. The copied skill scripts remain byte-identical to their source, verified with SHA256. No local package installs, cloud deployment, paid routing, video or publication in this increment.
