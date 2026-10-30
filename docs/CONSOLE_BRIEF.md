@@ -196,7 +196,7 @@ Page size25· filters/sort/page/selected run/job/time στο view state. Mobile 
 | --- | --- |
 | Austin zones/history | Existing sanitized snapshot· publication timestamp≠occurrence, source types≠synthetic service types |
 | Amazon Location map / prepared matrix | Existing basemap/cache, validity/hash/provenance· paid routing builder μόνο owner, όχι scenario click |
-| Capacity evaluator | New bounded deterministic contract under implementation· no result before verified deployment |
+| Capacity evaluator | Source implemented: `POST /v1/public/capacity-evaluations`, pure domain/contract and existing read Lambda adapter; source checks passed in CI41110905525. Not deployed; no UI result before verified deployment |
 | Company jobs/insured/telemetry | Deferred, not connected· no real fields/actions or synthetic fallback |
 | Weather/calendar/traffic/crowding | Deferred verified adapters/forecast validation· κανένα πλαστό live layer |
 | Notifications / dispatch exports | Deferred integration· no external sends in MVP |
@@ -238,7 +238,7 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 | Item | Status / default | Blocks what |
 | --- | --- | --- |
 | W1 wireframe structure | **Explicit owner OK pending** for six destinations, Capacity lab regions and detail/map | Product pages/scaffold, not independent domain/API work |
-| W2 final field/enum/bounds mapping | Match single domain/API contract before UI integration; defaults documented in section6 | Contract integration/validation |
+| W2 final field/enum/bounds mapping | Resolved in `packages/contracts/src/capacity.ts`; defaults factory shared with future UI; domain/API typecheck/tests/build passed in CI41110905525 | UI must consume this single contract |
 | W3 real staffing targets / service logs | Deferred; editable scenario target/durations are sufficient for this MVP | Any real-world staffing/SLA claim |
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
 | W5 calendar/weather/anomalies | Deferred pending adequate joint data/support/validation | Empirical seasonal views/detector claims |
