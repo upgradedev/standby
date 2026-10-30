@@ -106,7 +106,14 @@ async function ready(target) {
   assert.equal(await target.locator('.api-banner').count(), 0, 'Normal readiness cannot contain an API outage banner.');
 }
 async function noOverflow(target, width) {
-  assert.ok(await target.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No document overflow is allowed at ${width}px.`);
+  // Viewport changes settle through layout/ResizeObserver before the next paint.
+  await target.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const geometry=await target.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,
+    offenders:[...document.querySelectorAll('main *,dialog[open] *')].map(element=>{
+      const rect=element.getBoundingClientRect();return {tag:element.tagName,className:typeof element.className==='string'?element.className:'',x:rect.x,right:rect.right,width:rect.width};
+    }).filter(rect=>rect.right>innerWidth+1||rect.x < -1).slice(0,16)}));
+  if(geometry.document>geometry.viewport+1)receipt.overflowFailure=geometry;
+  assert.ok(geometry.document<=geometry.viewport+1, `No document overflow is allowed at ${width}px.`);
 }
 async function queryState(target, expected) {
   // React Router can publish a URL before its transition commits the new DOM.
