@@ -108,7 +108,7 @@ Capacity lab έχει input/result context στην ίδια σελίδα. Το 
 | Generated / completed / active / queued / unserved jobs | Event-log accounting, ίδιο horizon και replication | Modeled jobs με ίδιο outcome/status |
 | Queue wait p50/p90 | Assignment minus modeled arrival, με assigned n και χωριστό unfinished/censored count | Jobs που συνεισφέρουν και χωριστό unresolved list |
 | Response p50/p90 | Queue + preparation + outbound approach, με completed-arrival n και χωριστό unserved | Job timeline components |
-| Target attainment | Arrivals reached within editable response target / eligible modeled arrivals, unserved ξεχωριστά | Within target / late / not reached |
+| Target attainment | Arrivals reached by the horizon within editable response target / all modeled arrivals, including incompatible/unreachable/unserved/censored jobs | Within target / late / not reached |
 | Peak queue / available capabilities | Max queue και on-duty eligible capacity από timeline | Scrub στο επιλεγμένο time bin και jobs/units |
 | Unit utilization | Busy-on-duty / duty minutes· travel/onsite/recovery χωριστά, overtime explicit | Unit timeline |
 | Paired difference | Candidate minus baseline με ίδιο seed/arrivals/service draws και replications | Δύο results/inputs, sample και variability |
@@ -212,7 +212,7 @@ WCAG2.2AA target: visible focus, keyboard drawer tabs, Back/Escape returns focus
 
 ## 14. Stack and hosting constraints
 
-Existing React/TypeScript/Tailwind/TanStack Table/MapLibre/react-router stack and AWS serverless boundary remain. No fresh scaffold. Pure-domain simulator, explicit contracts/adapters and no duplicated enums/defaults between domain/API/UI. Validated request limits, bounded execution and content-addressed caching include scenario/model/dataset/matrix/seed/policy inputs. Browser replay does not recalculate physics or retrieve paid route legs.
+Existing React/TypeScript/Tailwind/TanStack Table/MapLibre/react-router stack and AWS serverless boundary remain. No fresh scaffold. Pure-domain simulator, explicit contracts/adapters and no duplicated enums/defaults between domain/API/UI. Validated request limits and bounded execution; result provenance binds scenario/model/dataset/matrix/seed/policy inputs. Results remain transient with no-store responses; a new result cache is unnecessary for this bounded MVP. Browser replay does not recalculate physics or retrieve paid route legs.
 
 Preserve public evaluator versus authorized writes, Cognito tenancy, raw/provider-data privacy/expiry, concurrency/idempotency/review checks. Domain/API work can proceed independently under current owner instruction. Product pages await explicit wireframe OK; later shell/overview and first-list review checkpoints still apply.
 
