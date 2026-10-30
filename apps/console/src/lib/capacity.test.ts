@@ -16,7 +16,7 @@ const now = new Date('2026-10-30T12:00:00Z');
 /** Synthetic routing fixture exercises the real domain producer, never provider claims. */
 function fixture() {
   const zones = ['x', 'y'].map(id => ({id, name: id, position: [0, 0] as [number, number], polygon: [] as [number, number][],
-    trainCount: 10, holdoutCount: 0, trainHours: Array<number>(24).fill(0), holdoutHours: Array<number>(24).fill(0),
+    trainCount: 10, holdoutCount: 1, trainHours: Array<number>(24).fill(0), holdoutHours: Array<number>(24).fill(0),
     trainDays: Array<number>(7).fill(0), holdoutDays: Array<number>(7).fill(0), qualityFlags: []}));
   const dataset: Dataset = {
     schemaVersion: '1', id: 'synthetic-browser-contract-fixture', hash: 'a'.repeat(64), configHash: 'b'.repeat(64),
@@ -24,7 +24,7 @@ function fixture() {
     periods: {train: {start: '2023-01-01', end: '2025-01-01'}, holdout: {start: '2025-01-01', end: '2026-01-01'}},
     sites: ['a', 'b'].map(id => ({id, name: id, position: [0, 0], assumed: true})),
     distribution: {train: {hours: [], days: []}, holdout: {hours: [], days: []}},
-    quality: {inputRows: {train: 20, holdout: 0}, accepted: {train: 20, holdout: 0}, excluded: {train: {}, holdout: {}},
+    quality: {inputRows: {train: 20, holdout: 2}, accepted: {train: 20, holdout: 2}, excluded: {train: {}, holdout: {}},
       monthlyReports: {}, approximationMeters: {train: {p50: 0, p90: 0, max: 0}, holdout: {p50: 0, p90: 0, max: 0}}, warnings: []},
     source: {url: 'https://example.invalid/synthetic', attribution: 'Synthetic contract test only', semantics: 'test', policyUrl: 'https://example.invalid/policy'},
   };
