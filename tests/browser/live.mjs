@@ -129,13 +129,28 @@ try {
       check(await history.locator('.nav-badge').isVisible(), 'collapsed-rail-badge-hidden');
       await page.getByRole('button', exact('Expand sidebar')).click();
       await page.locator('.app-shell:not(.sidebar-collapsed)').waitFor({state: 'visible'});
-    } else {
+    } else if (await page.getByRole('button', exact('Open navigation')).isVisible()) {
       await page.getByRole('button', exact('Open navigation')).click();
       const mobile = page.getByRole('dialog', exact('Navigation'));
       check(await mobile.getByRole('link').count() >= 5, 'mobile-navigation-incomplete');
       await page.keyboard.press('Escape');
       await mobile.waitFor({state: 'hidden'});
       check(await page.getByRole('button', exact('Open navigation')).evaluate((element) => document.activeElement === element), 'mobile-navigation-focus-not-restored');
+    } else {
+      // Responsive CSS can expose a permanent rail between desktop and mobile.
+      // Classify the rendered controls, rather than assuming a viewport breakpoint.
+      const rail = page.locator('aside.sidebar');
+      await visible(rail, 'permanent-rail-missing');
+      const bounds = await rail.boundingBox();
+      check(bounds && bounds.width > 0 && bounds.width <= 80, 'permanent-rail-not-compact');
+      const navigation = rail.getByRole('navigation', exact('Main navigation'));
+      for (const label of ['Overview', 'Incident history', 'Planning queues', 'Coverage map', 'Settings']) {
+        await visible(navigation.getByRole('link', {name: new RegExp(`^${regexEscape(label)}(?:,|$)`)}), 'permanent-rail-navigation-inaccessible');
+      }
+      for (const label of ['Incident history', 'Planning queues', 'Coverage map']) {
+        const link = navigation.getByRole('link', {name: new RegExp(`^${regexEscape(label)},`)});
+        await visible(link.locator('.nav-badge'), 'permanent-rail-badge-hidden');
+      }
     }
 
     step = `${viewport.name}:history-sort-filter-pagination`;
