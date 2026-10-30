@@ -1,21 +1,21 @@
-# AWS Weekend Challenge: Map it — current state
+# AWS Weekend Challenge: Map it â€” current state
 
 ## Mandatory deliverables
 
 | Deliverable from live rules | Status | Evidence or next action |
 |---|---|---|
-| Original application displaying real location/spatial data on a map | UNMET | Standby selected; reviewed MVP/UI specification ready, no application code before official opening. |
-| AWS location or data service in application/pipeline | UNMET | Dedicated S3/CloudFront + AWS Location Routes architecture selected; not deployed. |
-| Publicly reachable application running on AWS, or working map shown in demo | UNMET | Prefer anonymous HTTPS live app and video together. |
-| Written project published on AWS Builder Center describing dataset, mapping method, AWS service and live URL | UNMET | Your project tab currently says `No project yet.` |
+| Original application displaying real location/spatial data on a map | IMPLEMENTED | Shell, five routes and real-data AWS map are live; full acceptance in progress. |
+| AWS location or data service in application/pipeline | IMPLEMENTED | Dedicated AWS serverless stack and real Location matrix deployed. |
+| Publicly reachable application running on AWS, or working map shown in demo | IMPLEMENTED | Anonymous HTTPS app returns HTTP 200; video still outstanding. |
+| Written project published on AWS Builder Center describing dataset, mapping method, AWS service and live URL | DRAFT | Project 3LPVbxnjerX5pvDmH8FsdDG8uuA created; title, description, body, source and app link autosaved. Video and final publication remain. |
 | Public demo video showing live map and exploration, under three minutes | UNMET | Public YouTube/Vimeo/Facebook Video/Youku URL required. |
-| Only rights-cleared data; no personal/sensitive data | PARTIAL | Austin source/policy and annual queries verified; public sanitized import pipeline not built. |
-| Optional public source repository with approved OSI licence | UNMET | Intended MIT repository after official build start. |
+| Only rights-cleared data; no personal/sensitive data | IMPLEMENTED | Licensed Austin input is validated and sanitized; private raw records/matrix do not pass CloudFront; public views aggregate zones. |
+| Optional public source repository with approved OSI licence | IMPLEMENTED | Public MIT repository created; hosted CI passes. |
 | Project submitted; qualification pass/fail requirements satisfied | UNMET | Final submission must be verified visibly; registration already exists. |
 
 ## Right now
 
-Owner selected **Standby Operations Console**, authorized implementation per the reviewed [MVP specification](docs/STANDBY_MVP_SPEC.md), and explicitly approved **USD 25 total AWS budget** in the human message of 2026-10-29. Start on 2026-10-30 at/after 07:00 UTC / 09:00 Europe/Athens. First deliver application shell, then map with real sanitized Austin data, then road-time coverage evaluation. React/TypeScript/Tailwind/TanStack remain mandatory; FrontBox is read-only reference. No automatic continuation is scheduled, preserving the owner's earlier manual-resume preference. No application code, repository, cloud resource, paid route call or submission created yet.
+Implementation started after the owner resumed on 2026-10-30. Public AWS application: https://d34x1513u5u1qs.cloudfront.net . Original source: https://github.com/upgradedev/standby . Hosted typecheck, tests and production build pass. Full live acceptance now passes at desktop/tablet/mobile and through real Cognito Analyst/Planner/Admin flows. Read-concurrency and modal focus defects found by earlier runs were fixed; test readiness/locator mistakes were corrected without relaxing assertions. A real sanitized Austin snapshot and private HERE Car matrix exist. No paid routing is available to the public evaluator. USD 25 total remains the approved budget. Next: finish live acceptance, freeze, produce public video, publish Builder project and submit.
 
 ## Prize aim and structure
 
@@ -39,7 +39,7 @@ Four equally weighted criteria: Technical innovation and originality; Craft and 
 | Available disk | 355962880 bytes at initial observation; volatile | `Get-PSDrive -Name C \| Select-Object Free,Used` | 2026-10-29 |
 | Project directory was new | `False` before creation | `Test-Path -LiteralPath repos/aws-map-it` | 2026-10-29 |
 | Workspace root is not a Git checkout | git reports not a repository | `git status --short` | 2026-10-29 |
-| Public video account capability | Existing YouTube Studio channel exposes upload dialog and file selection; no file uploaded, new terms accepted, or visibility publication tested | `await cua.createBrowserTab('3','https://studio.youtube.com/',{sessionName:'🎬 Map demo readiness'})`; `await videoGateTab.click(74)`; `await videoGateTab.getAXState()` | 2026-10-29 |
+| Public video account capability | Existing YouTube Studio channel exposes upload dialog and file selection; no file uploaded, new terms accepted, or visibility publication tested | `await cua.createBrowserTab('3','https://studio.youtube.com/',{sessionName:'ðŸŽ¬ Map demo readiness'})`; `await videoGateTab.click(74)`; `await videoGateTab.getAXState()` | 2026-10-29 |
 
 ## Estimates and interpretations
 
@@ -53,14 +53,12 @@ Four equally weighted criteria: Technical innovation and originality; Craft and 
 
 | Agent | Files or area | Started UTC | Expected done |
 |---|---|---|---|
-| Codex coordinator | Repository bootstrap, CI, AWS/API, deployment and integration in repos/aws-map-it | 2026-10-30 09:44 UTC | First public working release |
-| Codex console lane | apps/console only, isolated worktrees/standby-console checkout | 2026-10-30 09:44 UTC | Shell, five pages, real-data map |
-| Codex data/domain lane | packages and tools/data, isolated worktrees/standby-data checkout | 2026-10-30 09:44 UTC | Frozen curated data and tested coverage solver |
+| Codex coordinator | Release freeze, demo production, AWS retention/budget checks, Builder preparation | 2026-10-30 09:44 UTC | Concrete reviewable submission |
+| — | Console, data/domain and writer lanes delivered; no active child edits | — | — |
 
 ## Blocked on
 
-- Official build window has not opened; use preparation time for design and source verification.
-- Product, live AWS URL, video, written Builder project and submission do not exist yet.
+- Public app and source exist. Public video, written Builder project and Submitted state remain outstanding.
 - Owner-only attestations: adult age, eligible actual residence, and Amazon employment/household exclusion are not inferred from language or timezone.
 - YouTube Studio upload dialog is reachable; actual file upload/publication, CAPTCHA and any action-time terms remain untested. Existing Builder session and registration are verified.
 
@@ -107,4 +105,18 @@ Architecture review corrections integrated: CloudFront can never reach raw/matri
 
 ## Next action
 
-At the next active session on/after 2026-10-30 07:00 UTC, begin the already-authorized implementation in isolated checkouts: application shell first, map with real sanitized data next, then coverage evaluation. No automatic wakeup is configured. Freeze source/split/region before optimizer, bootstrap hosted CI, ship anonymous core before extra features, then complete the selected console/auth workflow and record the frozen live release. Recheck AWS `default` identity, current pricing, remaining approved USD 25 budget and finite quotas before paid allocation; no renewed approval is needed for unchanged work within that authorization. Target Submitted by 2026-11-01 18:00 Athens, backstop 23:00; official deadline 2026-11-02 23:00 Athens. New legal terms/CAPTCHA remain action-time owner steps.
+Produce and verify the public demo against frozen application commit `49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a`; finish Builder and video publication and visibly verify Submitted. Public draft URL: https://builder.aws.com/project/3LPVbxnjerX5pvDmH8FsdDG8uuA/standby-plan-roadside-standby-with-real-road-times . No automatic continuation is scheduled. USD 25 total approval persists; never re-request unchanged budget permission. New binding terms, final eligibility attestations and owner password entry remain owner action-time steps. Owner account enrollment helper is `python tools/create-operator.py --username <owner-choice>` and reads the new password interactively; never collect it in chat.
+
+## Frozen application release and live acceptance
+
+**Product freeze: `49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a`, declared before recording on 2026-10-30.** Unfreeze only for a false judge-facing claim, broken mandatory deliverable or rule violation, recording reason and affected video beats here first. Runtime source is unchanged by later acceptance/narration tooling (`git diff 49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a -- apps/console packages services` returns empty).
+
+[PRIMARY] https://github.com/upgradedev/standby/actions/runs/41041997256 completed success. `gh run view 41041997256 --log` shows full anonymous journey PASS at desktop/tablet/mobile and real Cognito authorization PASS for Analyst, Planner and Admin, including idempotency, trusted evaluation, review denial, settings version conflict and stale-review invalidation. Initial source release build: https://github.com/upgradedev/standby/actions/runs/41040847530 . Exact test-run source is `cd34d6a4f87024c5f6d5a2627266fc54e55708d7`; application source matches frozen release per the runtime diff above.
+
+[PRIMARY] Actual frozen dataset SHA256 `447804ec7823abef15241c0ff080af9892ad71456bde6227e2185d784b2ec31f`. `python tools/data/validate.py ../../worktrees/standby-data/.runtime/dataset.json` reports 120 zones, 12 sites, accepted training 3072 / heldout 1467. Source cohorts: training 3456 / heldout 1662; exclusions are retained in the private import manifest and shown publicly as counts. Do not confuse publication time with breakdown occurrence.
+
+[PRIMARY] `python tools/build-matrix.py --input ../../worktrees/standby-data/.runtime/routing-input.json --attempt 1` reserved 1440 pairs, returned Core tier and zero NoRoute cells. Matrix hash `ca19df599b142229f099eb91073ddda5899aa676da1e86c5edf7b0dcacadadb0`; generated 2026-10-30T10:00:15Z and expires 2026-11-27T10:00:15Z. Routing ESTIMATE USD 0.72 from verified USD 0.0005/pair, before taxes/free allowances, not measured billing. No provider matrix exported into source/CI. Public map key expires after the published judging period; do not tear down live surfaces based on stale notes.
+
+Synthetic role users share a dedicated acceptance workspace, with suppressed invitations and credentials encrypted only in the dedicated repository secret. Remove those test memberships/users/secret after final authorization verification. No actual owner password was set or collected. Public anonymous evaluation remains available independently of account enrollment.
+
+Original narration was generated after product freeze with `python tools/demo/voice.py --release 49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a`: all six beat files passed their measured duration budgets. Receipt reserved 1971 characters. ESTIMATE neural speech USD 0.031536 at verified USD 0.000016/character, before tax/free allowances; actual invoiced spend remains unmeasured. No new route matrix call was needed. Recording and final media verification remain pending.

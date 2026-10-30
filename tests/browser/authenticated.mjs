@@ -40,7 +40,7 @@ async function api(actor,method,path,{data,headers={},token=actor.accessToken,st
     ...(data===undefined?{}:{data:typeof data==='string'?data:JSON.stringify(data)}),
   });
   const expected=Array.isArray(status)?status:[status];
-  check(expected.includes(response.status()),'protected-api-unexpected-status');
+  check(expected.includes(response.status()),`protected-api-unexpected-status-${response.status()}`);
   const responseHeaders=response.headers(),value=await response.json();
   if(response.ok()) check(responseHeaders['cache-control']?.includes('no-store'),'protected-response-cacheable');
   await response.dispose();
@@ -234,13 +234,32 @@ try {
   await admin.page.keyboard.press('Escape');
   await details.waitFor({state:'hidden'});
 
-  step='Admin:settings-version-and-review-invalidation';
+  step='Admin:settings-read-current-version';
   const settingsPath=`/workspaces/${workspaceId}/settings`,before=await api(admin,'GET',settingsPath);
   const nextThreshold=before.settings.defaultThresholdMinutes===15?20:15;
+  step='Admin:settings-workspace-navigation';
   await navigate(admin,'Settings');
   await admin.page.getByRole('tab',exact('Workspace')).click();
   await visible(admin.page.getByRole('button',exact('Save workspace defaults')),'admin-settings-write-menu-missing');
-  await admin.page.getByLabel('Default road approach threshold',{exact:true}).selectOption(String(nextThreshold));
+  check(await admin.page.getByRole('tab',exact('Workspace')).getAttribute('aria-selected')==='true','workspace-settings-tab-not-selected');
+  step='Admin:settings-threshold-field';
+  // Ground the field in the exact visible label span and its contained control.
+  // Embedded option text is excluded from this field-identity assertion.
+  const thresholdLabel=admin.page.locator('.settings-form label').filter({hasText:'Default road approach threshold'});
+  const namedLabels=await thresholdLabel.count();
+  check(namedLabels===1,'workspace-threshold-label-not-unique');
+  const labelSpan=thresholdLabel.locator(':scope > span');
+  check(await labelSpan.count()===1&&(await labelSpan.textContent())?.trim()==='Default road approach threshold',
+    'workspace-threshold-label-text-mismatch');
+  const threshold=thresholdLabel.getByRole('combobox');
+  const namedFields=await threshold.count();
+  console.log(`DOM Admin settings: workspace-tab-selected=true save-visible=true exact-visible-labels=${namedLabels} scoped-threshold-controls=${namedFields}`);
+  check(namedFields===1,'workspace-threshold-field-not-unique');
+  await visible(threshold,'workspace-threshold-field-not-visible');
+  check(await threshold.isEnabled(),'admin-workspace-threshold-disabled');
+  await threshold.selectOption(String(nextThreshold));
+  check(await threshold.inputValue()===String(nextThreshold),'workspace-threshold-selection-did-not-change');
+  step='Admin:settings-save-acknowledgement';
   const settingsResponse=admin.page.waitForResponse(value=>value.url()===`${admin.apiBase}${settingsPath}`&&value.request().method()==='PATCH').catch(()=>null);
   await admin.page.getByRole('button',exact('Save workspace defaults')).click();
   const changedResponse=await settingsResponse;
@@ -248,12 +267,15 @@ try {
   const updated=await changedResponse.json();
   check(updated.settings.version===before.settings.version+1&&updated.settings.defaultThresholdMinutes===nextThreshold&&updated.configHash!==before.configHash,
     'settings-version-or-config-hash-unchanged');
+  step='Admin:settings-stale-version-conflict';
   const staleSettings=await api(admin,'PATCH',settingsPath,{data:{expectedVersion:before.settings.version,
     defaultThresholdMinutes:nextThreshold,maxFleetSize:before.settings.maxFleetSize,enabledSiteIds:before.settings.enabledSiteIds},status:409});
   check(staleSettings.code==='VERSION_CONFLICT','stale-settings-write-not-rejected');
+  step='Admin:review-invalidation-api';
   const stalePlan=await api(admin,'GET',path);
   check(stalePlan.stale===true&&stalePlan.result===null&&stalePlan.reviewStatus==='NOT_READY','settings-change-retained-valid-review');
   await api(admin,'POST',`${path}/review`,{data:{expectedVersion:reviewed.version,...hashes},status:409});
+  step='Admin:review-invalidation-ui';
   await navigate(admin,'Planning queues');
   await admin.page.getByRole('tab',{name:/^Draft/}).click();
   const staleCard=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
