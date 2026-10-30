@@ -1,6 +1,6 @@
 {
   "version": "austin-standby-v1",
-  "frozenAt": "2026-10-30T09:58:00Z",
+  "frozenAt": "2026-10-30T09:43:36Z",
   "bounds": [-97.88, 30.18, -97.62, 30.46],
   "periods": {
     "train": {"start": "2023-01-01T00:00:00Z", "end": "2025-01-01T00:00:00Z"},
