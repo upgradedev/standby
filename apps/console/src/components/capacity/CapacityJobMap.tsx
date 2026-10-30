@@ -13,7 +13,8 @@ function fitSelection(instance:MapInstance,zone:DemandZone,site:StandbySite|unde
   for(const position of zone.polygon)bounds.extend(position);
   if(site)bounds.extend(site.position);
   const container=instance.getContainer();
-  const padding=Math.max(55,Math.min(container.clientWidth,container.clientHeight)*.18);
+  const horizontal=Math.max(55,container.clientWidth*.18),vertical=Math.max(55,container.clientHeight*.18);
+  const padding={left:horizontal,right:horizontal,top:vertical,bottom:vertical};
   instance.fitBounds(bounds,{padding,maxZoom:13,duration:0});
 }
 
