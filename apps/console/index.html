@@ -1,13 +1,4 @@
 <!doctype html>
 <html lang="en" data-theme="dark"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="theme-color" content="#0b1018"/>
-<script>
-  (function () {
-    var pick = function (value) { return value === 'light' || value === 'dark' ? value : null; };
-    var theme = pick(new URLSearchParams(location.search).get('theme'));
-    if (!theme) { try { theme = pick(localStorage.getItem('standby.theme.v1')); } catch (error) {} }
-    theme = theme || 'dark';
-    document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#f2f6fb' : '#0b1018');
-  })();
-</script>
+<script src="/theme.js"></script>
 <meta name="description" content="Standby helps roadside-assistance shift managers compare standby locations using historical Austin stalled-vehicle reports and Amazon Location road travel times."/><title>Standby · Operations console</title><link rel="icon" type="image/svg+xml" href="/standby.svg"/></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
