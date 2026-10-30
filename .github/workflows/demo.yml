@@ -96,7 +96,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: standby-public-demo
-          retention-days: 3
+          retention-days: 21
           include-hidden-files: true
           path: |
             .runtime/demo/standby-demo.mp4
