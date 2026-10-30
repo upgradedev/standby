@@ -10,7 +10,7 @@ interface State {
  config:Config|null;manifest:Manifest|null;zones:DemandZone[];loading:boolean;error:ApiError|null;reload:()=>void;
  input:EvaluationInput;setInput:(input:EvaluationInput)=>void;result:EvaluationResult|null;evaluating:boolean;evaluationError:ApiError|null;stale:boolean;evaluate:(input?:EvaluationInput)=>Promise<EvaluationResult|null>;
  planKey:PlanKey;setPlanKey:(key:PlanKey)=>void;preferences:Preferences;updatePreferences:(value:Preferences)=>boolean;
- scenarios:LocalScenario[];saveScenario:(name?:string)=>void;deleteScenario:(id:string)=>void;runScenario:(id:string)=>Promise<boolean>;
+ scenarios:LocalScenario[];saveScenario:(name?:string,scenarioInput?:EvaluationInput)=>void;deleteScenario:(id:string)=>void;runScenario:(id:string)=>Promise<boolean>;
  toasts:Toast[];toast:(message:string,kind?:Toast['kind'])=>void;dismissToast:(id:string)=>void;
  session:Session|null;setSession:(session:Session|null)=>void;memberships:Membership[];workspace:string;switchWorkspace:(id:string)=>void;membership:Membership|undefined;authError:string|null;
  cloudPlans:SavedPlan[];cloudPlansLoading:boolean;cloudPlansError:ApiError|null;refreshCloudPlans:()=>void;
@@ -68,8 +68,8 @@ export function Provider({children}:{children:ReactNode}) {
  const updatePreferences=useCallback((value:Preferences)=>{try{savePreferences(value);setPreferences(value);return true;}catch{toast('Browser storage is unavailable. Preferences were not saved.','error');return false;}},[toast]);
  const persistScenarios=useCallback((value:LocalScenario[])=>{try{saveScenarios(value);setScenarios(value);return true;}catch{toast('Browser storage is unavailable. The local scenario was not saved.','error');return false;}},[toast]);
  const stale=!!result&&(inputKey(result.input)!==inputKey(input)||!!evaluationError);
- const saveScenario=useCallback((name?:string)=>{
-   const successful=!!result&&!stale;
+ const saveScenario=useCallback((name?:string,scenarioInput:EvaluationInput=input)=>{
+   const successful=!!result&&!stale&&inputKey(result.input)===inputKey(scenarioInput);
    const scenario:LocalScenario={id:crypto.randomUUID(),name:name?.trim().slice(0,100)||`${input.fleetSize} units · ${input.thresholdMinutes} min`,input:{...input},updatedAt:new Date().toISOString(),evaluationStatus:successful?'SUCCEEDED':'NOT_RUN',reviewStatus:successful?'NEEDS_REVIEW':'NOT_READY',...(successful?{inputHash:result.inputHash}:{})};
    if(persistScenarios([scenario,...scenarios].slice(0,50)))toast('Scenario saved on this device. Travel-time results are not stored.');
  },[input,result,stale,scenarios,persistScenarios,toast]);

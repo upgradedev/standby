@@ -17,3 +17,5 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 .site-marker.focused{outline:3px solid #f2c66d;outline-offset:3px}
+
+.scenario-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}.scenario-fields label,.plan-name-label{display:flex;flex-direction:column;gap:7px;font-size:10px;color:var(--muted)}.scenario-fields select,.plan-name-label input{width:100%;font-size:10px}.plan-editor{border-block:1px solid var(--border);padding:0 0 18px;margin:18px 0}.plan-editor>p:last-child{font-size:9px;margin-top:12px;line-height:1.8}.plan-editor h3{margin-bottom:15px}.plan-name-label input{font-size:11px}
