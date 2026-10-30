@@ -447,7 +447,7 @@ try {
   assert.ok(!invalidBody.baseline&&!invalidBody.candidate,'A schema failure cannot return fabricated model results.');
   receipt.calls.rejectedCapacityRequests++;receipt.checks.push('Native blank/max validation prevents requests; actual invalid API request returns400 without model results');
   await count.fill('0');
-  await page.waitForFunction(()=>/\b0 modeled jobs\b/.test(document.querySelector('.capacity-draft-summary')?.textContent??''));
+  await page.waitForFunction(()=>[...document.querySelectorAll('.capacity-draft-summary > span')].some(element=>element.textContent?.trim()==='0 modeled jobs'));
   const empty = await evaluate(page);
   assert.equal(empty.baseline.replay.jobs.length,0);assert.equal(empty.candidate.replay.jobs.length,0);
   assert.equal(empty.baseline.aggregate.onTimePct,null);assert.equal(empty.baseline.aggregate.p90ResponseMinutes,null);
