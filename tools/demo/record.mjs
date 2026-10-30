@@ -17,6 +17,7 @@ import {execFileSync} from 'node:child_process';
 import {BEATS, FPS, VIEWPORT, storyboard} from './beats.mjs';
 import {validateCompletedCapture} from './presented-window.mjs';
 import {fileURLToPath} from 'node:url';
+import {assertRenderedMap} from './map-render-proof.mjs';
 
 function argument(name, fallback) {const index=process.argv.indexOf(name);return index<0?fallback:process.argv[index+1];}
 const base=process.env.STANDBY_DEMO_URL?.replace(/\/$/,'');
@@ -69,6 +70,7 @@ async function mapReady(page) {
   await evaluation(page);
   await page.getByRole('button',exact('Depot')).click();
   await page.locator('.map-panel').scrollIntoViewIfNeeded();
+  await assertRenderedMap(page,{requirePixels:true});
 }
 async function setup(page,id) {
   if(id==='overview') {await route(page,'/overview','Every minute starts here.');await visible(page.locator('.comparison-row.proposal'));return;}
