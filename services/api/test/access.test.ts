@@ -18,6 +18,7 @@ test('gateway group formats produce the same bounded roles',()=>{
     assert.ok(identityFromClaims({...access,'cognito:groups':groups}).groups.includes('Admin'));
   }
   assert.throws(()=>identityFromClaims({...access,'cognito:groups':['SuperAdmin']}),errorCode('FORBIDDEN'));
+  assert.throws(()=>identityFromClaims({...access,'cognito:groups':'Admin Planner'}),errorCode('FORBIDDEN'));
 });
 test('cross-workspace access and absent membership fail even with Admin JWT',()=>{
   assert.throws(()=>authorizeMembership(identity,membership,'another'),errorCode('FORBIDDEN'));

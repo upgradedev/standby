@@ -19,7 +19,10 @@ export function identityFromClaims(claims:Record<string,unknown>|undefined):Iden
   else if(typeof raw==='string') {
     try {const parsed:unknown=JSON.parse(raw); if(Array.isArray(parsed)) groups=parsed;}
     catch {/* API Gateway also renders Cognito groups as bracketed, comma-separated strings. */}
-    if(!groups.length) groups=raw.replace(/^\[/,'').replace(/\]$/,'').split(/[,\s]+/).map(x=>x.replace(/^['"]|['"]$/g,''));
+    if(!groups.length) {
+      const rendered=raw.startsWith('[')&&raw.endsWith(']')?raw.slice(1,-1):raw;
+      groups=rendered.split(',').map(x=>x.trim());
+    }
   }
   const trusted=roles.filter(role=>groups.includes(role));
   if(!trusted.length) throw new HttpError(403,'FORBIDDEN','No operator role has been assigned to this account.');

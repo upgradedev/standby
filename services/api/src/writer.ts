@@ -67,10 +67,11 @@ export function restrictWorkspaceModel(dataset:Dataset,matrix:MatrixSnapshot,set
   return {dataset:{...dataset,configHash:configurationHash(dataset,settings),sites:dataset.sites.filter(site=>enabled.has(site.id))},
     matrix:{...matrix,siteIds:indexes.map(row=>row.id),durationsSeconds:indexes.map(row=>matrix.durationsSeconds[row.index]!)}};
 }
-function presentPlan(record:PlanRecord,activeConfigHash?:string,now=Date.now()) {
+function presentPlan(record:PlanRecord,activeConfigHash?:string,datasetHash?:string,now=Date.now()) {
   const {pk:_pk,sk:_sk,resultRef:_ref,reviewedBy:_actor,...safe}=record;
   const stale=record.evaluationStatus==='SUCCEEDED' && (!record.resultRef || Date.parse(record.resultRef.expiresAt)<=now ||
-    !Number.isFinite(Date.parse(record.resultRef.expiresAt)) || (activeConfigHash!==undefined && record.configHash!==activeConfigHash));
+    !Number.isFinite(Date.parse(record.resultRef.expiresAt)) || (activeConfigHash!==undefined && record.configHash!==activeConfigHash) ||
+    (datasetHash!==undefined && record.resultRef.datasetHash!==datasetHash));
   return {...safe,reviewStatus:stale?'NOT_READY' as const:safe.reviewStatus,stale,
     ...(record.resultRef?{resultExpiresAt:record.resultRef.expiresAt}:{})};
 }
@@ -85,7 +86,9 @@ function membershipCondition(identity:Identity,workspaceId:string,minimum:'Plann
       {':workspace':workspaceId,':admin':'Admin',':planner':'Planner'}}};
 }
 function conflict(error:unknown):boolean {
-  return ['ConditionalCheckFailedException','TransactionCanceledException'].includes((error as {name?:string})?.name??'');
+  const value=error as {name?:string;CancellationReasons?:Array<{Code?:string}>};
+  return value?.name==='ConditionalCheckFailedException' || (value?.name==='TransactionCanceledException' &&
+    (value.CancellationReasons??[]).some(reason=>reason.Code==='ConditionalCheckFailed'||reason.Code==='TransactionConflict'));
 }
 function assertPlanVersion(plan:PlanRecord,version:number):void {
   if(plan.version!==version) throw new HttpError(409,'VERSION_CONFLICT','The plan changed. Reload it before trying again.');
@@ -141,7 +144,7 @@ async function savePlan(event:ApiEvent,workspaceId:string,identity:Identity,requ
   return json(status,response,requestId);
 }
 async function resultFor(plan:PlanRecord,configHash:string,datasetHash:string):Promise<EvaluationResult|null> {
-  if(presentPlan(plan,configHash).stale || plan.evaluationStatus!=='SUCCEEDED' || !plan.resultRef) return null;
+  if(presentPlan(plan,configHash,datasetHash).stale || plan.evaluationStatus!=='SUCCEEDED' || !plan.resultRef) return null;
   let cached:{schemaVersion:string;expiresAt:string;result:EvaluationResult};
   try {cached=await readJson(process.env.CACHE_BUCKET!,plan.resultRef.key);}
   catch(error) {
@@ -185,7 +188,7 @@ async function evaluatePlan(event:ApiEvent,workspaceId:string,id:string,identity
   delete evaluated.failure;delete evaluated.reviewedAt;delete evaluated.reviewedBy;
   // A concurrent settings edit or plan save cannot turn a stale computation into a reviewed record.
   await writeVersionedPlan(evaluated,version,identity,'PLAN_EVALUATED',settings.version);
-  return json(200,{...presentPlan(evaluated,configHash),result},requestId);
+  return json(200,{...presentPlan(evaluated,configHash,dataset.hash),result},requestId);
 }
 async function writeVersionedPlan(plan:PlanRecord,previousVersion:number,identity:Identity,action:string,settingsVersion:number) {
   try {
@@ -215,7 +218,7 @@ async function reviewPlan(event:ApiEvent,workspaceId:string,id:string,identity:I
   const reviewed:PlanRecord={...plan,version:version+1,reviewStatus:'REVIEWED',updatedAt:new Date().toISOString(),
     reviewedAt:new Date().toISOString(),reviewedBy:identity.subject};
   await writeVersionedPlan(reviewed,version,identity,'PLAN_REVIEWED',settings.version);
-  return json(200,presentPlan(reviewed,configHash),requestId);
+  return json(200,presentPlan(reviewed,configHash,dataset.hash),requestId);
 }
 async function patchSettings(event:ApiEvent,workspaceId:string,identity:Identity,requestId:string) {
   await membershipFor(identity,workspaceId,'Admin');
@@ -259,7 +262,7 @@ export async function handler(event:ApiEvent) {
     const dataset=await loadDataset(),settings=await settingsFor(workspaceId,dataset),configHash=configurationHash(dataset,settings);
     if(parts.length===4 && parts[3]==='settings' && method==='GET') return json(200,{settings,configHash},requestId);
     if(parts.length===4 && parts[3]==='plans' && method==='GET') {
-      const plans=(await queryAll(workspaceKey(workspaceId),'PLAN#')).map(record=>presentPlan(record as unknown as PlanRecord,configHash));
+      const plans=(await queryAll(workspaceKey(workspaceId),'PLAN#')).map(record=>presentPlan(record as unknown as PlanRecord,configHash,dataset.hash));
       return json(200,{plans:plans.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))},requestId);
     }
     if(parts.length===4 && parts[3]==='search' && method==='GET') {
@@ -278,7 +281,8 @@ export async function handler(event:ApiEvent) {
       if(parts.length===6 && parts[5]==='review' && method==='POST') return await reviewPlan(event,workspaceId,id,identity,requestId);
       if(parts.length===5 && method==='GET') {
         const plan=await getPlan(workspaceId,id),result=await resultFor(plan,configHash,dataset.hash);
-        return json(200,{...presentPlan(plan,configHash),result,stale:plan.evaluationStatus==='SUCCEEDED'&&result===null},requestId);
+        const summary=presentPlan(plan,configHash,dataset.hash),stale=plan.evaluationStatus==='SUCCEEDED'&&result===null;
+        return json(200,{...summary,result,stale,reviewStatus:stale?'NOT_READY':summary.reviewStatus},requestId);
       }
     }
     throw new HttpError(404,'NOT_FOUND','The API route does not exist.');
