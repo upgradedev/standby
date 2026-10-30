@@ -30,6 +30,9 @@ jobs:
       - name: Install browser in hosted CI only
         id: browser-install
         run: npx playwright install --with-deps chromium
+      - name: Ensure the actual map pixel decoder is available
+        run: |
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
       - name: Verify live anonymous user journey
         env:
           STANDBY_LIVE_URL: ${{ inputs.url }}

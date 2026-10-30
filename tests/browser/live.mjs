@@ -234,7 +234,7 @@ try {
     await visible(page.locator('.site-marker').first(), 'aws-map-did-not-finish-loading');
     check(await page.locator('.site-marker').count() === manifest.dataset.sites.length, 'map-site-layer-incomplete');
     check(await page.locator('.map-error').count() === 0, 'basemap-reported-loading-error');
-    await assertRenderedMap(page);
+    await assertRenderedMap(page,{requirePixels:true});
     await page.getByRole('combobox', exact('Hypothetical fleet size')).selectOption('2');
     await page.getByRole('combobox', exact('Road approach threshold')).selectOption('5');
     await visible(page.getByText('Inputs changed. The map shows the previous comparison until you calculate again.', {exact: true}), 'map-stale-state-missing');
