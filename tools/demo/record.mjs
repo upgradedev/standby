@@ -101,10 +101,17 @@ async function recordPresentedBeat(page,destination,beat) {
     diagnostics.semanticElapsedSeconds=(performance.now()-anchor)/1000;
     check(diagnostics.semanticElapsedSeconds<=beat.seconds&&actionsCompletedAtUnixMs-anchorUnix<=beat.seconds*1000,'demo-actions-overran-captured-window');
     await waitUntil(anchor+beat.seconds*1000);
-    // An actual five-second hold of the final working UI is an editing handle.
-    // No generated/repeated padding is added by our rendering pipeline.
-    await page.waitForTimeout(5000);
-    receipt={method:'native-screencast-slate',storyAnchorAtUnixMs:anchorUnix,actionsCompletedAtUnixMs,semanticElapsedSeconds:diagnostics.semanticElapsedSeconds,actualFinalUiHoldSeconds:5};
+    // A bounded REAL post-roll keeps normal browser paints flowing: a static
+    // wait can end before Chromium delivers its final native screencast frame.
+    // These existing navigation hover states occur after the published window.
+    const postRollSeconds=15,targets=page.locator('aside.sidebar nav .nav-item:not(.active)');
+    for(let second=0;second<postRollSeconds;second++){
+      await waitUntil(anchor+(beat.seconds+second)*1000);
+      await targets.nth(second%2).hover();
+    }
+    await waitUntil(anchor+(beat.seconds+postRollSeconds)*1000);
+    diagnostics.actualPostRollEndedAtUnixMs=Date.now();
+    receipt={method:'native-screencast-slate',storyAnchorAtUnixMs:anchorUnix,actionsCompletedAtUnixMs,semanticElapsedSeconds:diagnostics.semanticElapsedSeconds,actualFinalUiHoldSeconds:postRollSeconds};
   }catch(error){failure=error;}
   finally{
     if(slate)await slate.dispose().catch(()=>{});
@@ -205,7 +212,14 @@ try {
     }
     const capturedSeconds=mediaSeconds(captured);
     await writeFile(path.join(out,`${beat.id}.clock.json`),JSON.stringify({schemaVersion:1,beatId:beat.id,releaseSha,datasetHash:manifest.dataset.hash,sourceActualSeconds:capturedSeconds,diagnostics:captureDiagnostics},null,2)+'\n');
-    const syncProof=JSON.parse(execFileSync('python',['-B',fileURLToPath(new URL('./sync.py',import.meta.url)),'--media',captured,'--seconds',String(beat.seconds)],{encoding:'utf8',timeout:120_000}));
+    let syncProof;
+    try{syncProof=JSON.parse(execFileSync('python',['-B',fileURLToPath(new URL('./sync.py',import.meta.url)),'--media',captured,'--seconds',String(beat.seconds)],{encoding:'utf8',timeout:120_000}));}
+    catch(error){
+      let decodedFailure=null;try{const value=JSON.parse(String(error.stdout??''));if(value.status==='FAILED'&&/^SYNC_[A-Z_]+$/.test(value.code))decodedFailure=value;}catch{/* Retain only the controlled decoder diagnostic schema. */}
+      const failureCode=decodedFailure?.code==='SYNC_MEDIA_TOO_SHORT'?'decoded-sync-media-too-short':'decoded-sync-validation-failed';
+      await writeFile(path.join(out,`${beat.id}.failure.json`),JSON.stringify({schemaVersion:1,beatId:beat.id,releaseSha,datasetHash:manifest.dataset.hash,failureCode,rawVideoFile:path.relative(out,captured).replace(/\\/g,'/'),sourceActualSeconds:capturedSeconds,decodedSyncFailure:decodedFailure,diagnostics:captureDiagnostics},null,2)+'\n');
+      throw new Error(failureCode);
+    }
     const trimStartSeconds=syncProof.firstClearFramePtsSeconds;
     check(Number.isFinite(trimStartSeconds)&&capturedSeconds-trimStartSeconds>=beat.seconds,'actual-screencast-media-too-short');
     check(Number.isFinite(capturedSeconds)&&capturedSeconds>=beat.seconds,'actual-screencast-media-too-short');

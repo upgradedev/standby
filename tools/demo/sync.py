@@ -23,10 +23,14 @@ def locate_slate(timestamps: list[float], rgb: bytes, source_seconds: float, bea
     require(clear - first >= 2 and clear < len(marker), "The sync slate does not have a complete marker-to-app transition")
     require(not any(marker[clear:]), "The sync slate is not one contiguous pre-story marker")
     inpoint = timestamps[clear]
-    require(source_seconds - inpoint >= beat_seconds, "Actual media after the decoded sync slate is too short")
-    return {"method": "decoded-magenta-slate", "firstClearFramePtsSeconds": inpoint,
+    proof = {"method": "decoded-magenta-slate", "firstClearFramePtsSeconds": inpoint,
             "markerFirstFramePtsSeconds": timestamps[first], "markerLastFramePtsSeconds": timestamps[clear - 1],
             "markerFrames": clear - first, "decodedFrames": len(timestamps), "sourceDurationSeconds": source_seconds}
+    if source_seconds - inpoint < beat_seconds:
+        error = VerificationError("Actual media after the decoded sync slate is too short")
+        error.sync_proof = proof
+        raise error
+    return proof
 
 
 def inspect_sync(media: Path, beat_seconds: float) -> dict:
@@ -49,5 +53,6 @@ if __name__ == "__main__":
     try:
         print(json.dumps(inspect_sync(args.media, args.seconds)))
     except (OSError, VerificationError) as error:
-        print(f"FAIL decoded video sync: {error}")
+        proof = getattr(error, "sync_proof", None)
+        print(json.dumps({"status": "FAILED", "code": "SYNC_MEDIA_TOO_SHORT" if proof else "SYNC_INVALID_MARKER", "message": str(error)[:200], "proof": proof}))
         raise SystemExit(1)

@@ -17,8 +17,10 @@ class SlateSyncTests(unittest.TestCase):
 
     def test_short_actual_media_fails_instead_of_padding(self):
         pts, pixels = self.fixture()
-        with self.assertRaisesRegex(VerificationError, "after the decoded sync slate is too short"):
+        with self.assertRaisesRegex(VerificationError, "after the decoded sync slate is too short") as failure:
             locate_slate(pts, pixels, 33.1, 30)
+        self.assertEqual(failure.exception.sync_proof["firstClearFramePtsSeconds"], 3.2)
+        self.assertEqual(failure.exception.sync_proof["sourceDurationSeconds"], 33.1)
 
     def test_noncontiguous_or_missing_slate_fails(self):
         pts, _ = self.fixture()
