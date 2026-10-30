@@ -108,6 +108,33 @@ async function ready(target) {
 async function noOverflow(target, width) {
   assert.ok(await target.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No document overflow is allowed at ${width}px.`);
 }
+async function queryState(target, expected) {
+  // React Router can publish a URL before its transition commits the new DOM.
+  // Wait for both explicitly at each interaction, rather than sampling once.
+  await target.waitForFunction(values => {
+    const params = new URL(location.href).searchParams;
+    return Object.entries(values).every(([key,value]) => params.get(key) === value);
+  }, expected);
+}
+async function jobRows(target, count, matching, {pageNumber=1, size=10, exclude=[]}={}) {
+  await target.waitForFunction(({count,matching,pageNumber,size,exclude}) => {
+    const section=document.querySelector('[data-testid="capacity-jobs"]');
+    const rows=[...(section?.querySelectorAll('tbody tr')??[])];
+    const ids=rows.map(row=>row.querySelector('.capacity-job-link')?.textContent?.trim());
+    const scope=section?.querySelector('.capacity-job-scope')?.textContent??'';
+    const pagination=section?.querySelector('.capacity-job-pagination')?.textContent??'';
+    return rows.length===count && scope.startsWith(`${matching} of 24 generated jobs match`) &&
+      pagination.includes(`Page ${pageNumber} of ${Math.max(1,Math.ceil(matching/size))}`) &&
+      ids.every(id=>!exclude.includes(id));
+  }, {count,matching,pageNumber,size,exclude});
+}
+async function detailTab(target, tab) {
+  await target.getByTestId(`capacity-job-tab-${tab}`).click();
+  const name=tab.charAt(0).toUpperCase()+tab.slice(1);
+  await queryState(target,{jobTab:tab==='location'?null:name,jobMap:null});
+  await target.locator(`[data-testid="capacity-job-tab-${tab}"][aria-selected="true"]`).waitFor();
+  await target.locator(`#capacity-job-detail-panel[aria-labelledby="capacity-job-tab-${name}"]`).waitFor();
+}
 async function shot(name, target = page, options = {}) {
   await target.screenshot({path:path.join(out, name), fullPage:true, animations:'disabled', ...options});
   receipt.screenshots.push(name);
@@ -126,6 +153,7 @@ async function evaluate(target) {
   await target.getByTestId('capacity-results').waitFor();
   await target.getByTestId('capacity-run').waitFor({state:'visible'});
   await target.locator('[data-testid="capacity-status"][data-state="success"]').waitFor();
+  await queryState(target,{t:String(result.input.horizonMinutes),jobSelected:null,jobRun:null,jobTab:null,jobMap:null,jobPage:null});
   receipt.calls.successfulCapacityEvaluations++;
   assert.ok(receipt.calls.successfulCapacityEvaluations <= 3, 'The preview evaluation budget is three successful scenarios.');
   return result;
@@ -133,6 +161,7 @@ async function evaluate(target) {
 async function editAssumptions(target) {
   const open = target.getByRole('button', {name:'Edit assumptions',exact:true});
   if (await open.count()) await open.click();
+  await target.locator('#capacity-configuration[open]').waitFor();
 }
 function identical(result) {
   assert.equal(digest(result.input.baseline), digest(result.input.candidate), 'Initial policies must be identical.');
@@ -143,6 +172,8 @@ function identical(result) {
 }
 async function setPeak(target, result, view) {
   await target.getByRole('group', {name:'Replay fleet plan', exact:true}).getByRole('button', {name:view === 'baseline' ? 'Baseline' : 'Candidate', exact:true}).click();
+  await queryState(target,{view});
+  await target.getByRole('group',{name:'Replay fleet plan',exact:true}).locator('button[aria-pressed="true"]').filter({hasText:view==='baseline'?'Baseline':'Candidate'}).waitFor();
   const peak = target.getByTestId('capacity-peak-interval'), replay = result[view].replay, horizon = result.input.horizonMinutes;
   const waiting = minute => replay.jobs.filter(job => job.arrivalMinutes <= minute &&
     (job.assignedAtMinutes === null ? job.reason === 'horizon_queue' : minute < job.assignedAtMinutes)).length;
@@ -158,14 +189,21 @@ async function setPeak(target, result, view) {
   assert.equal(maximum, result[view].replay.metrics.maxQueue, 'Displayed interval peak must match the actual first-replication queue maximum.');
   // Selecting a different bin first ensures the change event also runs for bin0.
   const selected = bins.find(option => option.queue === maximum);
-  if (bins.length > 1) await peak.selectOption(bins.find(option => option.value !== selected.value).value);
+  if (bins.length > 1) {
+    const other=bins.find(option => option.value !== selected.value);
+    await peak.selectOption(other.value);
+    await queryState(target,{t:String(other.minute)});
+  }
   await peak.selectOption(selected.value);
+  await queryState(target,{t:String(selected.minute)});
   // The native range visually rounds to its .1 step; the URL preserves the full
   // scenario cursor supplied by the interval selector and used by all views.
   const displayed = Number(new URL(target.url()).searchParams.get('t'));
   assert.equal(displayed, selected.minute, 'Peak selection must preserve its exact recorded event time.');
   assert.equal(waiting(displayed), maximum, 'The peak cursor must reproduce the actual waiting jobs at that event.');
   const queued = target.locator('.capacity-replay-counts > div').filter({has:target.locator('span', {hasText:/^Queued$/})}).locator('strong');
+  await target.waitForFunction(expected => [...document.querySelectorAll('.capacity-replay-counts > div')].some(element=>
+    element.querySelector('span')?.textContent==='Queued'&&Number(element.querySelector('strong')?.textContent)===expected),maximum);
   assert.equal(Number(await queued.innerText()), maximum, 'Queue count at the exact cursor must agree with the API event log.');
   receipt.peak = {view, queue:maximum, interval:selected.value, cursorMatchesRecordedPeak:true};
 }
@@ -198,7 +236,11 @@ async function mapProof(target) {
     try {rgb=execFileSync('ffmpeg',['-v','error','-f','image2pipe','-i','pipe:0','-vf','crop=iw*0.8:ih*0.8:iw*0.1:ih*0.1,scale=96:64:flags=area,format=rgb24','-frames:v','1','-f','rawvideo','pipe:1'],{input:pixels,timeout:30000,maxBuffer:1024*1024,stdio:['pipe','pipe','pipe']});}
     catch {throw new Error('The required in-memory map pixel decoder failed.');}
     try {proof=analyzeMapRgb(rgb);break;}
-    catch {if(attempt===2)throw new Error('The actual map did not show nonblank geographic paint.');await target.waitForTimeout(750);}
+    catch {
+      if(attempt===2)throw new Error('The actual map did not show nonblank geographic paint.');
+      // Yield to actual browser paint boundaries; no fixed-duration sleep.
+      await target.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    }
   }
   return {...proof, geometry:'PASS', features:'Rendered GeoJSON points/polygon; no fabricated DOM marker count'};
 }
@@ -249,7 +291,20 @@ try {
   receipt.checks.push('Actual default24/10/42 evaluation; identical3-unit policies have zero paired changes');
   await shot('capacity-identical-policies.png');
   await editAssumptions(page);
+  const unitEditor=page.locator('.capacity-roster-section').first().locator('.capacity-unit-editor').first();
+  await unitEditor.locator(':scope > summary').click();
+  await page.locator('.capacity-roster-section').first().locator('.capacity-unit-editor[open]').first().waitFor();
+  const home=page.getByRole('combobox',{name:'Home standby site: Baseline unit-1',exact:true});
+  const unchangedSite=await home.inputValue();
+  await home.focus();await home.click();
+  await shot('capacity-home-site-dropdown-open.png');
+  await page.keyboard.press('Escape');
+  assert.equal(await home.inputValue(),unchangedSite,'Opening and dismissing the native dropdown cannot change the scenario.');
+  await unitEditor.locator(':scope > summary').click();
+  await page.waitForFunction(()=>!document.querySelector('.capacity-roster-section .capacity-unit-editor')?.open);
+  receipt.checks.push('Native home-site dropdown open/dismiss preview without changing assumptions');
   await page.getByTestId('capacity-add-candidate-unit').click();
+  await page.locator('[data-testid="capacity-status"][data-state="stale"]').waitFor();
   assert.equal(await page.getByTestId('capacity-status').getAttribute('data-state'),'stale');
   await page.locator('.capacity-previous-result').waitFor();
   assert.match(await page.locator('.capacity-previous-result').innerText(), /Previous result/);
@@ -265,63 +320,94 @@ try {
   await noOverflow(page, 1440);
   await shot('capacity-1440-dark.png');
   await page.locator('.capacity-result-provenance > summary').click();
+  await page.locator('.capacity-result-provenance[open]').waitFor();
   await page.locator('.capacity-result-provenance').screenshot({path:path.join(out,'capacity-provenance.png'),animations:'disabled'});
   receipt.screenshots.push('capacity-provenance.png');
   assert.ok((await page.locator('.capacity-result-provenance').innerText()).includes(candidate.pairedSamplesHash.slice(0,12)));
   receipt.checks.push('Recorded exact peak cursor and frozen assumptions/provenance are inspectable');
   const jobs = page.getByTestId('capacity-jobs');
   await jobs.getByRole('combobox', {name:'Modeled jobs per page',exact:true}).selectOption('10');
+  await queryState(page,{jobSize:'10',jobPage:null});
+  await jobRows(page,10,24);
   assert.equal(await jobs.locator('tbody tr').count(), 10);
   const firstPage = await jobs.locator('.capacity-job-link').allTextContents();
   await jobs.getByRole('button', {name:'Next modeled jobs page',exact:true}).click();
+  await queryState(page,{jobSize:'10',jobPage:'2'});
+  await jobRows(page,10,24,{pageNumber:2,exclude:firstPage});
   assert.equal(await jobs.locator('tbody tr').count(), 10);
   const secondPage = await jobs.locator('.capacity-job-link').allTextContents();
   assert.equal(firstPage.some(id => secondPage.includes(id)), false, 'Paging must expose a different slice of actual modeled jobs.');
   await shot('capacity-jobs-page2.png');
   await jobs.getByRole('combobox', {name:'Modeled job type filter',exact:true}).selectOption(candidate.baseline.replay.jobs[0].type);
+  await queryState(page,{jobType:candidate.baseline.replay.jobs[0].type,jobPage:null});
   assert.equal(new URL(page.url()).searchParams.get('jobPage'), null, 'A changed filter resets pagination.');
   const matching = candidate.baseline.replay.jobs.filter(job=>job.type===candidate.baseline.replay.jobs[0].type).length;
+  await jobRows(page,Math.min(10,matching),matching);
   assert.equal(await jobs.locator('tbody tr').count(), Math.min(10,matching));
   await jobs.getByRole('columnheader').getByRole('button', {name:'Type',exact:true}).click();
+  await queryState(page,{jobSort:'type.asc',jobPage:null});
+  await jobs.locator('th.capacity-job-col-type[aria-sort="ascending"]').waitFor();
   assert.equal(await jobs.locator('th.capacity-job-col-type').getAttribute('aria-sort'), 'ascending');
   await shot('capacity-jobs-filtered-sorted.png');
   await jobs.getByRole('button', {name:'Reset filters',exact:true}).click();
+  await queryState(page,{jobQ:null,jobType:null,jobPhase:null,jobPage:null});
+  await jobRows(page,10,24);
   const search=jobs.getByRole('textbox',{name:'Filter all generated modeled jobs by ID, type, zone or assigned unit at cursor',exact:true});
   await search.fill(candidate.baseline.replay.jobs[0].id);
+  await queryState(page,{jobQ:candidate.baseline.replay.jobs[0].id,jobPage:null});
+  await jobRows(page,1,1);
   assert.equal(await jobs.locator('tbody tr').count(),1,'Global modeled-job search must inspect all24 loaded jobs.');
   await jobs.getByRole('button',{name:'Clear modeled job search',exact:true}).click();
+  await queryState(page,{jobQ:null,jobPage:null});
+  await jobRows(page,10,24);
   await jobs.getByRole('combobox',{name:'Modeled job phase filter',exact:true}).selectOption('queued');
+  await queryState(page,{jobPhase:'queued',jobPage:null});
+  await jobRows(page,Math.min(10,receipt.peak.queue),receipt.peak.queue);
   assert.equal(await jobs.locator('tbody tr').count(),Math.min(10,receipt.peak.queue),'Phase filtering must use the exact recorded peak cursor.');
   await jobs.getByRole('button', {name:'Reset filters',exact:true}).click();
+  await queryState(page,{jobQ:null,jobType:null,jobPhase:null,jobPage:null});
+  await jobRows(page,10,24);
+  await jobs.screenshot({path:path.join(out,'capacity-jobs-desktop.png'),animations:'disabled'});
+  receipt.screenshots.push('capacity-jobs-desktop.png');
   const link = jobs.locator('.capacity-job-link').first(), jobId = (await link.innerText()).trim();
   await link.click();
+  await queryState(page,{jobSelected:jobId});
   const drawer = page.getByRole('dialog', {name:`Modeled job ${jobId}`,exact:true});
   await drawer.waitFor();
   receipt.map = await mapProof(page);
   await shot('capacity-job-detail-map.png');
   await drawer.getByRole('button', {name:'Expand modeled job map',exact:true}).click();
+  await queryState(page,{jobMap:'expanded'});
+  await page.locator('dialog.capacity-job-drawer.is-map-expanded').waitFor();
   assert.ok((await drawer.getAttribute('class')).includes('is-map-expanded'));
   receipt.expandedMap = await mapProof(page);
   await shot('capacity-job-expanded-map.png');
   await drawer.getByRole('button', {name:'Exit expanded map',exact:true}).click();
+  await queryState(page,{jobMap:null});
+  await page.locator('dialog.capacity-job-drawer:not(.is-map-expanded)').waitFor();
   for (const tab of ['summary','timeline','assumptions']) {
-    await page.getByTestId(`capacity-job-tab-${tab}`).click();
+    await detailTab(page,tab);
     await shot(`capacity-job-${tab}.png`);
   }
-  await page.getByTestId('capacity-job-tab-location').click();
+  await detailTab(page,'location');
   await mapProof(page);
   await page.setViewportSize({width:390,height:844});
   await noOverflow(page,390);
   receipt.mobileMap = await mapProof(page);
   await shot('capacity-job-map-390-dark.png');
   await page.keyboard.press('Escape');await drawer.waitFor({state:'hidden'});
+  await queryState(page,{jobSelected:null,jobRun:null,jobTab:null,jobMap:null});
+  await page.waitForFunction(id=>document.activeElement?.id===`capacity-job-link-${id}`,jobId);
   assert.ok(await link.evaluate(element=>document.activeElement===element), 'Closing job detail returns keyboard focus to its real list link.');
   await shot('capacity-390-dark.png');
   await page.setViewportSize({width:1440,height:1000});
   await page.getByTestId('theme-toggle').click();
+  await queryState(page,{theme:'light'});
   await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
   await noOverflow(page,1440);await shot('capacity-1440-light.png');
   await page.getByTestId('theme-toggle').click();
+  await queryState(page,{theme:'dark'});
+  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
   receipt.checks.push('Actual generated-job pagination/filter/sort; native detail tabs/map expansion/Escape/focus return', '1440dark/390dark/1440light; actual AWS map painted at desktop and mobile sizes');
   assert.ok(normal.provider.successfulResponses > 0, 'Map verification requires successful requests to the real AWS basemap.');
   receipt.basemap = {successfulResponses:normal.provider.successfulResponses, providerHosts:[...normal.provider.hosts].sort(), canceledRequests:normal.provider.canceledRequests, actualPaintRequired:true};
@@ -329,6 +415,8 @@ try {
   await editAssumptions(page);
   const count = page.getByRole('spinbutton', {name:/Modeled incidents/});
   await count.fill('');await page.getByTestId('capacity-run').click();
+  await page.locator('[data-testid="capacity-status"][data-state="stale"]').waitFor();
+  await page.locator('.capacity-inline-notice[role="alert"]').waitFor();
   assert.ok(await count.evaluate(element=>!element.validity.valid), 'A blank count must remain invalid rather than coerce to zero.');
   await count.fill('201');await page.getByTestId('capacity-run').click();
   assert.ok(await count.evaluate(element=>element.validity.rangeOverflow), 'Native max200 validation must prevent oversized UI submission.');
@@ -341,6 +429,7 @@ try {
   assert.ok(!invalidBody.baseline&&!invalidBody.candidate,'A schema failure cannot return fabricated model results.');
   receipt.calls.rejectedCapacityRequests++;receipt.checks.push('Native blank/max validation prevents requests; actual invalid API request returns400 without model results');
   await count.fill('0');
+  await page.waitForFunction(()=>/\b0 modeled jobs\b/.test(document.querySelector('.capacity-draft-summary')?.textContent??''));
   const empty = await evaluate(page);
   assert.equal(empty.baseline.replay.jobs.length,0);assert.equal(empty.candidate.replay.jobs.length,0);
   assert.equal(empty.baseline.aggregate.onTimePct,null);assert.equal(empty.baseline.aggregate.p90ResponseMinutes,null);
