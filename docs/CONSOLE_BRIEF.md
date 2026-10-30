@@ -238,7 +238,8 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 | Item | Status / default | Blocks what |
 | --- | --- | --- |
 | W1 wireframe structure | **OWNER APPROVED** six destinations, Capacity lab regions and detail/map | Resolved; shell/overview subsequently approved |
-| W1b shell/overview preview | **OWNER APPROVED** source67673a8 and verified desktop/mobile preview | Resolved; first functional Capacity list/detail review is next |
+| W1b shell/overview preview | **OWNER APPROVED** source67673a8 and verified desktop/mobile preview | Resolved |
+| W1c first functional list/detail | Built source2ce3156; CI41130833000 passed; final images/contact sheet shown | **PENDING OWNER OK** before final QA |
 | W2 final field/enum/bounds mapping | Resolved in `packages/contracts/src/capacity.ts`; defaults factory shared with future UI; domain/API typecheck/tests/build passed in CI41110905525 | UI must consume this single contract |
 | W3 real staffing targets / service logs | Deferred; editable scenario target/durations are sufficient for this MVP | Any real-world staffing/SLA claim |
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
@@ -274,6 +275,10 @@ Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops
 
 ### Step4 functional Capacity increment
 
-- Owner explicitly approved shell/Overview and authorized functional forms, queue and detail/map. Current first-list implementation uses the real public Capacity API; review captures and exact CI evidence will be recorded once verified.
+- Owner explicitly approved shell/Overview and authorized functional forms, queue and detail/map. First-list implementation uses the real public Capacity API. Source2ce315602c32f60255812ecc48f653df1d5df227 passed [CI41130833000](https://github.com/upgradedev/standby/actions/runs/41130833000), including53 tests, builds and20 functional captures.
 - Existing web UI remains5ad. The read API is partially activated at3802 with capability metadata, bounded actual evaluations and rollback receipts; no new resources, paid routing or protected writes.
 - Next owner checkpoint: review the generated jobs list, all detail tabs and full/expanded map. Full release QA and later video/publication approvals remain separate.
+
+- Verified first-list record:10 browser checks,3 actual successful Capacity evaluations,1 actual400 boundary rejection and1 deliberate network abort. Identical plans have zero paired changes; candidate+1 preserves baseline/shared samples;0jobs retainsN/A observations. Filters/sort/pagination, exact recorded peak, four tabs, Escape/focus return, light/dark and1440/390 reflow pass. Actual AWS map geometry/pixels pass at normal/expanded/mobile sizes with live CSP preserved.
+- Real: geography, prepared directional Car road snapshot and server-computed modeled results. Assumed: arrivals/type mix/service/recovery/rosters/shifts. No private insured records or product demo-data fallback. UI preview is not a web deployment; read backend3802 is live, existing web5ad stays intact.
+- Human review pending: first list/detail OK, then full release QA and owner Step5 contact sheet. OS dropdown option rendering was not visually captured by headless Chromium and stays on the manual checklist. Small mobile word-wrapping was corrected and reverified after visual review.
