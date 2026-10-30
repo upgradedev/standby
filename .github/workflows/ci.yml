@@ -47,6 +47,18 @@ jobs:
           name: standby-console-preview
           path: .runtime/console-preview/
           retention-days: 3
+      - name: Functional Capacity preview with actual live API and AWS map
+        run: |
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+          node tools/console-preview/capacity.mjs --help
+          node --check tools/console-preview/capacity.mjs
+          node tools/console-preview/capacity.mjs --source "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-capacity-preview
+          path: .runtime/capacity-preview/
+          retention-days: 3
       - name: Package original software only
         run: |
           mkdir release
