@@ -10,6 +10,11 @@ on:
         description: Exact deployed source commit SHA
         required: true
         type: string
+      authenticated:
+        description: Also exercise isolated synthetic operator roles
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
@@ -29,3 +34,10 @@ jobs:
           STANDBY_LIVE_URL: ${{ inputs.url }}
           STANDBY_EXPECTED_RELEASE: ${{ inputs.release }}
         run: node tests/browser/live.mjs
+      - name: Verify real Cognito and workspace authorization
+        if: ${{ inputs.authenticated }}
+        env:
+          STANDBY_LIVE_URL: ${{ inputs.url }}
+          STANDBY_EXPECTED_RELEASE: ${{ inputs.release }}
+          STANDBY_TEST_IDENTITIES: ${{ secrets.STANDBY_TEST_IDENTITIES }}
+        run: node tests/browser/authenticated.mjs

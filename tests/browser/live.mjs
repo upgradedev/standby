@@ -14,6 +14,18 @@ const exact = (name) => ({ name, exact: true });
 const regexEscape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const browser = await chromium.launch({headless: true, args: ['--use-angle=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist']});
 
+async function readinessDiagnostic(label, response) {
+  let code = '';
+  if (response.status() !== 200) {
+    try {
+      const body = await response.json();
+      // Only a bounded symbolic error code is safe to retain; never the message/body.
+      if (typeof body?.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(body.code)) code = ` code=${body.code}`;
+    } catch { /* An empty/non-JSON gateway error is represented by its HTTP status. */ }
+  }
+  console.log(`HTTP readiness ${label}=${response.status()}${code}`);
+}
+
 async function visible(locator, code) {
   await locator.waitFor({state: 'visible', timeout: 20_000});
   check(await locator.isVisible(), code);
@@ -60,6 +72,11 @@ try {
     page.setDefaultTimeout(15_000);
     const pageErrors = [];
     page.on('pageerror', () => pageErrors.push('uncaught-page-error'));
+    page.on('response', (received) => {
+      const path = new URL(received.url()).pathname;
+      const route = ['health', 'public/manifest', 'public/zones', 'public/evaluations'].find((name) => path.endsWith(`/v1/${name}`));
+      if (route && received.status() >= 400) console.log(`HTTP browser-api ${route}=${received.status()}`);
+    });
     const response = await page.goto(`${base}/overview`, {waitUntil: 'domcontentloaded', timeout: 45_000});
     check(response?.status() === 200, 'live-document-not-200');
     const configResponse = await context.request.get(`${base}/config.json`);
@@ -68,6 +85,9 @@ try {
     const apiBase = new URL(config.apiBase.replace(/\/$/, '') + '/', base + '/').href.replace(/\/$/, '');
     const [healthResponse, manifestResponse, zonesResponse] = await Promise.all([
       context.request.get(`${apiBase}/health`), context.request.get(`${apiBase}/public/manifest`), context.request.get(`${apiBase}/public/zones`),
+    ]);
+    await Promise.all([
+      readinessDiagnostic('health', healthResponse), readinessDiagnostic('manifest', manifestResponse), readinessDiagnostic('zones', zonesResponse),
     ]);
     check([healthResponse, manifestResponse, zonesResponse].every((r) => r.status() === 200), 'live-api-not-ready');
     const health = await healthResponse.json(), manifest = await manifestResponse.json(), {zones} = await zonesResponse.json();

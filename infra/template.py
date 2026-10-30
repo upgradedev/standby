@@ -86,7 +86,7 @@ for name,statements in [('Read',read_statements),('Writer',writer_statements),('
     resource(name+'Log','AWS::Logs::LogGroup',{'LogGroupName':'/aws/lambda/standby-'+name.lower(),'RetentionInDays':14,'Tags':tags})
     resource(name+'Function','AWS::Lambda::Function',{'FunctionName':'standby-'+name.lower(),'Runtime':'nodejs22.x','Architectures':['arm64'],
         'Handler':'index.handler','Role':get(name+'Role','Arn'),'MemorySize':256 if name=='Retention' else 512,
-        'Timeout':60 if name=='Retention' else 15,'ReservedConcurrentExecutions':1 if name=='Retention' else 3,
+        'Timeout':60 if name=='Retention' else 15,'ReservedConcurrentExecutions':1 if name=='Retention' else (8 if name=='Read' else 3),
         'Environment':{'Variables':{'SOURCE_BUCKET':ref('SourceBucket'),'CACHE_BUCKET':ref('CacheBucket'),'TABLE_NAME':ref('PlansTable'),
             'USER_POOL_ID':ref('UserPool'),'RELEASE_SHA':ref('ReleaseSha'),'DATASET_KEY':'curated/dataset.json','MATRIX_KEY':'matrix/active.json'}},
         'Code':{'ZipFile':"exports.handler=async()=>({statusCode:503,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify({code:'RELEASE_PENDING',message:'The release is being prepared.'})});"},'Tags':tags},DependsOn=name+'Log')

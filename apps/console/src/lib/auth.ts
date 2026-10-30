@@ -29,7 +29,13 @@ export async function finishSignIn(config:Config): Promise<Session> {
   const token = await response.json() as {access_token:string;id_token?:string;expires_in:number};
   if (typeof token.access_token !== 'string' || !Number.isFinite(token.expires_in)) throw new Error('The identity service returned an invalid session.');
   let email = 'Operator';
-  try { const encoded = token.id_token?.split('.')[1]; if (encoded) email = JSON.parse(atob(encoded.replace(/-/g,'+').replace(/_/g,'/'))).email ?? 'Operator'; } catch { /* Display only; authority comes from server memberships. */ }
+  try {
+    const encoded = token.id_token?.split('.')[1];
+    if (encoded) {
+      const claims = JSON.parse(atob(encoded.replace(/-/g,'+').replace(/_/g,'/'))) as Record<string, unknown>;
+      email = [claims.email, claims['cognito:username'], claims.name].find((value): value is string => typeof value === 'string' && value.trim().length > 0) ?? 'Operator';
+    }
+  } catch { /* Display only; authority comes from server memberships. */ }
   const session = {accessToken:token.access_token,expiresAt:Date.now()+token.expires_in*1000,email};
   sessionStorage.setItem(AUTH,JSON.stringify(session));
   return session;
