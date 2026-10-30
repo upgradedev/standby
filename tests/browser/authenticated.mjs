@@ -122,7 +122,7 @@ async function signIn(identity,base) {
   check(workspaces.workspaces?.some(value=>value.workspaceId===identity.workspaceId&&value.role===identity.role),'workspace-list-inconsistent');
   await api(actor,'GET',`/workspaces/${identity.workspaceId}/plans`);
   await navigate(actor,'Planning queues');
-  await visible(page.getByText('Authorized workspace plans',exact('Authorized workspace plans')),'workspace-queue-scope-missing');
+  await visible(page.getByText('Authorized workspace plans',{exact:true}),'workspace-queue-scope-missing');
   if(identity.role==='Analyst') {
     check(await page.getByRole('button',exact('Create workspace plan')).count()===0,'analyst-sees-plan-write-menu');
     await visible(page.getByText('Analyst · read only',{exact:true}),'analyst-read-only-label-missing');
@@ -179,10 +179,10 @@ try {
   await dialog.getByRole('textbox',exact('Scenario name')).fill(uiPlanName);
   await dialog.getByRole('combobox',exact('Scenario fleet size')).selectOption('2');
   await dialog.getByRole('combobox',exact('Scenario approach threshold')).selectOption('15');
-  const creation=planner.page.waitForResponse(value=>value.url()===`${planner.apiBase}${plansPath}`&&value.request().method()==='POST');
+  const creation=planner.page.waitForResponse(value=>value.url()===`${planner.apiBase}${plansPath}`&&value.request().method()==='POST').catch(()=>null);
   await dialog.getByRole('button',exact('Save scenario')).click();
   const createdResponse=await creation;
-  check(createdResponse.status()===201,'ui-plan-save-not-acknowledged');
+  check(createdResponse&&createdResponse.status()===201,'ui-plan-save-not-acknowledged');
   const uiPlan=await createdResponse.json();
   check(uiPlan.name===uiPlanName&&uiPlan.workspaceId===workspaceId&&uiPlan.evaluationStatus==='NOT_RUN','ui-plan-save-scope-invalid');
   await dialog.waitFor({state:'hidden'});
@@ -223,10 +223,10 @@ try {
   const details=admin.page.getByRole('dialog',exact(name));
   await visible(details,'admin-plan-detail-missing');
   await visible(details.getByRole('heading',exact('Server-calculated proposal')),'admin-trusted-result-not-visible');
-  const reviewResponse=admin.page.waitForResponse(value=>value.url()===`${admin.apiBase}${path}/review`&&value.request().method()==='POST');
+  const reviewResponse=admin.page.waitForResponse(value=>value.url()===`${admin.apiBase}${path}/review`&&value.request().method()==='POST').catch(()=>null);
   await details.getByRole('button',exact('Mark exact result reviewed')).click();
   const reviewedResponse=await reviewResponse;
-  check(reviewedResponse.status()===200,'ui-admin-review-not-acknowledged');
+  check(reviewedResponse&&reviewedResponse.status()===200,'ui-admin-review-not-acknowledged');
   const reviewed=await reviewedResponse.json();
   check(reviewed.reviewStatus==='REVIEWED'&&reviewed.version===evaluated.version+1,'review-state-not-persisted');
   const reviewedAgain=await api(admin,'GET',path);
@@ -241,10 +241,10 @@ try {
   await admin.page.getByRole('tab',exact('Workspace')).click();
   await visible(admin.page.getByRole('button',exact('Save workspace defaults')),'admin-settings-write-menu-missing');
   await admin.page.getByLabel('Default road approach threshold',{exact:true}).selectOption(String(nextThreshold));
-  const settingsResponse=admin.page.waitForResponse(value=>value.url()===`${admin.apiBase}${settingsPath}`&&value.request().method()==='PATCH');
+  const settingsResponse=admin.page.waitForResponse(value=>value.url()===`${admin.apiBase}${settingsPath}`&&value.request().method()==='PATCH').catch(()=>null);
   await admin.page.getByRole('button',exact('Save workspace defaults')).click();
   const changedResponse=await settingsResponse;
-  check(changedResponse.status()===200,'ui-settings-save-not-acknowledged');
+  check(changedResponse&&changedResponse.status()===200,'ui-settings-save-not-acknowledged');
   const updated=await changedResponse.json();
   check(updated.settings.version===before.settings.version+1&&updated.settings.defaultThresholdMinutes===nextThreshold&&updated.configHash!==before.configHash,
     'settings-version-or-config-hash-unchanged');
