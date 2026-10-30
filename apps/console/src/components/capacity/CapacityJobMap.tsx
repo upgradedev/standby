@@ -25,7 +25,7 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
   useEffect(()=>{
     setReady(false);setError(null);
     if(!container.current||!config?.mapStyleUrl||!bounds){setError('The AWS basemap is not configured. Representative coordinates remain available below.');return;}
-    let instance:MapInstance;let removeFailed:(()=>void)|undefined;
+    let instance:MapInstance;let removeFailed:(()=>void)|undefined;let initialized=false;
     try {
       const key=config.mapApiKey??new URL(config.mapStyleUrl,location.origin).searchParams.get('key');
       instance=new maplibregl.Map({container:container.current,style:config.mapStyleUrl,
@@ -48,14 +48,14 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
           'circle-radius':['case',['==',['get','kind'],'site'],8,7],
           'circle-color':['case',['==',['get','kind'],'site'],success,accent],
           'circle-stroke-color':style.getPropertyValue('--map-stroke').trim(),'circle-stroke-width':2}});
-        fitSelection(instance,selection.current.zone,selection.current.site);
+        initialized=true;fitSelection(instance,selection.current.zone,selection.current.site);
         setError(null);setReady(true);
       });
       instance.on('error',()=>setError('The AWS basemap could not finish loading. Use the representative coordinates below or retry the map.'));
     } catch {removeFailed?.();map.current=null;setError('This browser could not initialize the map. Representative coordinates remain available below.');return;}
     const observer=new ResizeObserver(()=>{
       instance.resize();
-      if(instance.isStyleLoaded())fitSelection(instance,selection.current.zone,selection.current.site);
+      if(initialized)fitSelection(instance,selection.current.zone,selection.current.site);
     });observer.observe(container.current);
     return()=>{observer.disconnect();instance.remove();map.current=null;};
   },[config?.mapStyleUrl,config?.mapApiKey,bounds,attempt]);

@@ -316,6 +316,12 @@ try {
   assert.notEqual(candidate.inputHash, first.inputHash);
   receipt.candidate = {inputHash:candidate.inputHash, pairedSamplesHash:candidate.pairedSamplesHash, baselineUnchanged:true, baselineUnits:3, candidateUnits:4};
   receipt.checks.push('Candidate+1 uses the same paired samples and unchanged baseline; edits visibly mark previous results');
+  const dismissals=page.getByRole('button',{name:'Dismiss notification',exact:true});
+  while(await dismissals.count()) {
+    const count=await dismissals.count();await dismissals.first().click();
+    await page.waitForFunction(expected=>document.querySelectorAll('.toast').length===expected,count-1);
+  }
+  receipt.checks.push('Success notifications are dismissible before inspecting the full job table');
   await setPeak(page, candidate, 'baseline');
   await noOverflow(page, 1440);
   await shot('capacity-1440-dark.png');
@@ -375,26 +381,26 @@ try {
   const drawer = page.getByRole('dialog', {name:`Modeled job ${jobId}`,exact:true});
   await drawer.waitFor();
   receipt.map = await mapProof(page);
-  await shot('capacity-job-detail-map.png');
+  await shot('capacity-job-detail-map.png',page,{fullPage:false});
   await drawer.getByRole('button', {name:'Expand modeled job map',exact:true}).click();
   await queryState(page,{jobMap:'expanded'});
   await page.locator('dialog.capacity-job-drawer.is-map-expanded').waitFor();
   assert.ok((await drawer.getAttribute('class')).includes('is-map-expanded'));
   receipt.expandedMap = await mapProof(page);
-  await shot('capacity-job-expanded-map.png');
+  await shot('capacity-job-expanded-map.png',page,{fullPage:false});
   await drawer.getByRole('button', {name:'Exit expanded map',exact:true}).click();
   await queryState(page,{jobMap:null});
   await page.locator('dialog.capacity-job-drawer:not(.is-map-expanded)').waitFor();
   for (const tab of ['summary','timeline','assumptions']) {
     await detailTab(page,tab);
-    await shot(`capacity-job-${tab}.png`);
+    await shot(`capacity-job-${tab}.png`,page,{fullPage:false});
   }
   await detailTab(page,'location');
   await mapProof(page);
   await page.setViewportSize({width:390,height:844});
   await noOverflow(page,390);
   receipt.mobileMap = await mapProof(page);
-  await shot('capacity-job-map-390-dark.png');
+  await shot('capacity-job-map-390-dark.png',page,{fullPage:false});
   await page.keyboard.press('Escape');await drawer.waitFor({state:'hidden'});
   await queryState(page,{jobSelected:null,jobRun:null,jobTab:null,jobMap:null});
   await page.waitForFunction(id=>document.activeElement?.id===`capacity-job-link-${id}`,jobId);
