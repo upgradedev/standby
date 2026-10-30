@@ -102,6 +102,8 @@ Capacity lab έχει input/result context στην ίδια σελίδα. Το 
 
 Κάθε figure δείχνει mode, run/replication/time scope, denominator, source και assumption status. Κανένα result πριν ολοκληρωθεί matching run. Αλλαγή inputs σημειώνει το παλιό result Stale.
 
+Στη σύγκριση εμφανίζεται ο μέσος όρος του metric ανά replication, το παρατηρημένο min/max και το πλήθος replications με ορισμένο metric. Το “mean replication p90” δεν είναι pooled p90 ούτε confidence interval. Το replay αφορά μόνο την πρώτη replication και εμφανίζει τα δικά της job/queue/response sample counts· δεν αναμειγνύεται με τους aggregate δείκτες.
+
 | Metric | Definition / source | Drill-down |
 | --- | --- | --- |
 | Historical coverage / road approach | Existing historical matrix/evaluation, ίδιο cohort/threshold | Existing zone/map scope |
