@@ -1,5 +1,13 @@
 # History
 
+## 2026-10-30 — Codex — corrected freeze and completed verified video
+
+Independent review found inaccurate cohort labels in the accessible map list and overbroad private-results wording in Settings. Recorded unfreeze, corrected only those two runtime surfaces and re-froze at 48caf91933de5f24553c3ae9d0772c12186f3ded. Source CI 41053286838 and final anonymous desktop/tablet/mobile acceptance 41053626057 passed. Previous real Cognito role acceptance remains tied to its original exact release; service/domain code is unchanged. PR4 merged as 5d69709d13f7f1bfa551d171a00b8114b9d0dc4d.
+
+Final video run 41055059142 passed actual encoded media checks: 145 seconds audio and video, 30 fps, 23 cues; MP4 SHA256 c1cd41e1f7ee4241ab5a6f7d6d8445530bb52b5bc7e7c17578e8d879c2687f89. Artifact 12975933421 is retained through November20. Recorded native slate and real post-roll repaired the capture instrument without padding or looser gates; measured scroll timing repaired remaining actions while preserving the same story. No further product changes or routing calls.
+
+Owner-only publication/eligibility and local free space are pending. C: reached zero free bytes; generated-copy cleanup was automatically rejected as blocked by policy. Final documentation is committed through GitHub REST to avoid writing local Git objects. The local checkout still contains pre-final uncommitted STATE/TRAPS edits; after space is available, compare them with this upstream commit before reconciling. Do not re-deploy or re-record the unchanged frozen application merely to reconcile docs. Writer claims released for handoff. No public video upload, new terms acceptance or Submitted state is claimed.
+
 ## 2026-10-30 — Codex — complete live acceptance and product freeze
 
 Live acceptance https://github.com/upgradedev/standby/actions/runs/41041997256 passed the complete anonymous journey at desktop/tablet/mobile and real Cognito Analyst/Planner/Admin flows, including exact review, settings conflicts and stale-review invalidation. Earlier test readiness/label/tablet-mode assumptions were corrected while keeping all assertions. Actual app defects fixed were read-concurrency bursts and modal keyboard containment. Frozen application source is 49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a; later changes affect only acceptance/demo tooling, and `git diff 49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a -- apps/console packages services` is empty. Builder draft 3LPVbxnjerX5pvDmH8FsdDG8uuA autosaved the actual dataset/method/source/app narrative. Original neural narration generated within beat budgets after freeze; actual recording/public video and final publication are next.

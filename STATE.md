@@ -4,7 +4,7 @@
 
 | Deliverable from live rules | Status | Evidence or next action |
 |---|---|---|
-| Original application displaying real location/spatial data on a map | IMPLEMENTED | Shell, five routes and real-data AWS map are live; full acceptance in progress. |
+| Original application displaying real location/spatial data on a map | IMPLEMENTED | Shell, five routes and real-data AWS map are live; final anonymous acceptance passed. |
 | AWS location or data service in application/pipeline | IMPLEMENTED | Dedicated AWS serverless stack and real Location matrix deployed. |
 | Publicly reachable application running on AWS, or working map shown in demo | IMPLEMENTED | Anonymous HTTPS app returns HTTP 200; video still outstanding. |
 | Written project published on AWS Builder Center describing dataset, mapping method, AWS service and live URL | DRAFT | Project 3LPVbxnjerX5pvDmH8FsdDG8uuA created; title, description, body, source and app link autosaved. Video and final publication remain. |
@@ -15,7 +15,9 @@
 
 ## Right now
 
-Implementation started after the owner resumed on 2026-10-30. Public AWS application: https://d34x1513u5u1qs.cloudfront.net . Original source: https://github.com/upgradedev/standby . Hosted typecheck, tests and production build pass. Full live acceptance now passes at desktop/tablet/mobile and through real Cognito Analyst/Planner/Admin flows. Read-concurrency and modal focus defects found by earlier runs were fixed; test readiness/locator mistakes were corrected without relaxing assertions. A real sanitized Austin snapshot and private HERE Car matrix exist. No paid routing is available to the public evaluator. USD 25 total remains the approved budget. Next: finish live acceptance, freeze, produce public video, publish Builder project and submit.
+Final narrated video is READY as a reviewed CI artifact, but has NOT been publicly hosted on a qualifying video service or submitted. [PRIMARY] https://github.com/upgradedev/standby/actions/runs/41055059142 passed: frozen live release 48caf91933de5f24553c3ae9d0772c12186f3ded, video/audio both 145 seconds, 30 fps, 23 in-bounds caption cues. Encoded MP4 SHA256 c1cd41e1f7ee4241ab5a6f7d6d8445530bb52b5bc7e7c17578e8d879c2687f89. Download artifact https://github.com/upgradedev/standby/actions/runs/41055059142/artifacts/12975933421 (retained until 2026-11-20). Final publication awaits explicit YouTube terms/Builder submission confirmation and owner eligibility facts. Local C: was observed at zero free bytes; an async request asks the owner to free 500 MB before download/upload. Automatic approval rejected deletion of generated temporary copies as blocked by policy, without a more specific reason. No alternate destructive cleanup was attempted.
+
+Implementation started after the owner resumed on 2026-10-30. Public AWS application: https://d34x1513u5u1qs.cloudfront.net . Original source: https://github.com/upgradedev/standby . Hosted typecheck, tests and production build pass. Full live acceptance now passes at desktop/tablet/mobile and through real Cognito Analyst/Planner/Admin flows. Read-concurrency and modal focus defects found by earlier runs were fixed; test readiness/locator mistakes were corrected without relaxing assertions. A real sanitized Austin snapshot and private HERE Car matrix exist. No paid routing is available to the public evaluator. USD 25 total remains the approved budget. Corrected freeze is 48caf91933de5f24553c3ae9d0772c12186f3ded; final anonymous acceptance passed. Next: finish the public video, publish Builder project and submit after owner action-time attestations.
 
 ## Prize aim and structure
 
@@ -53,8 +55,7 @@ Four equally weighted criteria: Technical innovation and originality; Craft and 
 
 | Agent | Files or area | Started UTC | Expected done |
 |---|---|---|---|
-| Codex coordinator | Release freeze, demo production, AWS retention/budget checks, Builder preparation | 2026-10-30 09:44 UTC | Concrete reviewable submission |
-| — | Console, data/domain and writer lanes delivered; no active child edits | — | — |
+| No active writer claim | Owner action-time terms, eligibility and local disk space remain pending | 2026-10-30 12:32 UTC | Resume after owner response |
 
 ## Blocked on
 
@@ -105,9 +106,15 @@ Architecture review corrections integrated: CloudFront can never reach raw/matri
 
 ## Next action
 
-Produce and verify the public demo against frozen application commit `49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a`; finish Builder and video publication and visibly verify Submitted. Public draft URL: https://builder.aws.com/project/3LPVbxnjerX5pvDmH8FsdDG8uuA/standby-plan-roadside-standby-with-real-road-times . No automatic continuation is scheduled. USD 25 total approval persists; never re-request unchanged budget permission. New binding terms, final eligibility attestations and owner password entry remain owner action-time steps. Owner account enrollment helper is `python tools/create-operator.py --username <owner-choice>` and reads the new password interactively; never collect it in chat.
+Produce and verify the public demo against corrected frozen application commit `48caf91933de5f24553c3ae9d0772c12186f3ded`; finish Builder and video publication and visibly verify Submitted. Public draft URL: https://builder.aws.com/project/3LPVbxnjerX5pvDmH8FsdDG8uuA/standby-plan-roadside-standby-with-real-road-times . No automatic continuation is scheduled. USD 25 total approval persists; never re-request unchanged budget permission. New binding terms, final eligibility attestations and owner password entry remain owner action-time steps. Owner account enrollment helper is `python tools/create-operator.py --username <owner-choice>` and reads the new password interactively; never collect it in chat.
 
 ## Frozen application release and live acceptance
+
+**Corrected product freeze: `48caf91933de5f24553c3ae9d0772c12186f3ded`, declared 2026-10-30 before the final recording.** Only the two stated public cohort/privacy defects changed runtime behavior since the original freeze. Source/build validation passed https://github.com/upgradedev/standby/actions/runs/41053286838 . The final video will use a fresh full capture against this release; the original narration remains accurate and is reused without new synthesis.
+
+[PRIMARY] Corrected release live acceptance https://github.com/upgradedev/standby/actions/runs/41053626057 passed the full anonymous journey at desktop, tablet and mobile (`gh run view 41053626057 --log`). Both `/config.json` and `/api/v1/health` independently returned corrected freeze `48caf91933de5f24553c3ae9d0772c12186f3ded`. PR4 merged as `5d69709d13f7f1bfa551d171a00b8114b9d0dc4d`. Original authenticated acceptance remains tied to its exact source and the unchanged service/domain implementation. No owner password was created. Console and independent review lanes released their claims after verifying the two source fixes.
+
+Unfreeze 2026-10-30 12:07 UTC for two verified false judge-facing statements: accessible map list calls fixed held-out counts generic evaluation reports even when training is selected; Settings calls all provider-derived results private despite anonymous derived comparisons. Affected surfaces are Coverage map and Settings. Correct only these statements/counts, re-freeze and record all video beats against the corrected live SHA. Console lane claims these two files in its isolated checkout; coordinator owns integration and deployment. Earlier acceptance remains evidence for its exact original release, with a targeted live recheck required after this correction.
 
 **Product freeze: `49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a`, declared before recording on 2026-10-30.** Unfreeze only for a false judge-facing claim, broken mandatory deliverable or rule violation, recording reason and affected video beats here first. Runtime source is unchanged by later acceptance/narration tooling (`git diff 49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a -- apps/console packages services` returns empty).
 
@@ -122,3 +129,5 @@ Synthetic role users share a dedicated acceptance workspace, with suppressed inv
 Original narration was generated after product freeze with `python tools/demo/voice.py --release 49b8a940f83dcdf72fa5ee72aca7ba55553dcc7a`: all six beat files passed their measured duration budgets. Receipt reserved 1971 characters. ESTIMATE neural speech USD 0.031536 at verified USD 0.000016/character, before tax/free allowances; actual invoiced spend remains unmeasured. No new route matrix call was needed. Recording and final media verification remain pending.
 
 Demo production instrument defect: first six captures completed but final rendering correctly failed because the unavailable-unit clip had an inferred Node-clock in-point and insufficient usable media. Product freeze remains unchanged; tools-only repair is required for the broken mandatory video deliverable. Recorder now uses the documented explicit Playwright screencast API after readiness, browser presentation timestamps and actual ffprobe duration; baseline visibly restores the shared threshold before the proposal beat. The workflow preserves short-lived captured beats for independent repair/re-render. No application source changed.
+
+Final live authorization fixtures were removed after PASS: `python` owner cleanup receipt `.runtime/auth-cleanup-receipt.json` records only the synthetic users, their isolated acceptance workspace items/results and the temporary test secret. Owner accounts and live source/matrix were untouched. Live retention drill `.runtime/retention-live-receipt.json` passed: expired synthetic object deleted, fresh probe preserved, active matrix ETag unchanged.

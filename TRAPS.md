@@ -1,3 +1,7 @@
 # Traps
 
-No project-specific failure has yet cost more than an hour. Keep verified current constraints in STATE.md; append costly reproducible failures here when they occur.
+## 2026-10-30 — Browser capture clocks and static tails
+
+Video production lost more than an hour to inferred recording in-points and static ending holds. Native Playwright screencast frames do not necessarily span the host wall-clock recording duration. A real retained baseline captured for about 36 seconds decoded to 29.766 seconds, including a 1.000-second magenta sync slate, leaving only 28.766 usable seconds for a 30-second beat. `python tools/demo/sync.py --media .runtime/demo-slate/raw/baseline-1793360604810.webm --seconds 30` correctly rejected it. The public onFrame JPEG subscriber also delayed delivery by up to ten seconds on the hosted software-rendering runner.
+
+Use path-only native capture, a recorded editorial slate decoded from actual pixels, and real post-roll hover paints beyond the published window. Preserve individual completed beats and structured failure receipts before rendering. Never infer usable footage from Node start time, enlarge a passing tolerance or add artificial video padding. Verify the final encoded bytes, with audio/video ending within one frame and captions in bounds. A failed raw clip or stale inherited failure file is not the latest run's verdict; bind receipts to the exact raw filename and source SHA.
