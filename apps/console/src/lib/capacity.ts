@@ -197,7 +197,7 @@ export function validateCapacityResult(raw: unknown, submitted: CapacityInput, f
   for (const name of ['baseline', 'candidate'] as const) {
     const policy = object(result[name]);
     const aggregate = validateAggregate(policy.aggregate, submitted.replications);
-    check(aggregate.totalArrivals!.mean === submitted.jobCount && aggregate.totalArrivals!.min === submitted.jobCount && aggregate.totalArrivals!.max === submitted.jobCount);
+    check(near(aggregate.totalArrivals!.mean, submitted.jobCount) && aggregate.totalArrivals!.min === submitted.jobCount && aggregate.totalArrivals!.max === submitted.jobCount);
     check(submitted.jobCount === 0 ? aggregate.onTimePct === null : aggregate.onTimePct?.n === submitted.replications
       && near(aggregate.onTimePct.mean, aggregate.onTime!.mean / submitted.jobCount * 100));
     aggregates.push(aggregate);
