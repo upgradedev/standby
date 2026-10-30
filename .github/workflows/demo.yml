@@ -1,0 +1,66 @@
+name: Standby demo production
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Verified public AWS application
+        required: true
+        type: string
+      release:
+        description: Full frozen application commit SHA
+        required: true
+        type: string
+      voice_sha256:
+        description: SHA256 of the bounded original narration ZIP
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Provision media tools in hosted CI only
+        run: |
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Fetch original narration from the exact temporary private URL
+        env:
+          VOICE_ARCHIVE_URL: ${{ secrets.STANDBY_VOICE_ARCHIVE_URL }}
+          VOICE_SHA256: ${{ inputs.voice_sha256 }}
+        run: |
+          python - <<'PY'
+          import hashlib,io,os,pathlib,urllib.request,zipfile
+          raw=urllib.request.urlopen(os.environ['VOICE_ARCHIVE_URL'],timeout=30).read()
+          assert hashlib.sha256(raw).hexdigest()==os.environ['VOICE_SHA256']
+          expected={x+'.mp3' for x in ['overview','history','baseline','proposal','unavailable','provenance']}
+          archive=zipfile.ZipFile(io.BytesIO(raw))
+          assert set(archive.namelist())==expected and sum(x.file_size for x in archive.infolist())<10000000
+          out=pathlib.Path('.runtime/voice');out.mkdir(parents=True)
+          for name in sorted(expected): (out/name).write_bytes(archive.read(name))
+          print('Verified six original narration files.')
+          PY
+      - name: Record actual frozen app interactions
+        env:
+          STANDBY_DEMO_URL: ${{ inputs.url }}
+          STANDBY_DEMO_RELEASE: ${{ inputs.release }}
+        run: node tools/demo/record.mjs --out .runtime/demo --beat all
+      - name: Render and verify actual media bytes
+        run: python tools/demo/render.py --capture .runtime/demo --voice-dir .runtime/voice --release '${{ inputs.release }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standby-public-demo
+          retention-days: 3
+          path: |
+            .runtime/demo/standby-demo.mp4
+            .runtime/demo/captions.srt
+            .runtime/demo/verification.json
+            .runtime/demo/project.json
