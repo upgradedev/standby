@@ -53,7 +53,10 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
       });
       instance.on('error',()=>setError('The AWS basemap could not finish loading. Use the representative coordinates below or retry the map.'));
     } catch {removeFailed?.();map.current=null;setError('This browser could not initialize the map. Representative coordinates remain available below.');return;}
-    const observer=new ResizeObserver(()=>instance.resize());observer.observe(container.current);
+    const observer=new ResizeObserver(()=>{
+      instance.resize();
+      if(instance.isStyleLoaded())fitSelection(instance,selection.current.zone,selection.current.site);
+    });observer.observe(container.current);
     return()=>{observer.disconnect();instance.remove();map.current=null;};
   },[config?.mapStyleUrl,config?.mapApiKey,bounds,attempt]);
 
