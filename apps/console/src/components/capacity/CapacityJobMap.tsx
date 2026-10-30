@@ -12,7 +12,9 @@ function fitSelection(instance:MapInstance,zone:DemandZone,site:StandbySite|unde
   bounds.extend(zone.position);
   for(const position of zone.polygon)bounds.extend(position);
   if(site)bounds.extend(site.position);
-  instance.fitBounds(bounds,{padding:55,maxZoom:13,duration:0});
+  const container=instance.getContainer();
+  const padding=Math.max(55,Math.min(container.clientWidth,container.clientHeight)*.18);
+  instance.fitBounds(bounds,{padding,maxZoom:13,duration:0});
 }
 
 /** Geography only: the point represents a zone, never a customer or vehicle position. */

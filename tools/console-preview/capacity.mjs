@@ -237,7 +237,12 @@ async function mapProof(target) {
     catch {throw new Error('The required in-memory map pixel decoder failed.');}
     try {proof=analyzeMapRgb(rgb);break;}
     catch {
-      if(attempt===2)throw new Error('The actual map did not show nonblank geographic paint.');
+      if(attempt===2){
+        await writeFile(path.join(out,'capacity-map-failed-pixels.png'),pixels);
+        receipt.screenshots.push('capacity-map-failed-pixels.png');
+        receipt.mapFailure={geometry,reason:'Required nonblank geographic paint was not visible.'};
+        throw new Error('The actual map did not show nonblank geographic paint.');
+      }
       // Yield to actual browser paint boundaries; no fixed-duration sleep.
       await target.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     }
