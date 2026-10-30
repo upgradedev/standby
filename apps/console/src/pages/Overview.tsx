@@ -29,6 +29,13 @@ export default function Overview() {
       <span>{cohortLabel} reports</span><span>{integer(zones.length)} train-derived zones</span>
       <span className="context-right">Snapshot <code>{shortHash(dataset?.hash)}</code></span>
     </div>
+    <div className="overview-scope"><strong>Historical coverage</strong><span>Generic placement fleet · directional Car approach · no workload or service-time assumptions in these figures</span></div>
+    <div className="kpi-grid">
+      <Kpi label="Eligible historical reports" value={integer(demand)} note={`${cohortLabel} cohort · all eligible reports`} icon={<FileBarChart2 size={18}/>} tag="OBSERVED"/>
+      <Kpi label="Available placement units" value={`${input.fleetSize-(input.unavailableUnitId?1:0)}`} note={`${input.fleetSize} assumed generic service vehicles`} icon={<Truck size={18}/>} tag="ASSUMED"/>
+      <Kpi label={`Within ${threshold} min by road`} value={plan?percent(plan.coveragePct):'Not evaluated'} note={plan?`${integer(plan.coveredDemand)} / ${integer(plan.totalDemand)} report weights`:'Run a matching coverage comparison'} icon={<ShieldCheck size={18}/>} tag="MODELED" positive={!!plan}/>
+      <Kpi label="P90 road approach" value={quantile(plan?.p90)} note={plan?`Report-weighted · n=${integer(plan.totalDemand)} · travel only`:'Customer response time is not measured here'} icon={<Clock3 size={18}/>} tag="MODELED"/>
+    </div>
     <section className="capacity-callout" aria-labelledby="capacity-intro-title">
       <div className="capacity-callout-icon"><FlaskConical size={27}/></div>
       <div className="capacity-callout-copy"><Badge tone="accent">Capacity lab · scope preview</Badge>
@@ -38,13 +45,6 @@ export default function Overview() {
       </div>
       <Link className="button secondary" to="/capacity">View capacity scope<ArrowRight size={16}/></Link>
     </section>
-    <div className="overview-scope"><strong>Historical coverage</strong><span>Generic placement fleet · directional Car approach · no workload or service-time assumptions in these figures</span></div>
-    <div className="kpi-grid">
-      <Kpi label="Eligible historical reports" value={integer(demand)} note={`${cohortLabel} cohort · all eligible reports`} icon={<FileBarChart2 size={18}/>} tag="OBSERVED"/>
-      <Kpi label="Available placement units" value={`${input.fleetSize-(input.unavailableUnitId?1:0)}`} note={`${input.fleetSize} assumed generic service vehicles`} icon={<Truck size={18}/>} tag="ASSUMED"/>
-      <Kpi label={`Within ${threshold} min by road`} value={plan?percent(plan.coveragePct):'Not evaluated'} note={plan?`${integer(plan.coveredDemand)} / ${integer(plan.totalDemand)} report weights`:'Run a matching coverage comparison'} icon={<ShieldCheck size={18}/>} tag="MODELED" positive={!!plan}/>
-      <Kpi label="P90 road approach" value={quantile(plan?.p90)} note={plan?`Report-weighted · n=${integer(plan.totalDemand)} · travel only`:'Customer response time is not measured here'} icon={<Clock3 size={18}/>} tag="MODELED"/>
-    </div>
     <div className="overview-grid">
       <Panel title="When reports were published" kicker="Historical publication pattern" action={<Badge>{cohortLabel}</Badge>}>
         <figure className="publication-figure">
