@@ -156,17 +156,20 @@ async function actions(page,id,anchor,diagnostics,clock) {
     await at(19,()=>page.getByRole('combobox',exact('Road approach threshold')).selectOption('10'));
     await at(22,()=>evaluation(page));
   } else if(id==='proposal') {
-    await at(4,()=>page.getByRole('button',exact('Proposal')).click());
-    await at(12,()=>page.getByRole('combobox',exact('Map layer')).selectOption('difference'));
-    await at(21,async()=>{const gap=page.locator('.gap-card').first();if(await gap.count())await gap.click();});
-    await at(25,()=>page.locator('.map-panel').scrollIntoViewIfNeeded());
+    await at(2,()=>page.getByRole('button',exact('Proposal')).click());
+    await at(6,()=>page.getByRole('combobox',exact('Map layer')).selectOption('difference'));
+    await at(11,async()=>{const gap=page.locator('.gap-card').first();if(await gap.count())await gap.click();});
+    // Actual hosted recording measured this map scroll at 6.524s. Give it
+    // thirteen seconds inside the unchanged thirty-second semantic window.
+    await at(17,()=>page.locator('.map-panel').scrollIntoViewIfNeeded());
   } else if(id==='unavailable') {
-    await at(5,()=>page.getByRole('button',{name:/^unit-1, available\./}).click());
-    await at(10,()=>evaluation(page));
-    await at(19,()=>page.getByRole('heading',exact('Priority uncovered zones')).scrollIntoViewIfNeeded());
+    await at(2,()=>page.getByRole('button',{name:/^unit-1, available\./}).click());
+    await at(6,()=>evaluation(page));
+    await at(13,()=>page.getByRole('heading',exact('Priority uncovered zones')).scrollIntoViewIfNeeded());
   } else if(id==='provenance') {
-    await at(6,()=>page.getByRole('heading',exact('Road-time model')).scrollIntoViewIfNeeded());
-    await at(11,()=>page.getByRole('heading',exact('Import quality')).scrollIntoViewIfNeeded());
+    // These two panels share a row at the fixed 1440px recording viewport.
+    // One real scroll shows both; a second late scroll adds no evidence.
+    await at(2,async()=>{await page.getByRole('heading',exact('Road-time model')).scrollIntoViewIfNeeded();await visible(page.getByRole('heading',exact('Road-time model')));await visible(page.getByRole('heading',exact('Import quality')));});
   }
 }
 
