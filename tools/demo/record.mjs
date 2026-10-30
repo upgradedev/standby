@@ -15,7 +15,7 @@ import path from 'node:path';
 import {performance} from 'node:perf_hooks';
 import {execFileSync} from 'node:child_process';
 import {BEATS, FPS, VIEWPORT, storyboard} from './beats.mjs';
-import {PresentedWindow,validateCompletedCapture} from './presented-window.mjs';
+import {PresentedWindow,validateCompletedCapture,frameObservation} from './presented-window.mjs';
 
 function argument(name, fallback) {const index=process.argv.indexOf(name);return index<0?fallback:process.argv[index+1];}
 const base=process.env.STANDBY_DEMO_URL?.replace(/\/$/,'');
@@ -83,35 +83,62 @@ async function recordPresentedBeat(page,destination,beat) {
   // https://playwright.dev/docs/api/class-screencast#screencast-start
   // No context-wide recordVideo and no inferred pre-roll trimming remain.
   const clock=new PresentedWindow(VIEWPORT);
+  const diagnostics={schemaVersion:1,beatId:beat.id,durationSeconds:beat.seconds,startRequestedAtUnixMs:Date.now(),startRequestedAtPerformanceMs:performance.now(),firstFrames:[],lastFrames:[],actions:[]};
   let firstResolve,firstReject,frameError,firstObservedAtPerformance,endResolve,endRequiredAtUnixMs=Infinity;
   const firstFrame=new Promise((resolve,reject)=>{firstResolve=resolve;firstReject=reject;});
   const endFrame=new Promise(resolve=>{endResolve=resolve;});
-  await page.screencast.start({path:destination,size:VIEWPORT,fps:FPS,onFrame:frame=>{
-    try {
-      const initial=clock.first===null;clock.observe(frame);
-      if(initial){firstObservedAtPerformance=performance.now();firstResolve();}
-      if(clock.hasPresentedAtOrAfter(endRequiredAtUnixMs))endResolve();
-    }catch(error){frameError=error;firstReject(error);}
-  }});
+  let failure,receipt;
   try {
+    await page.screencast.start({path:destination,size:VIEWPORT,fps:FPS,onFrame:frame=>{
+      const observation=frameObservation(frame,Date.now(),performance.now());
+      if(diagnostics.firstFrames.length<2)diagnostics.firstFrames.push(observation);
+      diagnostics.lastFrames.push(observation);if(diagnostics.lastFrames.length>2)diagnostics.lastFrames.shift();
+      try {
+        const initial=clock.first===null;clock.observe(frame);
+        if(initial){firstObservedAtPerformance=observation.observedAtPerformanceMs;diagnostics.firstCallbackAtUnixMs=observation.observedAtUnixMs;diagnostics.firstCallbackAtPerformanceMs=firstObservedAtPerformance;firstResolve();}
+        if(clock.hasPresentedAtOrAfter(endRequiredAtUnixMs))endResolve();
+      }catch(error){frameError=error;firstReject(error);}
+    }});
+    diagnostics.startResolvedAtUnixMs=Date.now();diagnostics.startResolvedAtPerformanceMs=performance.now();
     await bounded(firstFrame,15_000,'first-presented-frame-timeout');
-    await actions(page,beat.id,firstObservedAtPerformance);
+    diagnostics.actionsAnchorAtPerformanceMs=firstObservedAtPerformance;
+    await actions(page,beat.id,firstObservedAtPerformance,diagnostics,clock);
     const actionsCompletedAtUnixMs=Date.now();
+    diagnostics.actionsCompletedAtUnixMs=actionsCompletedAtUnixMs;
+    diagnostics.actionsCompletedAfterFirstPresentationSeconds=(actionsCompletedAtUnixMs-clock.first)/1000;
+    diagnostics.actionsCompletedAfterFirstCallbackSeconds=(performance.now()-firstObservedAtPerformance)/1000;
     check(actionsCompletedAtUnixMs<=clock.first+beat.seconds*1000,'demo-actions-overran-captured-window');
     await waitUntil(firstObservedAtPerformance+beat.seconds*1000);
     // Synchronize the ending against a NEW real browser presentation. Hovering
     // an inactive navigation link changes the real app's existing hover style;
     // no overlay, fabricated frame, DOM mutation or guessed tail is introduced.
     endRequiredAtUnixMs=Math.max(clock.first+beat.seconds*1000,Date.now());
+    diagnostics.endingPresentationTargetAtUnixMs=endRequiredAtUnixMs;
     await page.mouse.move(0,0);
     await page.locator('aside.sidebar nav .nav-item:not(.active)').first().hover();
     if(!clock.hasPresentedAtOrAfter(endRequiredAtUnixMs))await bounded(endFrame,10_000,'ending-presented-frame-timeout');
     if(frameError)throw frameError;
-    return clock.receipt(beat.seconds,actionsCompletedAtUnixMs);
-  }finally{await page.screencast.stop();} // Documented stop flushes the actual WebM.
+    receipt=clock.receipt(beat.seconds,actionsCompletedAtUnixMs);
+  }catch(error){failure=error;}
+  finally{
+    diagnostics.stopRequestedAtUnixMs=Date.now();diagnostics.stopRequestedAtPerformanceMs=performance.now();
+    try{await page.screencast.stop();}catch(error){if(!failure)failure=error;}
+    diagnostics.stopResolvedAtUnixMs=Date.now();diagnostics.stopResolvedAtPerformanceMs=performance.now();
+    diagnostics.finalFrameClock={firstPresentedAtUnixMs:clock.first,lastPresentedAtUnixMs:clock.last,framesObserved:clock.frames,spanSeconds:clock.first===null||clock.last===null?null:(clock.last-clock.first)/1000};
+  }
+  if(failure){failure.captureDiagnostics=diagnostics;throw failure;}
+  return {receipt,diagnostics};
 }
-async function actions(page,id,anchor) {
-  async function at(seconds,action) {await waitUntil(anchor+seconds*1000);check(performance.now()-anchor<(BEATS.find(beat=>beat.id===id).seconds-1)*1000,'demo-action-overran-beat');await action();}
+async function actions(page,id,anchor,diagnostics,clock) {
+  async function at(seconds,action) {
+    await waitUntil(anchor+seconds*1000);
+    const startedAtUnixMs=Date.now(),startedAtPerformanceMs=performance.now();
+    const event={index:diagnostics.actions.length,scheduledSeconds:seconds,startedAtUnixMs,startedAtPerformanceMs,startedAfterFirstPresentationSeconds:(startedAtUnixMs-clock.first)/1000,startedAfterFirstCallbackSeconds:(startedAtPerformanceMs-anchor)/1000};
+    diagnostics.actions.push(event);
+    try{check(performance.now()-anchor<(BEATS.find(beat=>beat.id===id).seconds-1)*1000,'demo-action-overran-beat');await action();event.status='SUCCEEDED';}
+    catch(error){event.status='FAILED';throw error;}
+    finally{event.endedAtUnixMs=Date.now();event.endedAtPerformanceMs=performance.now();event.endedAfterFirstPresentationSeconds=(event.endedAtUnixMs-clock.first)/1000;event.endedAfterFirstCallbackSeconds=(event.endedAtPerformanceMs-anchor)/1000;}
+  }
   if(id==='overview') {
     await at(5,()=>page.locator('.hour-chart button').nth(16).hover());
     await at(11,()=>page.locator('.comparison-chart').scrollIntoViewIfNeeded());
@@ -182,8 +209,16 @@ try {
     await setup(page,beat.id);
     step=`${beat.id}:capture`;
     const captured=path.join(raw,`${beat.id}-${Date.now()}.webm`);
-    const captureClock=await recordPresentedBeat(page,captured,beat);
+    let captureClock,captureDiagnostics;
+    try{const capture=await recordPresentedBeat(page,captured,beat);captureClock=capture.receipt;captureDiagnostics=capture.diagnostics;}
+    catch(error){
+      let sourceActualSeconds=null;try{const measured=mediaSeconds(captured);if(Number.isFinite(measured))sourceActualSeconds=measured;}catch{/* A failed recording still retains its bounded clock receipt. */}
+      const failureCode=error instanceof Error&&/^[a-z][a-z-]+$/.test(error.message)?error.message:'demo-action-or-timeout';
+      await writeFile(path.join(out,`${beat.id}.failure.json`),JSON.stringify({schemaVersion:1,beatId:beat.id,releaseSha,datasetHash:manifest.dataset.hash,failureCode,rawVideoFile:path.relative(out,captured).replace(/\\/g,'/'),sourceActualSeconds,diagnostics:error.captureDiagnostics??null},null,2)+'\n');
+      throw error;
+    }
     const capturedSeconds=mediaSeconds(captured);
+    await writeFile(path.join(out,`${beat.id}.clock.json`),JSON.stringify({schemaVersion:1,beatId:beat.id,releaseSha,datasetHash:manifest.dataset.hash,sourceActualSeconds:capturedSeconds,diagnostics:captureDiagnostics},null,2)+'\n');
     check(Number.isFinite(capturedSeconds)&&capturedSeconds>=beat.seconds,'actual-screencast-media-too-short');
     check(!pageError,'demo-page-runtime-error');
     check(await page.locator('.api-banner,.map-error').count()===0,'demo-visible-error-state');

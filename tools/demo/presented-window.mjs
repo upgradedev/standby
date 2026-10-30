@@ -20,6 +20,12 @@ export class PresentedWindow {
   }
 }
 
+/** Explicitly exclude JPEG bytes and any unrelated callback fields. */
+export function frameObservation(frame,observedAtUnixMs,observedAtPerformanceMs) {
+  return {presentedAtUnixMs:frame.timestamp,observedAtUnixMs,observedAtPerformanceMs,
+    deliveryLagMs:observedAtUnixMs-frame.timestamp,viewportWidth:frame.viewportWidth,viewportHeight:frame.viewportHeight};
+}
+
 /** Reuse is accepted only from a complete matching receipt AND probed media. */
 export function validateCompletedCapture(metadata,{beat,releaseSha,datasetHash,capturedSeconds,viewport,fps}) {
   if(metadata?.schemaVersion!==2||metadata.id!==beat.id||metadata.releaseSha!==releaseSha||metadata.datasetHash!==datasetHash||metadata.videoFile!==`${beat.id}.webm`||metadata.trimStartSeconds!==0||metadata.durationSeconds!==beat.seconds||metadata.fps!==fps||metadata.viewport?.width!==viewport.width||metadata.viewport?.height!==viewport.height)throw new Error('existing-capture-identity-disagrees');

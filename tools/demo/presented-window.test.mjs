@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {PresentedWindow,validateCompletedCapture} from './presented-window.mjs';
+import {PresentedWindow,validateCompletedCapture,frameObservation} from './presented-window.mjs';
 const viewport={width:1440,height:900};
 const frame=timestamp=>({timestamp,viewportWidth:1440,viewportHeight:900});
 test('presentation clock starts at the first captured frame, independent of earlier setup',()=>{
@@ -31,4 +31,11 @@ test('only a complete matching receipt and actual sufficient media can be reused
   assert.throws(()=>validateCompletedCapture(metadata,{...expected,capturedSeconds:24.9}),/media-too-short/);
   assert.throws(()=>validateCompletedCapture({...metadata,captureClock:undefined},expected),/receipt-invalid/);
   assert.throws(()=>validateCompletedCapture({...metadata,schemaVersion:1,trimStartSeconds:23},expected),/identity-disagrees/);
+});
+test('diagnostics preserve first-frame lag and exclude JPEG or unrelated payload fields',()=>{
+  const observed=frameObservation({...frame(1793370000123),data:Buffer.from('not-retained'),unrelated:'not-retained'},1793370013123,48000);
+  assert.equal(observed.deliveryLagMs,13000);
+  assert.equal(observed.observedAtPerformanceMs,48000);
+  assert.equal(observed.presentedAtUnixMs,1793370000123);
+  assert.equal('data'in observed,false);assert.equal('unrelated'in observed,false);
 });
