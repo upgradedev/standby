@@ -18,6 +18,7 @@ import re
 import subprocess
 
 from verify import VerificationError, number, probe_media, require, sha256_file, validate
+from sync import inspect_sync
 
 
 def run(command: list[str]) -> None:
@@ -56,6 +57,33 @@ def voice_file(directory: Path, beat_id: str) -> Path:
     return existing[0]
 
 
+def validate_capture_clock(metadata: dict, duration: float) -> None:
+    if metadata.get("schemaVersion") == 3:
+        clock = metadata.get("captureClock", {})
+        require(clock.get("method") == "native-screencast-slate", "Native sync-slate receipt is required")
+        require(0 <= number(clock.get("semanticElapsedSeconds"), "Semantic action duration") <= duration,
+                "Actual demo actions overran the captured edit window")
+        elapsed = (number(clock.get("actionsCompletedAtUnixMs"), "Action completion") - number(clock.get("storyAnchorAtUnixMs"), "Story anchor")) / 1000
+        require(0 <= elapsed <= duration, "Semantic action clock is outside the beat budget")
+        proof = metadata.get("syncProof", {})
+        require(proof.get("method") == "decoded-magenta-slate" and proof.get("markerFrames", 0) >= 2,
+                "Decoded sync-slate proof is required")
+        require(metadata.get("trimStartSeconds") == proof.get("firstClearFramePtsSeconds"), "In-point differs from the decoded actual frame")
+        return
+    require(metadata.get("schemaVersion") == 2 and metadata.get("trimStartSeconds") == 0,
+            "Capture uses a legacy inferred pre-roll clock; recapture this beat with explicit screencast start")
+    clock = metadata.get("captureClock", {})
+    require(clock.get("method") == "playwright-screencast", "A browser presentation-clock receipt is required")
+    first = number(clock.get("firstPresentedAtUnixMs"), "First presented frame timestamp")
+    last = number(clock.get("lastPresentedAtUnixMs"), "Last presented frame timestamp")
+    actions_end = number(clock.get("actionsCompletedAtUnixMs"), "Action completion timestamp")
+    require(first > 0 and last - first >= duration * 1000, "Actual presented frame span is shorter than the beat")
+    require(isinstance(clock.get("framesObserved"), int) and clock["framesObserved"] >= 2,
+            "At least two actual browser frames must bound the beat")
+    require(first <= actions_end <= first + duration * 1000,
+            "Actual demo actions overran the captured edit window")
+
+
 def render_beat(capture: Path, voices: Path, segments: Path, beat: dict, project: dict) -> None:
     beat_id = beat["id"]
     require(bool(re.fullmatch(r"[a-z]+", beat_id)), "Beat identifier is invalid")
@@ -66,6 +94,7 @@ def render_beat(capture: Path, voices: Path, segments: Path, beat: dict, project
     duration = number(metadata.get("durationSeconds"), "Beat duration")
     require(abs(duration - (beat["endSeconds"] - beat["startSeconds"])) < 0.000001,
             f"{beat_id} duration differs from the storyboard")
+    validate_capture_clock(metadata, duration)
     fps = number(project.get("fps"), "Storyboard frame rate")
     frame_count = round(duration * fps)
     require(abs(frame_count / fps - duration) < 0.000001, "Beat duration is not an exact frame count")
@@ -73,8 +102,12 @@ def render_beat(capture: Path, voices: Path, segments: Path, beat: dict, project
     require(trim >= 0, "Capture in-point cannot be negative")
     source = capture / metadata["videoFile"]
     source_probe = probe_media(source)
+    if metadata.get("schemaVersion") == 3:
+        decoded = inspect_sync(source, duration)
+        require(abs(decoded["firstClearFramePtsSeconds"] - trim) < 0.000001,
+                f"{beat_id} in-point does not match actual decoded pixels")
     available = number(source_probe.get("format", {}).get("duration"), "Raw capture duration") - trim
-    require(available >= duration - 1 / fps, f"{beat_id} capture is too short; recapture this beat")
+    require(available >= duration, f"{beat_id} capture is too short; recapture this beat")
     voice = voice_file(voices, beat_id)
     audio_probe = probe_media(voice)
     require(any(stream.get("codec_type") == "audio" for stream in audio_probe.get("streams", [])),
