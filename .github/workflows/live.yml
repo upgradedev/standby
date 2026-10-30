@@ -1,0 +1,31 @@
+name: Standby live acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Public AWS application URL
+        required: true
+        type: string
+      release:
+        description: Exact deployed source commit SHA
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Install browser in hosted CI only
+        run: npx playwright install --with-deps chromium
+      - name: Verify live anonymous user journey
+        env:
+          STANDBY_LIVE_URL: ${{ inputs.url }}
+          STANDBY_EXPECTED_RELEASE: ${{ inputs.release }}
+        run: node tests/browser/live.mjs

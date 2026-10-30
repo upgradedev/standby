@@ -1,0 +1,41 @@
+name: Standby CI
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies
+        run: |
+          if test -f package-lock.json; then npm ci; else npm install; fi
+          python -m pip install --disable-pip-version-check boto3==1.43.103
+      - name: Offline source and domain checks
+        run: |
+          npm run check:secrets
+          npm run typecheck
+          npm test
+          python -m unittest discover -s tools/data -p 'test_*.py'
+          python -m unittest discover -s tools -p 'test_build_matrix.py'
+      - name: Build application and isolated Lambda bundles
+        run: npm run build
+      - name: Package original software only
+        run: |
+          mkdir release
+          for name in read writer retention; do (cd dist/$name && zip -q ../../release/$name.zip index.js); done
+          cp -R apps/console/dist release/web
+          cp package-lock.json release/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standby-release
+          path: release/
+          retention-days: 3

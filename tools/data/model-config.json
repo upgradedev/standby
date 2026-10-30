@@ -1,0 +1,17 @@
+{
+  "version": "austin-standby-v1",
+  "frozenAt": "2026-10-30T09:43:36Z",
+  "bounds": [-97.88, 30.18, -97.62, 30.46],
+  "periods": {
+    "train": {"start": "2023-01-01T00:00:00Z", "end": "2025-01-01T00:00:00Z"},
+    "holdout": {"start": "2025-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z"}
+  },
+  "zoneLimit": 120,
+  "siteLimit": 12,
+  "medoidRounds": 4,
+  "profile": "Car",
+  "solverVersion": "exact-weighted-coverage-v1",
+  "objective": ["maximize training reports covered within threshold", "minimize training weighted road seconds with unreachable last", "lexicographic site IDs"],
+  "sourceLabels": ["Stalled Vehicle", "zSTALLED VEHICLE"],
+  "sourceUrl": "https://data.austintexas.gov/resource/dx9v-zd7x.json"
+}
