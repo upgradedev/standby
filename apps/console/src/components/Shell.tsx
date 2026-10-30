@@ -18,7 +18,7 @@ export function Shell({children}:{children:ReactNode}){
  const [tooltipsDismissed,setTooltipsDismissed]=useState(false);
  const title=nav.find(item=>location.pathname.startsWith(item.path))?.label??'Operator access';
  const overviewReady=!loading&&(!!error||!zones.length||!manifest?.matrix||!!result||!!evaluationError)&&!state.evaluating;
- const ready=location.pathname==='/overview'?overviewReady:location.pathname==='/capacity'?!loading&&(!!error||!zones.length||!!capacity.input)&&!capacity.running:!loading;
+ const ready=location.pathname==='/overview'?overviewReady:location.pathname==='/capacity'?!loading&&(!!error||!zones.length||!!capacity.input||!!capacity.unavailableReason)&&!capacity.running:!loading;
  useEffect(()=>{document.title=`${title}${location.pathname==='/capacity'?' [Assumption-based]':''} · Standby`;if(firstPath.current!==location.pathname){firstPath.current=location.pathname;window.scrollTo(0,0);mainRef.current?.focus({preventScroll:true});}},[title,location.pathname]);
  useEffect(()=>{const header=topbarRef.current;if(!header)return;const observer=new ResizeObserver(()=>document.documentElement.style.setProperty('--topbar-height',`${header.getBoundingClientRect().height}px`));observer.observe(header);return()=>observer.disconnect();},[]);
  useEffect(()=>{if(searchOpen)searchInput.current?.focus();},[searchOpen]);

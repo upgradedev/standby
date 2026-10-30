@@ -16,6 +16,7 @@ function draftNumber(value:number){return Number.isFinite(value)?integer(value):
 export default function Capacity() {
   const lab=useCapacity(), {manifest,preferences,reload}=useStandby();
   const [params,setParams]=useSearchParams();
+  const latestParams=useRef(params);latestParams.current=params;
   const [configure,setConfigure]=useState(()=>!lab.result),[validation,setValidation]=useState('');
   const details=useRef<HTMLDetailsElement>(null),errorSummary=useRef<HTMLDivElement>(null),focusError=useRef(false);
   const view=params.get('view')==='baseline'?'baseline':'candidate';
@@ -37,10 +38,11 @@ export default function Capacity() {
     const planningHorizon=lab.input.horizonMinutes;
     if(await lab.run()){
       focusError.current=false;setConfigure(false);
-      const search=new URLSearchParams(params);DETAIL_KEYS.forEach(key=>search.delete(key));search.set('t',String(planningHorizon));
+      const search=new URLSearchParams(latestParams.current);DETAIL_KEYS.forEach(key=>search.delete(key));search.set('t',String(planningHorizon));
       setParams(search,{replace:true});
     } else setConfigure(true);
   }
+  const unavailable=lab.unavailableReason?<div className="capacity-inline-notice" role="status" data-testid="capacity-unavailable"><strong>Unavailable</strong><p>{lab.unavailableReason}</p><button type="button" className="button secondary" onClick={reload}>Reload source snapshot</button></div>:null;
   return <DataGate><div className="capacity-page">
     <PageHeading title="Capacity lab" eyebrow="Assumption-based planning" description="Compare mixed fleets against the same modeled jobs. Inspect what waits, what finishes and which units stay busy."
       actions={<Badge tone="accent"><FlaskConical size={14}/>Assumption-based scenario</Badge>}/>
@@ -48,7 +50,7 @@ export default function Capacity() {
       <strong>Real geography. Assumed workload and service.</strong>
       <p>Austin training counts weight zone locations. Job arrivals, incident mix, durations, rosters and shifts are editable assumptions. This is a planning experiment, not a forecast or a staffing guarantee.</p>
     </div></div>
-    {!lab.input?<LoadingState/>:<>
+    {!lab.input?unavailable??<LoadingState/>:<>
       <div className="capacity-draft-summary" aria-label="Current draft assumptions">
         <span><strong>{draftNumber(lab.input.baseline.units.length)}</strong> baseline units</span>
         <span><strong>{draftNumber(lab.input.candidate.units.length)}</strong> candidate units</span>
@@ -70,7 +72,7 @@ export default function Capacity() {
         </div>
         {lab.running?<p id="capacity-running" className="capacity-running-note">The same seeded jobs and service draws are evaluated for both rosters. Your inputs are retained.</p>:null}
         {validation?<div className="capacity-inline-notice" role="alert">{validation}</div>:null}
-        {lab.unavailableReason?<div className="capacity-inline-notice" role="status" data-testid="capacity-unavailable"><strong>Unavailable</strong><p>{lab.unavailableReason}</p><button type="button" className="button secondary" onClick={reload}>Reload source snapshot</button></div>:null}
+        {unavailable}
         {lab.error?<div ref={errorSummary} tabIndex={-1} className="capacity-inline-notice capacity-failure" role="alert" data-testid="capacity-error"><strong>{lab.error.status===400?'Some assumptions need attention':'The capacity comparison could not be verified'}</strong><p>{lab.error.message}</p><code>{lab.error.code}{lab.error.requestId?` · ${lab.error.requestId}`:''}</code><p>Your draft is preserved. Review the inputs and run the comparison again.</p></div>:null}
         <details ref={details} id="capacity-configuration" className="capacity-configuration" open={configure} onToggle={event=>setConfigure(event.currentTarget.open)}>
           <summary><span>Workload, service profiles and rosters</span><ChevronDown size={17}/></summary>
