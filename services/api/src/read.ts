@@ -2,6 +2,7 @@ import {evaluateScenario} from '../../../packages/domain/src/index';
 import type {MatrixMetadata} from '../../../packages/contracts/src/index';
 import {body,failure,HttpError,json,loadDataset,loadMatrix,type ApiEvent} from './common';
 import {capacityEvaluationHandler} from './capacity';
+import {CAPACITY_LIMITS, CAPACITY_MODEL_VERSION} from '../../../packages/contracts/src/capacity';
 function metadata(m:MatrixMetadata):MatrixMetadata {
   return {id:m.id,hash:m.hash,provider:m.provider,profile:m.profile,generatedAt:m.generatedAt,expiresAt:m.expiresAt};
 }
@@ -22,6 +23,7 @@ export async function handler(event:ApiEvent) {
       try {matrix=metadata(await loadMatrix());}catch {/* The real-data map remains available; evaluation shows a distinct failure. */}
       const {zones,...datasetMetadata}=dataset;
       return json(200,{dataset:datasetMetadata,matrix,release:process.env.RELEASE_SHA||'development',
+        capabilities:{capacity:{modelVersion:CAPACITY_MODEL_VERSION,limits:CAPACITY_LIMITS}},
         limits:{maxFleetSize:4,minThresholdMinutes:5,maxThresholdMinutes:30,zoneCount:zones.length,siteCount:dataset.sites.length}},requestId);
     }
     if(method==='GET'&&path==='/v1/public/zones') return json(200,{zones:(await loadDataset()).zones},requestId);

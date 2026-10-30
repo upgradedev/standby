@@ -3,6 +3,10 @@ import type {MatrixMetadata} from './index.js';
 export const CAPACITY_MODEL_VERSION = 'fixed-home-capacity-v1';
 export const CAPACITY_LIMITS = {maxUnits: 12, maxJobs: 200, maxHorizonMinutes: 1440, maxReplications: 20} as const;
 export const CAPACITY_JOB_TYPES = ['battery', 'tyre', 'breakdown', 'collision'] as const;
+export interface CapacityCapability {
+  modelVersion: typeof CAPACITY_MODEL_VERSION;
+  limits: typeof CAPACITY_LIMITS;
+}
 export type CapacityJobType = typeof CAPACITY_JOB_TYPES[number];
 export type CapacityUnitKind = 'motorcycle' | 'service_van' | 'flatbed';
 export interface CapacityTriangle {min: number; mode: number; max: number}

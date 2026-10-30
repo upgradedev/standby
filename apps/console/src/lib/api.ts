@@ -24,7 +24,7 @@ export function normalizeManifest(raw: unknown): Manifest {
   const value = raw as Manifest & Record<string,unknown>;
   const dataset = value.dataset;
   if (!dataset || !Array.isArray(dataset.sites) || !dataset.distribution || !dataset.source || !dataset.quality || !Array.isArray(dataset.bounds) || typeof value.release!=='string' || !value.limits || !Number.isInteger(value.limits.maxFleetSize)) throw new ApiError('Dataset metadata failed validation.','INVALID_DATA');
-  return {dataset,matrix:value.matrix ?? null,release:typeof value.release === 'string' ? value.release : 'development',limits:value.limits};
+  return {dataset,matrix:value.matrix ?? null,release:typeof value.release === 'string' ? value.release : 'development',limits:value.limits,capabilities:value.capabilities};
 }
 export function normalizeZones(raw: unknown): DemandZone[] {
   const zones = (raw as {zones?: DemandZone[]}).zones;

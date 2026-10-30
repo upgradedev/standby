@@ -1,3 +1,4 @@
+import type {CapacityCapability} from './capacity.js';
 export type Position = [number, number];
 export type Cohort = 'train' | 'holdout';
 export interface ReportingPeriod { start: string; end: string }
@@ -110,6 +111,7 @@ export interface PublicManifest {
   dataset: Omit<Dataset, 'zones'>;
   matrix: MatrixMetadata | null;
   release: string;
+  capabilities?: {capacity?: CapacityCapability};
   limits: {maxFleetSize: number; minThresholdMinutes: number; maxThresholdMinutes: number; zoneCount: number; siteCount: number};
 }
 export interface ApiFailure { code: string; message: string; requestId: string; retryable: boolean }

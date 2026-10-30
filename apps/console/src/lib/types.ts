@@ -1,7 +1,8 @@
 import type { Dataset, DemandZone, EvaluationInput, EvaluationResult, MatrixMetadata, PlanResult, TravelQuantile } from '../../../../packages/contracts/src/index';
+import type {CapacityCapability} from '../../../../packages/contracts/src/capacity';
 export type { Dataset, DemandZone, EvaluationInput, EvaluationResult, MatrixMetadata, PlanResult, TravelQuantile };
 export interface Config { apiBase: string; mapStyleUrl?: string; mapApiKey?: string; release?: string; auth?: {domain: string; clientId: string; issuer?: string; redirectUri?: string} }
-export interface Manifest { dataset: Omit<Dataset, 'zones'>; matrix: MatrixMetadata | null; release: string; limits: {maxFleetSize: number; minThresholdMinutes: number; maxThresholdMinutes: number} }
+export interface Manifest { dataset: Omit<Dataset, 'zones'>; matrix: MatrixMetadata | null; release: string; capabilities?:{capacity?:CapacityCapability}; limits: {maxFleetSize: number; minThresholdMinutes: number; maxThresholdMinutes: number} }
 export type PlanKey = 'depot' | 'spread' | 'proposal';
 export interface Preferences { version: 1; collapsed: boolean; shortcuts: boolean; pageSize: number; timezone: 'America/Chicago' | 'UTC'; distanceUnit: 'km' | 'mi'; layer: 'coverage' | 'demand' | 'difference' }
 export interface LocalScenario { id: string; name: string; input: EvaluationInput; updatedAt: string; evaluationStatus: 'NOT_RUN'|'SUCCEEDED'|'FAILED'; reviewStatus: 'NOT_READY'|'NEEDS_REVIEW'|'REVIEWED'; inputHash?: string; error?: string }
