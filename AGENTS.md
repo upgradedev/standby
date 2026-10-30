@@ -21,4 +21,6 @@ Read the workspace `../../CLAUDE.md` first, then:
 
 Claim your work area in STATE.md before touching it; release it on handoff. Never two agents in one checkout; use a separate clone or `git worktree`.
 
-This is a new dedicated project; existing submitted challenge repositories and infrastructure are reference-only. No package installs on this machine. Product code is deferred until official opening pending any verified organizer clarification.
+This is an original dedicated project; existing submitted challenge repositories and infrastructure are reference-only. No package installs on this machine. Implementation began after official opening. The current frozen application, CI evidence and remaining submission steps are in STATE.md.
+
+Live application: https://d34x1513u5u1qs.cloudfront.net . Public source: https://github.com/upgradedev/standby . Hosted CI runs the pinned build, source checks and tests; the separate live workflow verifies the complete public and authenticated journeys. Owner enrollment uses tools/create-operator.py interactively. Never collect an owner password in chat.
