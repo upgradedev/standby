@@ -75,7 +75,12 @@ jobs:
           STANDBY_DEMO_URL: ${{ inputs.url }}
           STANDBY_DEMO_RELEASE: ${{ inputs.release }}
           STANDBY_DEMO_BEAT: ${{ inputs.beat }}
-        run: node tools/demo/record.mjs --out .runtime/demo --beat "$STANDBY_DEMO_BEAT" --replace
+        run: |
+          if [ "$STANDBY_DEMO_BEAT" = all ]; then
+            node tools/demo/record.mjs --out .runtime/demo --beat all --skip-existing
+          else
+            node tools/demo/record.mjs --out .runtime/demo --beat "$STANDBY_DEMO_BEAT" --replace
+          fi
       - name: Preserve completed captures before rendering
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
