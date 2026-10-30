@@ -64,7 +64,7 @@ export function Provider({children}:{children:ReactNode}) {
    finally{if(sequence===evaluationSequence.current)setEvaluating(false);}
  },[config,manifest?.dataset.hash,toast]);
  const autoEvaluated=useRef<string|null>(null);
- useEffect(()=>{if(manifest?.matrix&&config&&zones.length&&!loading&&autoEvaluated.current!==manifest.dataset.hash){autoEvaluated.current=manifest.dataset.hash;void evaluate(currentInput.current);}},[manifest,config,zones.length,loading,evaluate]);
+ useEffect(()=>{if(manifest?.matrix&&config&&zones.length&&!loading&&autoEvaluated.current!==`${workspace}:${manifest.dataset.hash}`){autoEvaluated.current=`${workspace}:${manifest.dataset.hash}`;void evaluate(currentInput.current);}},[manifest,config,zones.length,loading,evaluate,workspace]);
  const updatePreferences=useCallback((value:Preferences)=>{try{savePreferences(value);setPreferences(value);return true;}catch{toast('Browser storage is unavailable. Preferences were not saved.','error');return false;}},[toast]);
  const persistScenarios=useCallback((value:LocalScenario[])=>{try{saveScenarios(value);setScenarios(value);return true;}catch{toast('Browser storage is unavailable. The local scenario was not saved.','error');return false;}},[toast]);
  const stale=!!result&&(inputKey(result.input)!==inputKey(input)||!!evaluationError);
