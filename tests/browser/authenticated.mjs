@@ -234,13 +234,27 @@ try {
   await admin.page.keyboard.press('Escape');
   await details.waitFor({state:'hidden'});
 
-  step='Admin:settings-version-and-review-invalidation';
+  step='Admin:settings-read-current-version';
   const settingsPath=`/workspaces/${workspaceId}/settings`,before=await api(admin,'GET',settingsPath);
   const nextThreshold=before.settings.defaultThresholdMinutes===15?20:15;
+  step='Admin:settings-workspace-navigation';
   await navigate(admin,'Settings');
   await admin.page.getByRole('tab',exact('Workspace')).click();
   await visible(admin.page.getByRole('button',exact('Save workspace defaults')),'admin-settings-write-menu-missing');
-  await admin.page.getByLabel('Default road approach threshold',{exact:true}).selectOption(String(nextThreshold));
+  check(await admin.page.getByRole('tab',exact('Workspace')).getAttribute('aria-selected')==='true','workspace-settings-tab-not-selected');
+  step='Admin:settings-threshold-field';
+  // A select embedded in its label can contribute its selected option to the
+  // label's accessible text. Match the complete field name plus that suffix.
+  const threshold=admin.page.getByLabel(/^Default road approach threshold(?:\s|$)/);
+  const exactLabels=await admin.page.getByLabel('Default road approach threshold',{exact:true}).count();
+  const namedFields=await threshold.count();
+  console.log(`DOM Admin settings: workspace-tab-selected=true save-visible=true exact-threshold-labels=${exactLabels} named-threshold-fields=${namedFields}`);
+  check(namedFields===1,'workspace-threshold-field-not-unique');
+  await visible(threshold,'workspace-threshold-field-not-visible');
+  check(await threshold.isEnabled(),'admin-workspace-threshold-disabled');
+  await threshold.selectOption(String(nextThreshold));
+  check(await threshold.inputValue()===String(nextThreshold),'workspace-threshold-selection-did-not-change');
+  step='Admin:settings-save-acknowledgement';
   const settingsResponse=admin.page.waitForResponse(value=>value.url()===`${admin.apiBase}${settingsPath}`&&value.request().method()==='PATCH').catch(()=>null);
   await admin.page.getByRole('button',exact('Save workspace defaults')).click();
   const changedResponse=await settingsResponse;
@@ -248,12 +262,15 @@ try {
   const updated=await changedResponse.json();
   check(updated.settings.version===before.settings.version+1&&updated.settings.defaultThresholdMinutes===nextThreshold&&updated.configHash!==before.configHash,
     'settings-version-or-config-hash-unchanged');
+  step='Admin:settings-stale-version-conflict';
   const staleSettings=await api(admin,'PATCH',settingsPath,{data:{expectedVersion:before.settings.version,
     defaultThresholdMinutes:nextThreshold,maxFleetSize:before.settings.maxFleetSize,enabledSiteIds:before.settings.enabledSiteIds},status:409});
   check(staleSettings.code==='VERSION_CONFLICT','stale-settings-write-not-rejected');
+  step='Admin:review-invalidation-api';
   const stalePlan=await api(admin,'GET',path);
   check(stalePlan.stale===true&&stalePlan.result===null&&stalePlan.reviewStatus==='NOT_READY','settings-change-retained-valid-review');
   await api(admin,'POST',`${path}/review`,{data:{expectedVersion:reviewed.version,...hashes},status:409});
+  step='Admin:review-invalidation-ui';
   await navigate(admin,'Planning queues');
   await admin.page.getByRole('tab',{name:/^Draft/}).click();
   const staleCard=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
