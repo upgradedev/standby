@@ -28,9 +28,15 @@ export function frameObservation(frame,observedAtUnixMs,observedAtPerformanceMs)
 
 /** Reuse is accepted only from a complete matching receipt AND probed media. */
 export function validateCompletedCapture(metadata,{beat,releaseSha,datasetHash,capturedSeconds,viewport,fps}) {
-  if(metadata?.schemaVersion!==2||metadata.id!==beat.id||metadata.releaseSha!==releaseSha||metadata.datasetHash!==datasetHash||metadata.videoFile!==`${beat.id}.webm`||metadata.trimStartSeconds!==0||metadata.durationSeconds!==beat.seconds||metadata.fps!==fps||metadata.viewport?.width!==viewport.width||metadata.viewport?.height!==viewport.height)throw new Error('existing-capture-identity-disagrees');
-  if(!Number.isFinite(capturedSeconds)||capturedSeconds<beat.seconds)throw new Error('existing-capture-media-too-short');
+  if(![2,3].includes(metadata?.schemaVersion)||metadata.id!==beat.id||metadata.releaseSha!==releaseSha||metadata.datasetHash!==datasetHash||metadata.videoFile!==`${beat.id}.webm`||metadata.durationSeconds!==beat.seconds||metadata.fps!==fps||metadata.viewport?.width!==viewport.width||metadata.viewport?.height!==viewport.height)throw new Error('existing-capture-identity-disagrees');
+  const trim=metadata.schemaVersion===3?metadata.trimStartSeconds:0;
+  if(!Number.isFinite(trim)||trim<0||!Number.isFinite(capturedSeconds)||capturedSeconds-trim<beat.seconds)throw new Error('existing-capture-media-too-short');
   const receipt=metadata.captureClock;
+  if(metadata.schemaVersion===3){
+    if(receipt?.method!=='native-screencast-slate'||!Number.isFinite(receipt.actionsCompletedAtUnixMs-receipt.storyAnchorAtUnixMs)||receipt.actionsCompletedAtUnixMs<receipt.storyAnchorAtUnixMs||receipt.actionsCompletedAtUnixMs-receipt.storyAnchorAtUnixMs>beat.seconds*1000||!Number.isFinite(receipt.semanticElapsedSeconds)||receipt.semanticElapsedSeconds<0||receipt.semanticElapsedSeconds>beat.seconds||metadata.syncProof?.method!=='decoded-magenta-slate'||metadata.syncProof.firstClearFramePtsSeconds!==trim||metadata.syncProof.markerFrames<2)throw new Error('existing-capture-clock-receipt-invalid');
+    return;
+  }
+  if(metadata.trimStartSeconds!==0)throw new Error('existing-capture-identity-disagrees');
   if(receipt?.method!=='playwright-screencast'||!Number.isInteger(receipt.framesObserved)||receipt.framesObserved<2)throw new Error('existing-capture-clock-receipt-invalid');
   const clock=new PresentedWindow(viewport);
   clock.observe({timestamp:receipt.firstPresentedAtUnixMs,viewportWidth:viewport.width,viewportHeight:viewport.height});

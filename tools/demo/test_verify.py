@@ -68,6 +68,16 @@ class VerifyDemoTests(unittest.TestCase):
         with self.assertRaisesRegex(VerificationError, "actions overran"):
             validate_capture_clock(metadata, 25)
 
+    def test_native_slate_receipt_uses_decoded_offset_and_strict_action_budget(self):
+        metadata = {"schemaVersion": 3, "trimStartSeconds": 3.2,
+                    "syncProof": {"method": "decoded-magenta-slate", "markerFrames": 30, "firstClearFramePtsSeconds": 3.2},
+                    "captureClock": {"method": "native-screencast-slate", "storyAnchorAtUnixMs": 1793370000000,
+                                     "actionsCompletedAtUnixMs": 1793370023000, "semanticElapsedSeconds": 23}}
+        validate_capture_clock(metadata, 30)
+        metadata["captureClock"]["semanticElapsedSeconds"] = 30.1
+        with self.assertRaisesRegex(VerificationError, "actions overran"):
+            validate_capture_clock(metadata, 30)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,7 @@ import re
 import subprocess
 
 from verify import VerificationError, number, probe_media, require, sha256_file, validate
+from sync import inspect_sync
 
 
 def run(command: list[str]) -> None:
@@ -57,6 +58,18 @@ def voice_file(directory: Path, beat_id: str) -> Path:
 
 
 def validate_capture_clock(metadata: dict, duration: float) -> None:
+    if metadata.get("schemaVersion") == 3:
+        clock = metadata.get("captureClock", {})
+        require(clock.get("method") == "native-screencast-slate", "Native sync-slate receipt is required")
+        require(0 <= number(clock.get("semanticElapsedSeconds"), "Semantic action duration") <= duration,
+                "Actual demo actions overran the captured edit window")
+        elapsed = (number(clock.get("actionsCompletedAtUnixMs"), "Action completion") - number(clock.get("storyAnchorAtUnixMs"), "Story anchor")) / 1000
+        require(0 <= elapsed <= duration, "Semantic action clock is outside the beat budget")
+        proof = metadata.get("syncProof", {})
+        require(proof.get("method") == "decoded-magenta-slate" and proof.get("markerFrames", 0) >= 2,
+                "Decoded sync-slate proof is required")
+        require(metadata.get("trimStartSeconds") == proof.get("firstClearFramePtsSeconds"), "In-point differs from the decoded actual frame")
+        return
     require(metadata.get("schemaVersion") == 2 and metadata.get("trimStartSeconds") == 0,
             "Capture uses a legacy inferred pre-roll clock; recapture this beat with explicit screencast start")
     clock = metadata.get("captureClock", {})
@@ -89,6 +102,10 @@ def render_beat(capture: Path, voices: Path, segments: Path, beat: dict, project
     require(trim >= 0, "Capture in-point cannot be negative")
     source = capture / metadata["videoFile"]
     source_probe = probe_media(source)
+    if metadata.get("schemaVersion") == 3:
+        decoded = inspect_sync(source, duration)
+        require(abs(decoded["firstClearFramePtsSeconds"] - trim) < 0.000001,
+                f"{beat_id} in-point does not match actual decoded pixels")
     available = number(source_probe.get("format", {}).get("duration"), "Raw capture duration") - trim
     require(available >= duration, f"{beat_id} capture is too short; recapture this beat")
     voice = voice_file(voices, beat_id)
