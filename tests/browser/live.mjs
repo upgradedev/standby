@@ -171,6 +171,9 @@ try {
     step = `${viewport.name}:live-map-evaluation-and-unit-unavailable`;
     await navigate(page, 'Coverage map');
     await visible(page.locator('.maplibregl-canvas'), 'map-canvas-missing');
+    await visible(page.locator('.site-marker').first(), 'aws-map-did-not-finish-loading');
+    check(await page.locator('.site-marker').count() === manifest.dataset.sites.length, 'map-site-layer-incomplete');
+    check(await page.locator('.map-error').count() === 0, 'basemap-reported-loading-error');
     await page.getByRole('combobox', exact('Hypothetical fleet size')).selectOption('2');
     await page.getByRole('combobox', exact('Road approach threshold')).selectOption('5');
     await visible(page.getByText('Inputs changed. The map shows the previous comparison until you calculate again.', {exact: true}), 'map-stale-state-missing');
@@ -199,6 +202,8 @@ try {
     const storage = await page.evaluate(() => ({...localStorage}));
     check(!JSON.stringify(storage).includes('durationsSeconds') && !JSON.stringify(storage).includes('coveragePct') && !JSON.stringify(storage).includes('travelSeconds'), 'provider-derived-values-persisted');
     await navigate(page, 'Planning queues');
+    await page.getByRole('tab', {name: /^Reviewed/}).click();
+    await visible(page.getByRole('heading', exact('No plans marked reviewed')), 'public-reviewed-queue-not-empty');
     await page.getByRole('tab', {name: /^Needs review/}).click();
     await visible(page.getByRole('heading', exact(stored[0].name)), 'local-scenario-not-in-review-queue');
     await page.reload({waitUntil: 'domcontentloaded'});
