@@ -27,6 +27,7 @@ jobs:
           python -m unittest discover -s tools/data -p 'test_*.py'
           python -m unittest discover -s tools -p 'test_build_matrix.py'
           python -m unittest discover -s tools/demo -p 'test_verify.py'
+          node --test tools/demo/*.test.mjs
       - name: Build application and isolated Lambda bundles
         run: npm run build
       - name: Package original software only

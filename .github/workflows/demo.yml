@@ -14,16 +14,25 @@ on:
         description: SHA256 of the bounded original narration ZIP
         required: true
         type: string
+      reuse_run_id:
+        description: Optional previous demo run whose captured beats should be reused
+        required: false
+        default: ''
+        type: string
+      beat:
+        description: Capture all beats, one replacement beat, or render existing captures
+        default: all
+        type: choice
+        options: [all, overview, history, baseline, proposal, unavailable, provenance, render-only]
 permissions:
   contents: read
+  actions: read
 jobs:
   record:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -48,11 +57,33 @@ jobs:
           for name in sorted(expected): (out/name).write_bytes(archive.read(name))
           print('Verified six original narration files.')
           PY
+      - name: Restore only this repository's retained demo captures
+        if: ${{ inputs.reuse_run_id != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          run=os.environ['REUSE_RUN_ID'];assert re.fullmatch(r'[0-9]{1,20}',run)
+          subprocess.run(['gh','run','download',run,'--repo','upgradedev/standby','--name','standby-demo-captures','--dir','.runtime/demo'],check=True)
+          PY
       - name: Record actual frozen app interactions
+        id: capture
+        if: ${{ inputs.beat != 'render-only' }}
         env:
           STANDBY_DEMO_URL: ${{ inputs.url }}
           STANDBY_DEMO_RELEASE: ${{ inputs.release }}
-        run: node tools/demo/record.mjs --out .runtime/demo --beat all
+          STANDBY_DEMO_BEAT: ${{ inputs.beat }}
+        run: node tools/demo/record.mjs --out .runtime/demo --beat "$STANDBY_DEMO_BEAT" --replace
+      - name: Preserve completed captures before rendering
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: standby-demo-captures
+          retention-days: 3
+          include-hidden-files: true
+          path: .runtime/demo/
       - name: Render and verify actual media bytes
         env:
           STANDBY_DEMO_RELEASE: ${{ inputs.release }}
@@ -61,6 +92,7 @@ jobs:
         with:
           name: standby-public-demo
           retention-days: 3
+          include-hidden-files: true
           path: |
             .runtime/demo/standby-demo.mp4
             .runtime/demo/captions.srt
