@@ -38,12 +38,12 @@ export default function Overview() {
     </div>
     <section className="capacity-callout" aria-labelledby="capacity-intro-title">
       <div className="capacity-callout-icon"><FlaskConical size={27}/></div>
-      <div className="capacity-callout-copy"><Badge tone="accent">Capacity lab · scope preview</Badge>
+      <div className="capacity-callout-copy"><Badge tone="accent">Capacity lab · assumption-based</Badge>
         <h2 id="capacity-intro-title">From positions to capacity.</h2>
         <p>Explore how fleet mix, overlapping jobs and service time can change a standby plan.</p>
         <div className="capacity-concepts"><span>Mixed fleet</span><span>Queues &amp; shifts</span><span>Paired what-if</span></div>
       </div>
-      <Link className="button secondary" to="/capacity">View capacity scope<ArrowRight size={16}/></Link>
+      <Link className="button secondary" to="/capacity">Open capacity lab<ArrowRight size={16}/></Link>
     </section>
     <div className="overview-grid">
       <Panel title="When reports were published" kicker="Historical publication pattern" action={<Badge>{cohortLabel}</Badge>}>

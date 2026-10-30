@@ -39,7 +39,7 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
       instance.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
       instance.on('load',()=>{
         const style=getComputedStyle(container.current!);
-        const accent=style.getPropertyValue('--accent').trim(),success=style.getPropertyValue('--success').trim();
+        const accent=style.getPropertyValue('--map-accent').trim(),success=style.getPropertyValue('--map-site').trim();
         instance.addSource('capacity-selected-zone',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
         instance.addLayer({id:'capacity-zone-fill',type:'fill',source:'capacity-selected-zone',paint:{'fill-color':accent,'fill-opacity':.18}});
         instance.addLayer({id:'capacity-zone-outline',type:'line',source:'capacity-selected-zone',paint:{'line-color':accent,'line-width':2}});
@@ -47,7 +47,7 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
         instance.addLayer({id:'capacity-representative-points',type:'circle',source:'capacity-selected-points',paint:{
           'circle-radius':['case',['==',['get','kind'],'site'],8,7],
           'circle-color':['case',['==',['get','kind'],'site'],success,accent],
-          'circle-stroke-color':style.getPropertyValue('--canvas').trim(),'circle-stroke-width':2}});
+          'circle-stroke-color':style.getPropertyValue('--map-stroke').trim(),'circle-stroke-width':2}});
         fitSelection(instance,selection.current.zone,selection.current.site);
         setError(null);setReady(true);
       });

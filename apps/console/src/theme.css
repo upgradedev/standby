@@ -1,6 +1,9 @@
 /* Route A: extend the console's existing token names and colour roles. */
 :root {
   --subtle: #9cafc5;
+  --map-accent: #53c9d8;
+  --map-site: #76d6a7;
+  --map-stroke: #0b1018;
   --control-border: #6f859e;
   --border-control: var(--control-border);
   --focus: #69d7e4;
