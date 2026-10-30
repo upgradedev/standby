@@ -70,7 +70,7 @@ export function Provider({children}:{children:ReactNode}) {
  const stale=!!result&&(inputKey(result.input)!==inputKey(input)||!!evaluationError);
  const saveScenario=useCallback((name?:string,scenarioInput:EvaluationInput=input)=>{
    const successful=!!result&&!stale&&inputKey(result.input)===inputKey(scenarioInput);
-   const scenario:LocalScenario={id:crypto.randomUUID(),name:name?.trim().slice(0,100)||`${input.fleetSize} units · ${input.thresholdMinutes} min`,input:{...input},updatedAt:new Date().toISOString(),evaluationStatus:successful?'SUCCEEDED':'NOT_RUN',reviewStatus:successful?'NEEDS_REVIEW':'NOT_READY',...(successful?{inputHash:result.inputHash}:{})};
+   const scenario:LocalScenario={id:crypto.randomUUID(),name:name?.trim().slice(0,100)||`${scenarioInput.fleetSize} units · ${scenarioInput.thresholdMinutes} min`,input:{...scenarioInput},updatedAt:new Date().toISOString(),evaluationStatus:successful?'SUCCEEDED':'NOT_RUN',reviewStatus:successful?'NEEDS_REVIEW':'NOT_READY',...(successful?{inputHash:result.inputHash}:{})};
    if(persistScenarios([scenario,...scenarios].slice(0,50)))toast('Scenario saved on this device. Travel-time results are not stored.');
  },[input,result,stale,scenarios,persistScenarios,toast]);
  const deleteScenario=useCallback((id:string)=>{if(persistScenarios(scenarios.filter(s=>s.id!==id)))toast('Local scenario removed.');},[scenarios,persistScenarios,toast]);
