@@ -8,7 +8,7 @@ import { Busy } from './ui';
 
 interface Props {plan:PlanResult|undefined;layer:'coverage'|'demand'|'difference';selected:string|null;onSelect:(id:string)=>void}
 export default function MapCanvas({plan,layer,selected,onSelect}:Props){
- const{config,manifest,zones,result}=useStandby(),container=useRef<HTMLDivElement>(null),map=useRef<MapInstance|null>(null),markers=useRef<maplibregl.Marker[]>([]),callback=useRef(onSelect);
+ const{config,manifest,zones,result,input}=useStandby(),container=useRef<HTMLDivElement>(null),map=useRef<MapInstance|null>(null),markers=useRef<maplibregl.Marker[]>([]),callback=useRef(onSelect);
  const[ready,setReady]=useState(false),[mapError,setMapError]=useState<string|null>(null),[attempt,setAttempt]=useState(0);callback.current=onSelect;
  const bounds=manifest?.dataset.bounds;
  useEffect(()=>{
@@ -26,13 +26,13 @@ export default function MapCanvas({plan,layer,selected,onSelect}:Props){
  },[config?.mapStyleUrl,config?.mapApiKey,bounds,attempt]);
  const features=useMemo(()=>{
   const coverage=new Map(plan?.zones.map(z=>[z.zoneId,z])??[]),baseline=new Map(result?.plans.depot.zones.map(z=>[z.zoneId,z])??[]),proposal=new Map(result?.plans.proposal.zones.map(z=>[z.zoneId,z])??[]);
-  return zones.map(zone=>{const outcome=coverage.get(zone.id),count=plan?.cohort==='train'?zone.trainCount:zone.holdoutCount;let color='#53c9d8';
+  return zones.map(zone=>{const outcome=coverage.get(zone.id),count=(plan?.cohort??input.cohort)==='train'?zone.trainCount:zone.holdoutCount;let color='#53c9d8';
    if(layer==='coverage'&&outcome)color=outcome.covered?'#76d6a7':'#f2a866';
    if(layer==='demand')color=count>=50?'#53c9d8':count>=15?'#4388a8':'#435b74';
    if(layer==='difference'){const before=baseline.get(zone.id)?.covered,after=proposal.get(zone.id)?.covered;color=after&&!before?'#76d6a7':before&&!after?'#f58b91':'#435b74';}
    return{zone,properties:{id:zone.id,color,demand:count,selected:zone.id===selected}};
   });
- },[zones,plan,layer,result,selected]);
+ },[zones,plan,layer,result,selected,input.cohort]);
  useEffect(()=>{if(!ready||!map.current)return;const instance=map.current;
   (instance.getSource('demand-zones') as GeoJSONSource)?.setData({type:'FeatureCollection',features:features.map(({zone,properties})=>({type:'Feature',properties,geometry:{type:'Polygon',coordinates:[zone.polygon]}}))});
   (instance.getSource('representatives') as GeoJSONSource)?.setData({type:'FeatureCollection',features:features.map(({zone,properties})=>({type:'Feature',properties,geometry:{type:'Point',coordinates:zone.position}}))});
