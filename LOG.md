@@ -1,5 +1,13 @@
 # History
 
+## 2026-10-30 — Codex — visible map correction and final media
+
+Actual video frames and a fresh native Chrome screenshot exposed a blank map after run41055059142 passed timing checks. Earlier SDK/AX readiness was insufficient: lazy MapLibre CSS overrode the application selector, leaving a zero-height clipped container. Recorded unfreeze before the one-selector fix, deployed and re-froze5ad96cc4c6e50503556bb706f1698477764d2dd2. Native proof then showed600x931px of real roads, demand polygons/points and sites. Added geometry/clipping/control and in-memory actual-pixel gates; the retained bad frame fails while the corrected screenshot passes. No gates were loosened and no prior evidence was erased.
+
+Final anonymous desktop/tablet/mobile and mandatory pixel acceptance passed41058050365. Final source CI41058056422 passed. Fresh six-beat capture and final media passed41058054655:145 seconds audio/video,30fps,23 bounded cues. Actual MP4 SHA256 ef6f57794642870f40f90cd1bb1fc318ae2424a21f3e2f4fbdddcac9e7d2cb6d independently matched after download. Actual encoded map/resilience/provenance frames were visually checked. Video is `.runtime/demo-visible/standby-demo.mp4`; qualifying public hosting and final submission still require owner action-time terms and eligibility facts. Original narration reused; no new routing or synthesis.
+
+Owner resolved the local zero-space blocker (observed1727320064 bytes free). Safely reconciled local canonical edits with the upstream documentation commit, preserving a local patch receipt first. The rejected temporary-copy cleanup was not bypassed. Native Chrome restarted as browser4; current app, saved Builder preview and YouTube upload dialog are reachable. No video uploaded, new terms accepted or Submitted claim made.
+
 ## 2026-10-30 — Codex — corrected freeze and completed verified video
 
 Independent review found inaccurate cohort labels in the accessible map list and overbroad private-results wording in Settings. Recorded unfreeze, corrected only those two runtime surfaces and re-froze at 48caf91933de5f24553c3ae9d0772c12186f3ded. Source CI 41053286838 and final anonymous desktop/tablet/mobile acceptance 41053626057 passed. Previous real Cognito role acceptance remains tied to its original exact release; service/domain code is unchanged. PR4 merged as 5d69709d13f7f1bfa551d171a00b8114b9d0dc4d.
