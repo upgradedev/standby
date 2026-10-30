@@ -40,7 +40,7 @@ async function api(actor,method,path,{data,headers={},token=actor.accessToken,st
     ...(data===undefined?{}:{data:typeof data==='string'?data:JSON.stringify(data)}),
   });
   const expected=Array.isArray(status)?status:[status];
-  check(expected.includes(response.status()),'protected-api-unexpected-status');
+  check(expected.includes(response.status()),`protected-api-unexpected-status-${response.status()}`);
   const responseHeaders=response.headers(),value=await response.json();
   if(response.ok()) check(responseHeaders['cache-control']?.includes('no-store'),'protected-response-cacheable');
   await response.dispose();

@@ -28,6 +28,7 @@ jobs:
           node-version: '22'
       - run: npm ci
       - name: Install browser in hosted CI only
+        id: browser-install
         run: npx playwright install --with-deps chromium
       - name: Verify live anonymous user journey
         env:
@@ -35,7 +36,7 @@ jobs:
           STANDBY_EXPECTED_RELEASE: ${{ inputs.release }}
         run: node tests/browser/live.mjs
       - name: Verify real Cognito and workspace authorization
-        if: ${{ inputs.authenticated }}
+        if: ${{ !cancelled() && inputs.authenticated && steps.browser-install.outcome == 'success' }}
         env:
           STANDBY_LIVE_URL: ${{ inputs.url }}
           STANDBY_EXPECTED_RELEASE: ${{ inputs.release }}
