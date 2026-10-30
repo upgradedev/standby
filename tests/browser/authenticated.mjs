@@ -243,12 +243,17 @@ try {
   await visible(admin.page.getByRole('button',exact('Save workspace defaults')),'admin-settings-write-menu-missing');
   check(await admin.page.getByRole('tab',exact('Workspace')).getAttribute('aria-selected')==='true','workspace-settings-tab-not-selected');
   step='Admin:settings-threshold-field';
-  // A select embedded in its label can contribute its selected option to the
-  // label's accessible text. Match the complete field name plus that suffix.
-  const threshold=admin.page.getByLabel(/^Default road approach threshold(?:\s|$)/);
-  const exactLabels=await admin.page.getByLabel('Default road approach threshold',{exact:true}).count();
+  // Ground the field in the exact visible label span and its contained control.
+  // Embedded option text is excluded from this field-identity assertion.
+  const thresholdLabel=admin.page.locator('.settings-form label').filter({hasText:'Default road approach threshold'});
+  const namedLabels=await thresholdLabel.count();
+  check(namedLabels===1,'workspace-threshold-label-not-unique');
+  const labelSpan=thresholdLabel.locator(':scope > span');
+  check(await labelSpan.count()===1&&(await labelSpan.textContent())?.trim()==='Default road approach threshold',
+    'workspace-threshold-label-text-mismatch');
+  const threshold=thresholdLabel.getByRole('combobox');
   const namedFields=await threshold.count();
-  console.log(`DOM Admin settings: workspace-tab-selected=true save-visible=true exact-threshold-labels=${exactLabels} named-threshold-fields=${namedFields}`);
+  console.log(`DOM Admin settings: workspace-tab-selected=true save-visible=true exact-visible-labels=${namedLabels} scoped-threshold-controls=${namedFields}`);
   check(namedFields===1,'workspace-threshold-field-not-unique');
   await visible(threshold,'workspace-threshold-field-not-visible');
   check(await threshold.isEnabled(),'admin-workspace-threshold-disabled');
