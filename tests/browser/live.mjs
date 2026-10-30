@@ -33,6 +33,17 @@ async function visible(locator, code) {
 async function noHorizontalOverflow(page) {
   check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'viewport-horizontal-overflow');
 }
+async function renderedAttribute(page, locator, name, value) {
+  // Playwright clicks and history.pushState can finish before a React transition commits.
+  await locator.and(page.locator(`[${name}="${value}"]`)).waitFor({state: 'visible'});
+}
+async function renderedPage(page, expectedPage, previousIds) {
+  await page.waitForFunction(({expectedPage, previousIds}) => {
+    const counter = document.querySelector('.table-pagination')?.textContent ?? '';
+    const ids = [...document.querySelectorAll('table.data-table tbody .zone-cell small')].map((element) => element.textContent);
+    return new RegExp(`Page ${expectedPage} of`).test(counter) && ids.length > 0 && JSON.stringify(ids) !== JSON.stringify(previousIds);
+  }, {expectedPage, previousIds});
+}
 async function navigate(page, label, heading = label) {
   const menu = page.getByRole('button', exact('Open navigation'));
   if (await menu.isVisible()) {
@@ -112,10 +123,12 @@ try {
     const collapse = page.getByRole('button', exact('Collapse sidebar'));
     if (await collapse.isVisible()) {
       await collapse.click();
+      await page.locator('.app-shell.sidebar-collapsed').waitFor({state: 'visible'});
       check(await page.locator('.app-shell.sidebar-collapsed').count() === 1, 'rail-did-not-collapse');
       const history = page.locator('aside.sidebar').getByRole('link', {name: /^Incident history,/});
       check(await history.locator('.nav-badge').isVisible(), 'collapsed-rail-badge-hidden');
       await page.getByRole('button', exact('Expand sidebar')).click();
+      await page.locator('.app-shell:not(.sidebar-collapsed)').waitFor({state: 'visible'});
     } else {
       await page.getByRole('button', exact('Open navigation')).click();
       const mobile = page.getByRole('dialog', exact('Navigation'));
@@ -130,13 +143,17 @@ try {
     const table = page.locator('table.data-table');
     await visible(table, 'history-table-missing');
     const rows = table.locator('tbody tr');
+    await rows.first().waitFor({state: 'visible'});
     const firstIds = await rows.locator('.zone-cell small').allTextContents();
     await page.getByRole('button', exact('Next page')).click();
     await page.waitForURL((url) => url.searchParams.get('page') === '2');
+    await renderedPage(page, 2, firstIds);
     const nextIds = await rows.locator('.zone-cell small').allTextContents();
     check(nextIds.length > 0 && firstIds.every((id) => !nextIds.includes(id)), 'pagination-repeats-first-page');
     await table.getByRole('button', exact('Training reports')).click();
     await page.waitForURL((url) => url.searchParams.get('sort') === 'trainCount');
+    const expectedSort = new URL(page.url()).searchParams.get('dir') === 'asc' ? 'ascending' : 'descending';
+    await renderedAttribute(page, table.getByRole('columnheader', {name: 'Training reports'}), 'aria-sort', expectedSort);
     const sortDirection = await table.getByRole('columnheader', {name: 'Training reports'}).getAttribute('aria-sort');
     const counts = await rows.locator('td:nth-child(2)').allTextContents();
     const values = counts.map((value) => Number(value.replace(/,/g, '')));
@@ -145,10 +162,12 @@ try {
     await filter.fill('no-such-zone-browser-gate');
     await visible(page.getByRole('heading', exact('No zones match these filters')), 'history-empty-state-missing');
     await page.getByRole('button', exact('Clear filters')).click();
+    await rows.first().waitFor({state: 'visible'});
     await filter.focus();
     await page.keyboard.press('/');
     check(await page.locator('dialog.search-modal[open]').count() === 0, 'search-shortcut-intercepts-editable-field');
     await filter.fill('');
+    await page.waitForFunction(() => document.querySelector('input[aria-label="Filter all demand zones"]')?.value === '' && document.querySelectorAll('table.data-table tbody tr').length > 0);
 
     step = `${viewport.name}:global-search-beyond-current-page`;
     const visibleIds = await rows.locator('.zone-cell small').allTextContents();
@@ -164,10 +183,13 @@ try {
     check(new URL(page.url()).searchParams.get('zone') === offPageZone.id, 'global-search-selected-wrong-zone');
     await page.keyboard.press('Escape');
     await page.locator('dialog.detail-drawer').waitFor({state: 'hidden'});
+    await page.waitForURL((url) => !url.searchParams.has('zone'));
 
     step = `${viewport.name}:master-detail-keyboard-focus`;
+    const beforeDrawerPageIds = await rows.locator('.zone-cell small').allTextContents();
     await page.getByRole('button', exact('Next page')).click();
     await page.waitForURL((url) => url.searchParams.get('page') === '2');
+    await renderedPage(page, 2, beforeDrawerPageIds);
     const row = rows.first();
     const selectedId = await row.locator('.zone-cell small').textContent();
     await row.press('Enter');
@@ -175,8 +197,10 @@ try {
     await visible(drawer, 'keyboard-row-does-not-open-drawer');
     check(new URL(page.url()).searchParams.get('zone') === selectedId, 'drawer-zone-url-wrong');
     await drawer.getByRole('tab', exact('Coverage')).click();
+    await renderedAttribute(page, drawer.getByRole('tab', exact('Coverage')), 'aria-selected', 'true');
     await visible(drawer.getByRole('tabpanel'), 'drawer-coverage-panel-missing');
     await drawer.getByRole('tab', exact('Coverage')).press('ArrowRight');
+    await renderedAttribute(page, drawer.getByRole('tab', exact('Provenance')), 'aria-selected', 'true');
     check(await drawer.getByRole('tab', exact('Provenance')).getAttribute('aria-selected') === 'true', 'drawer-keyboard-tabs-broken');
     await visible(drawer.getByText(manifest.dataset.hash, {exact: true}), 'drawer-provenance-hash-missing');
     for (let i = 0; i < 12; i++) {
@@ -200,15 +224,19 @@ try {
     const fresh = await waitEvaluation(page, () => page.getByRole('button', exact('Compare positions')).click(), {fleetSize: 2, thresholdMinutes: 5});
     check(fresh.datasetHash === manifest.dataset.hash, 'map-evaluated-wrong-snapshot');
     await page.getByRole('button', exact('Depot')).click();
+    await renderedAttribute(page, page.getByRole('button', exact('Depot')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Depot')).getAttribute('aria-pressed') === 'true', 'depot-display-not-selected');
     await page.getByRole('button', exact('Proposal')).click();
+    await renderedAttribute(page, page.getByRole('button', exact('Proposal')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Proposal')).getAttribute('aria-pressed') === 'true', 'proposal-display-not-selected');
     await page.getByRole('button', {name: /^unit-1, available\./}).click();
+    await visible(page.getByRole('button', {name: /^unit-1, unavailable\./}), 'availability-toggle-not-rendered');
     const busy = await waitEvaluation(page, () => page.getByRole('button', exact('Compare positions')).click(), {fleetSize: 2, thresholdMinutes: 5, unavailableUnitId: 'unit-1'});
     check(busy.inputHash !== fresh.inputHash, 'availability-change-did-not-change-evaluation');
     check(busy.plans.proposal.units.filter((unit) => unit.available).length === 1, 'unavailable-unit-still-counts-as-available');
     check(busy.plans.proposal.backupCoveredDemand === 0, 'single-available-unit-creates-backup');
     await page.getByRole('button', exact('Accessible list of all zones')).click();
+    await page.locator('.accessible-zone-list button').first().waitFor({state: 'visible'});
     check(await page.locator('.accessible-zone-list button').count() === zones.length, 'accessible-map-list-incomplete');
     await noHorizontalOverflow(page);
 
@@ -228,6 +256,7 @@ try {
     await visible(page.getByRole('heading', exact(stored[0].name)), 'local-scenario-not-in-review-queue');
     await page.reload({waitUntil: 'domcontentloaded'});
     await visible(page.getByRole('heading', exact(stored[0].name)), 'local-input-not-restored-after-reload');
+    await renderedAttribute(page, page.getByRole('tab', {name: /^Draft/}), 'aria-selected', 'true');
     check(await page.getByRole('tab', {name: /^Draft/}).getAttribute('aria-selected') === 'true', 'reload-retained-unverified-evaluation-status');
 
     step = `${viewport.name}:preferences-save-reset`;
@@ -236,10 +265,16 @@ try {
     await timezone.selectOption('UTC');
     await units.selectOption('km');
     await page.getByRole('button', exact('Save preferences')).click();
+    await visible(page.getByRole('status').filter({hasText: 'Preferences saved on this device.'}), 'preferences-save-acknowledgement-missing');
     await page.reload({waitUntil: 'domcontentloaded'});
     await visible(page.getByRole('heading', exact('Settings')), 'settings-reload-failed');
     check(await timezone.inputValue() === 'UTC' && await units.inputValue() === 'km', 'preferences-not-persisted');
     await page.getByRole('button', exact('Reset defaults')).click();
+    await page.waitForFunction(() => {
+      const panel = document.querySelector('.settings-form');
+      const selects = panel?.querySelectorAll('select');
+      return selects?.[0]?.value === 'America/Chicago' && selects?.[1]?.value === 'mi';
+    });
     check(await timezone.inputValue() === 'America/Chicago' && await units.inputValue() === 'mi', 'preferences-reset-failed');
     await page.getByRole('tab', exact('Data & model')).click();
     await visible(page.getByText(manifest.dataset.hash, {exact: true}), 'settings-provenance-missing');
