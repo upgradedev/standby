@@ -237,8 +237,8 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 
 | Item | Status / default | Blocks what |
 | --- | --- | --- |
-| W1 wireframe structure | **OWNER APPROVED** six destinations, Capacity lab regions and detail/map | Resolved; shell/overview review is the next gate |
-| W1b shell/overview preview | Built source67673a8, hosted CI41118994064 passed; owner review requested with desktop/mobile images | Owner explicit OK before Capacity list/detail pages |
+| W1 wireframe structure | **OWNER APPROVED** six destinations, Capacity lab regions and detail/map | Resolved; shell/overview subsequently approved |
+| W1b shell/overview preview | **OWNER APPROVED** source67673a8 and verified desktop/mobile preview | Resolved; first functional Capacity list/detail review is next |
 | W2 final field/enum/bounds mapping | Resolved in `packages/contracts/src/capacity.ts`; defaults factory shared with future UI; domain/API typecheck/tests/build passed in CI41110905525 | UI must consume this single contract |
 | W3 real staffing targets / service logs | Deferred; editable scenario target/durations are sufficient for this MVP | Any real-world staffing/SLA claim |
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
@@ -262,7 +262,7 @@ No open item authorizes guessed measurements. Engine runtime limits and actual o
 |2026-10-30|Wireframe structure explicitly approved: «Εγκρίνω τη δομή του wireframe»|Owner reply; Step3 complete|
 |2026-10-30|Step4 starts with shell/overview preview; Capacity list/detail follows owner review|ops-console-ui Step4 named checkpoint|
 
-Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops-console-ui/SKILL.md), step4: “The user reviews the shell and the overview before you build further, and later the first list on real data, while changes are still cheap.” The owner-approved wireframe structure is complete; the next review uses actual built shell/overview screenshots, not the lowfi wireframe.
+Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops-console-ui/SKILL.md), step4: “The user reviews the shell and the overview before you build further, and later the first list on real data, while changes are still cheap.” The owner-approved wireframe structure and shell/overview review are complete. The next review uses the first functional list with actual API-generated modeled jobs and a real map. These modeled jobs are not empirical insured incidents.
 
 ### Step4 shell/overview review record
 
@@ -270,4 +270,10 @@ Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops
 - Verified: [CI41118994064](https://github.com/upgradedev/standby/actions/runs/41118994064) passed typecheck, `npm test`44domain/API tests, source/data/demo gates, web/Lambda build and the Step4 preview. Copied skill lint on Shell/Overview has0errors/0warnings. Six shots at320/390/1440, dark/light;0console errors,0failed normal requests,0ready timeouts,0keyboard smoke warnings. Additional checks cover persisted rail, native dropdown, user dropdown, mobile navigation/Escape/focus return and a forced API outage without KPI fallback.
 - Review artifacts: [CI preview artifact](https://github.com/upgradedev/standby/actions/runs/41118994064/artifacts/13008140431), local `.runtime/console-review-67673a8/` with contact sheet, full desktop, mobile, dropdown and forced-error PNGs. Coordinator visually inspected the contact sheet, desktop/mobile, dropdowns and outage. Images are actual app captures.
 - Demo: no made-up historical data or outage fallback. Capacity lab currently shows an explicit scope/unavailable preview only; its editable scenario forms, queue/jobs/map and API connection follow the owner shell/overview OK.
-- Open: owner shell/overview approval; Capacity list/detail and subsequent first-list review; full-app strict lint, axe and human keyboard/role/deep-link/state release matrix. The copied skill scripts remain byte-identical to their source, verified with SHA256. No local package installs, cloud deployment, paid routing, video or publication in this increment.
+- Open: shell/overview now explicitly approved; Capacity first-list/detail review; full-app strict lint, axe and human keyboard/role/deep-link/state release matrix. The copied skill scripts remain byte-identical to their source, verified with SHA256. No local package installs, cloud deployment, paid routing, video or publication in this increment.
+
+### Step4 functional Capacity increment
+
+- Owner explicitly approved shell/Overview and authorized functional forms, queue and detail/map. Current first-list implementation uses the real public Capacity API; review captures and exact CI evidence will be recorded once verified.
+- Existing web UI remains5ad. The read API is partially activated at3802 with capability metadata, bounded actual evaluations and rollback receipts; no new resources, paid routing or protected writes.
+- Next owner checkpoint: review the generated jobs list, all detail tabs and full/expanded map. Full release QA and later video/publication approvals remain separate.
