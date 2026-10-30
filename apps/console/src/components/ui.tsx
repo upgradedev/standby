@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { AlertCircle, ArrowUpRight, Check, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { ApiError } from '../lib/api';
 import { useStandby } from '../state';
@@ -13,7 +13,17 @@ export function DataGate({children}:{children:ReactNode}){const{loading,error,zo
 export function Modal({open,onClose,title,children,className=''}:{open:boolean;onClose:()=>void;title:string;children:ReactNode;className?:string}){
  const ref=useRef<HTMLDialogElement>(null),label=useId();
  useEffect(()=>{const dialog=ref.current;if(open&&!dialog?.open)dialog?.showModal();if(!open&&dialog?.open)dialog.close();},[open]);
- return <dialog ref={ref} className={`modal ${className}`} aria-labelledby={label} onClose={onClose} onClick={e=>{if(e.target===e.currentTarget){const box=e.currentTarget.getBoundingClientRect();if(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom)onClose();}}}><div className="modal-heading"><h2 id={label}>{title}</h2><button className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
+ function trapTab(event:KeyboardEvent<HTMLDialogElement>){
+  if(event.key!=='Tab'||event.altKey||event.ctrlKey||event.metaKey)return;
+  const dialog=event.currentTarget;
+  const focusable=Array.from(dialog.querySelectorAll<HTMLElement>('a[href],button,input,select,textarea,summary,[tabindex],[contenteditable="true"]')).filter(element=>element.tabIndex>=0&&!element.matches(':disabled')&&!element.closest('[inert]')&&element.getClientRects().length>0&&getComputedStyle(element).visibility!=='hidden');
+  event.preventDefault();
+  if(!focusable.length){dialog.focus();return;}
+  const current=focusable.indexOf(document.activeElement as HTMLElement);
+  const next=current<0?(event.shiftKey?focusable.length-1:0):(current+(event.shiftKey?-1:1)+focusable.length)%focusable.length;
+  focusable[next].focus();
+ }
+ return <dialog ref={ref} tabIndex={-1} className={`modal ${className}`} aria-labelledby={label} onKeyDown={trapTab} onClose={onClose} onClick={e=>{if(e.target===e.currentTarget){const box=e.currentTarget.getBoundingClientRect();if(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom)onClose();}}}><div className="modal-heading"><h2 id={label}>{title}</h2><button className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
 }
 export function Toasts(){const{toasts,dismissToast}=useStandby();return <div className="toast-stack" aria-live="polite" aria-atomic="false">{toasts.map(t=><div key={t.id} className={`toast ${t.kind}`} role={t.kind==='error'?'alert':'status'}>{t.kind==='error'?<AlertCircle size={18}/>:<Check size={18}/>}<span>{t.message}</span><button aria-label="Dismiss notification" className="icon-button" onClick={()=>dismissToast(t.id)}><X size={16}/></button></div>)}</div>;}
 export function Busy({label='Computing'}:{label?:string}){return <span className="inline-flex items-center gap-2"><LoaderCircle className="spin" size={15}/>{label}</span>;}
