@@ -13,6 +13,7 @@ let step = 'browser-launch';
 const check = (condition, code) => { if (!condition) throw new Error(code); };
 const exact = (name) => ({ name, exact: true });
 const regexEscape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const navigationItems = [['Overview','overview'], ['Incident history','incidents'], ['Capacity lab','capacity'], ['Planning queues','queues'], ['Coverage map','map'], ['Settings','settings']];
 const browser = await chromium.launch({headless: true, args: ['--use-angle=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist']});
 
 async function readinessDiagnostic(label, response) {
@@ -56,6 +57,58 @@ async function navigate(page, label, heading = label) {
   check(await page.locator('dialog.mobile-nav[open]').count() === 0, 'mobile-navigation-did-not-close');
   await noHorizontalOverflow(page);
 }
+async function navigationContract(page, navigation, pendingReview) {
+  check(Number.isInteger(pendingReview) && pendingReview >= 0, 'navigation-review-count-unverified');
+  const links = [];
+  check(await navigation.getByRole('link').count() === navigationItems.length, 'navigation-destination-count-wrong');
+  for (const [label, path] of navigationItems) {
+    const link = navigation.getByRole('link', {name: new RegExp(`^${regexEscape(label)}(?:,|$)`)});
+    await visible(link, 'navigation-destination-hidden');
+    const target = new URL(await link.getAttribute('href'), page.url());
+    check(target.origin === new URL(base).origin && target.pathname === `/${path}`, 'navigation-destination-wrong');
+    check(await link.evaluate(element => element instanceof HTMLAnchorElement && element.tabIndex >= 0 && !element.closest('[inert]') && element.getAttribute('aria-disabled') !== 'true'), 'navigation-link-not-keyboard-reachable');
+    const expectedName = path === 'queues' && pendingReview > 0 ? `${label}, ${pendingReview} plans need review` : label;
+    check(await navigation.getByRole('link', exact(expectedName)).count() === 1, 'navigation-accessible-name-wrong');
+    const badge = link.locator('.nav-badge');
+    if (path === 'queues' && pendingReview > 0) {
+      check(await badge.count() === 1, 'pending-review-badge-missing');
+      await visible(badge, 'pending-review-badge-hidden');
+      check((await badge.innerText()).trim() === String(pendingReview), 'pending-review-badge-count-wrong');
+    } else check(await badge.count() === 0, 'navigation-has-misleading-total-badge');
+    links.push(link);
+  }
+  await links[0].focus();
+  for (let index = 0; index < links.length; index++) {
+    check(await links[index].evaluate(element => document.activeElement === element), 'navigation-keyboard-order-broken');
+    if (index + 1 < links.length) await page.keyboard.press('Tab');
+  }
+}
+async function navigationRail(page, pendingReview) {
+  const collapse = page.getByRole('button', exact('Collapse sidebar'));
+  const menu = page.getByRole('button', exact('Open navigation'));
+  if (await collapse.isVisible()) {
+    await collapse.click();
+    await page.locator('.app-shell.sidebar-collapsed').waitFor({state:'visible'});
+    check(await page.locator('.app-shell.sidebar-collapsed').count() === 1, 'rail-did-not-collapse');
+    await navigationContract(page, page.locator('aside.sidebar').getByRole('navigation', exact('Main navigation')), pendingReview);
+    await page.getByRole('button', exact('Expand sidebar')).click();
+    await page.locator('.app-shell:not(.sidebar-collapsed)').waitFor({state:'visible'});
+  } else if (await menu.isVisible()) {
+    await menu.click();
+    const mobile = page.getByRole('dialog', exact('Navigation'));
+    await visible(mobile, 'mobile-navigation-not-open');
+    await navigationContract(page, mobile.getByRole('navigation', exact('Main navigation')), pendingReview);
+    await page.keyboard.press('Escape');
+    await mobile.waitFor({state:'hidden'});
+    check(await menu.evaluate(element => document.activeElement === element), 'mobile-navigation-focus-not-restored');
+  } else {
+    const rail = page.locator('aside.sidebar');
+    await visible(rail, 'permanent-rail-missing');
+    const bounds = await rail.boundingBox();
+    check(bounds && bounds.width > 0 && bounds.width <= 80, 'permanent-rail-not-compact');
+    await navigationContract(page, rail.getByRole('navigation', exact('Main navigation')), pendingReview);
+  }
+}
 async function waitEvaluation(page, action, expectedInput) {
   const pending = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('/public/evaluations') && response.request().method() === 'POST', {timeout: 30_000});
   await action();
@@ -83,6 +136,8 @@ try {
     const page = await context.newPage();
     page.setDefaultTimeout(15_000);
     const pageErrors = [];
+    let capacityRequests = 0;
+    page.on('request', request => {if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/public/capacity-evaluations')) capacityRequests++;});
     page.on('pageerror', () => pageErrors.push('uncaught-page-error'));
     page.on('response', (received) => {
       const path = new URL(received.url()).pathname;
@@ -121,38 +176,27 @@ try {
     await noHorizontalOverflow(page);
 
     step = `${viewport.name}:navigation-rail`;
-    const collapse = page.getByRole('button', exact('Collapse sidebar'));
-    if (await collapse.isVisible()) {
-      await collapse.click();
-      await page.locator('.app-shell.sidebar-collapsed').waitFor({state: 'visible'});
-      check(await page.locator('.app-shell.sidebar-collapsed').count() === 1, 'rail-did-not-collapse');
-      const history = page.locator('aside.sidebar').getByRole('link', {name: /^Incident history,/});
-      check(await history.locator('.nav-badge').isVisible(), 'collapsed-rail-badge-hidden');
-      await page.getByRole('button', exact('Expand sidebar')).click();
-      await page.locator('.app-shell:not(.sidebar-collapsed)').waitFor({state: 'visible'});
-    } else if (await page.getByRole('button', exact('Open navigation')).isVisible()) {
-      await page.getByRole('button', exact('Open navigation')).click();
-      const mobile = page.getByRole('dialog', exact('Navigation'));
-      check(await mobile.getByRole('link').count() >= 5, 'mobile-navigation-incomplete');
-      await page.keyboard.press('Escape');
-      await mobile.waitFor({state: 'hidden'});
-      check(await page.getByRole('button', exact('Open navigation')).evaluate((element) => document.activeElement === element), 'mobile-navigation-focus-not-restored');
-    } else {
-      // Responsive CSS can expose a permanent rail between desktop and mobile.
-      // Classify the rendered controls, rather than assuming a viewport breakpoint.
-      const rail = page.locator('aside.sidebar');
-      await visible(rail, 'permanent-rail-missing');
-      const bounds = await rail.boundingBox();
-      check(bounds && bounds.width > 0 && bounds.width <= 80, 'permanent-rail-not-compact');
-      const navigation = rail.getByRole('navigation', exact('Main navigation'));
-      for (const label of ['Overview', 'Incident history', 'Planning queues', 'Coverage map', 'Settings']) {
-        await visible(navigation.getByRole('link', {name: new RegExp(`^${regexEscape(label)}(?:,|$)`)}), 'permanent-rail-navigation-inaccessible');
-      }
-      for (const label of ['Incident history', 'Planning queues', 'Coverage map']) {
-        const link = navigation.getByRole('link', {name: new RegExp(`^${regexEscape(label)},`)});
-        await visible(link.locator('.nav-badge'), 'permanent-rail-badge-hidden');
-      }
-    }
+    await navigationRail(page, 0);
+
+    step = `${viewport.name}:public-capacity-deep-link-and-reload`;
+    const capacityUrl = `${base}/capacity?view=baseline&t=17`;
+    const capacityDocument = await page.goto(capacityUrl, {waitUntil:'domcontentloaded',timeout:45_000});
+    check(capacityDocument?.status() === 200, 'capacity-deep-link-not-200');
+    await visible(page.getByRole('heading', exact('Capacity lab')), 'capacity-deep-link-heading-missing');
+    await page.locator('main[data-ready="true"]').waitFor();
+    await visible(page.getByTestId('capacity-assumption-label'), 'capacity-assumptions-not-visible');
+    await renderedAttribute(page, page.getByTestId('capacity-status'), 'data-state', 'not_run');
+    check(await page.getByRole('combobox', exact('Active workspace')).inputValue() === 'public', 'capacity-public-path-requires-workspace');
+    check(await page.locator('[data-testid="capacity-results"]').count() === 0, 'capacity-shows-uncomputed-results');
+    check((await page.title()).includes('[Assumption-based]'), 'capacity-title-not-labeled');
+    await page.reload({waitUntil:'domcontentloaded'});
+    await visible(page.getByRole('heading', exact('Capacity lab')), 'capacity-reload-heading-missing');
+    await page.locator('main[data-ready="true"]').waitFor();
+    await renderedAttribute(page, page.getByTestId('capacity-status'), 'data-state', 'not_run');
+    const capacityQuery = new URL(page.url()).searchParams;
+    check(capacityQuery.get('view') === 'baseline' && capacityQuery.get('t') === '17', 'capacity-reload-lost-url-state');
+    check(capacityRequests === 0, 'capacity-deep-link-starts-unsolicited-evaluation');
+    await noHorizontalOverflow(page);
 
     step = `${viewport.name}:history-sort-filter-pagination`;
     await navigate(page, 'Incident history');
@@ -208,7 +252,8 @@ try {
     await renderedPage(page, 2, beforeDrawerPageIds);
     const row = rows.first();
     const selectedId = await row.locator('.zone-cell small').textContent();
-    await row.press('Enter');
+    const rowLink = row.getByRole('link');
+    await rowLink.press('Enter');
     const drawer = page.locator('dialog.detail-drawer[open]');
     await visible(drawer, 'keyboard-row-does-not-open-drawer');
     check(new URL(page.url()).searchParams.get('zone') === selectedId, 'drawer-zone-url-wrong');
@@ -225,7 +270,8 @@ try {
     }
     await page.keyboard.press('Escape');
     await drawer.waitFor({state: 'hidden'});
-    check(await row.evaluate((element) => document.activeElement === element), 'drawer-focus-not-restored-to-row');
+    await page.waitForFunction(id => document.activeElement?.id === `history-zone-${id}`, selectedId);
+    check(await rowLink.evaluate((element) => document.activeElement === element), 'drawer-focus-not-restored-to-zone-link');
     check(new URL(page.url()).searchParams.get('page') === '2', 'drawer-reset-master-page');
 
     step = `${viewport.name}:live-map-evaluation-and-unit-unavailable`;
@@ -247,7 +293,9 @@ try {
     await renderedAttribute(page, page.getByRole('button', exact('Proposal')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Proposal')).getAttribute('aria-pressed') === 'true', 'proposal-display-not-selected');
     await page.getByRole('button', {name: /^Unit 1[\s\S]*Available[\s\S]*Toggle availability/}).click();
-    await visible(page.getByRole('button', {name: /^unit-1, unavailable\./}), 'availability-toggle-not-rendered');
+    const unavailableUnit = page.getByRole('button', {name: /^Unit 1[\s\S]*Unavailable[\s\S]*Toggle availability/});
+    await visible(unavailableUnit, 'availability-toggle-not-rendered');
+    check(await unavailableUnit.getAttribute('aria-pressed') === 'false', 'availability-toggle-not-unavailable');
     const busy = await waitEvaluation(page, () => page.getByRole('button', exact('Compare positions')).click(), {fleetSize: 2, thresholdMinutes: 5, unavailableUnitId: 'unit-1'});
     check(busy.inputHash !== fresh.inputHash, 'availability-change-did-not-change-evaluation');
     check(busy.plans.proposal.units.filter((unit) => unit.available).length === 1, 'unavailable-unit-still-counts-as-available');
@@ -271,10 +319,15 @@ try {
     await visible(page.getByRole('heading', exact('No plans marked reviewed')), 'public-reviewed-queue-not-empty');
     await page.getByRole('tab', {name: /^Needs review/}).click();
     await visible(page.getByRole('heading', exact(stored[0].name)), 'local-scenario-not-in-review-queue');
+    const reviewCount = page.getByRole('tab', {name:/^Needs review/}).locator('span');
+    await visible(reviewCount, 'saved-scenario-review-count-hidden');
+    check((await reviewCount.innerText()).trim() === '1', 'saved-scenario-review-count-wrong');
+    await navigationRail(page, 1);
     await page.reload({waitUntil: 'domcontentloaded'});
     await visible(page.getByRole('heading', exact(stored[0].name)), 'local-input-not-restored-after-reload');
     await renderedAttribute(page, page.getByRole('tab', {name: /^Draft/}), 'aria-selected', 'true');
     check(await page.getByRole('tab', {name: /^Draft/}).getAttribute('aria-selected') === 'true', 'reload-retained-unverified-evaluation-status');
+    await navigationRail(page, 0);
 
     step = `${viewport.name}:preferences-save-reset`;
     await navigate(page, 'Settings');
