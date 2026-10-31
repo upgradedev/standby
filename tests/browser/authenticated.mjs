@@ -110,7 +110,17 @@ async function signIn(identity,base) {
   const claims=decodeJwtPayload(token.access_token);
   check(claims.token_use==='access'&&(claims.scope??'').split(/\s+/).includes('standby/access'),'real-access-token-scope-invalid');
   step=`${identity.role}:sign-in-return-path`;
-  await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname===entry.pathname&&url.searchParams.get('theme')==='dark',{timeout:30_000});
+  try {
+    await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname===entry.pathname&&url.searchParams.get('theme')==='dark',{timeout:30_000});
+  }catch(error){
+    // Only bounded booleans and approved route names; never URL queries, tokens or DOM text.
+    const current=new URL(page.url()),routes=['/settings','/overview','/auth/callback'];
+    const diagnostic=await page.evaluate(()=>({authStored:!!sessionStorage.getItem('standby.auth.v1'),pkceStored:!!sessionStorage.getItem('standby.pkce.v1'),
+      callbackLoading:!!document.querySelector('.loading-state'),callbackError:!!document.querySelector('.error-state'),fatal:!!document.querySelector('.fatal-error')})).catch(()=>null);
+    console.log(JSON.stringify({returnPathDiagnostic:{route:current.origin===new URL(base).origin&&routes.includes(current.pathname)?current.pathname:'other',
+      themePreserved:current.searchParams.get('theme')==='dark',runtimeErrors:errors.length,...diagnostic}}));
+    throw error;
+  }
   await page.waitForFunction(()=>{
     try {return typeof JSON.parse(sessionStorage.getItem('standby.auth.v1')??'null')?.accessToken==='string';}
     catch {return false;}
