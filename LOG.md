@@ -1,5 +1,13 @@
 # History
 
+## 2026-10-31 — Codex — retain scoped map resource; observe committed input transitions
+
+Integrated workere3df1eb as1aab618 after independent source review. JobDetail keeps only one lazy scoped geometry/map slot across close/tabs; no old job/card fallback,0statuscards/titleclearwhenclosed, invalidselection/run/geography synchronously blocks cache. Positive-size init/resize/fit guards; cleanup remains scoped. Coordinates/camera/padding/data/copy/4tabs unchanged. Local copied strict UI lint29files0errors/0warnings and syntax/diff checks passed; fresh hosted runtime is still required.
+
+[PRIMARY]0a5f23c run https://github.com/upgradedev/standby/actions/runs/41193305147 failed mobile history-reset-editable-filter plus second-close observation. Host close receipt completed1read/2849msfirst and0readswithin25ssecond; later all predicates true. No profiler cause is inferred. Failed receipt/PNG retained. The map lifetime change removes repeated SDK destruction during presentation changes. The history instrument now waits for actual slash query/no-match React commit before clearing, avoiding overlapping controlled-field transitions; existing15s reset predicate, actual data and no-mocking/no-retry budget remain. No release gate was waived.
+
+Owner design approval/copilot deferral stand. Revised proposal must include these bounded corrections, exact green source and fresh captures/guards; old922plan is obsolete for apply. No cloud mutation, frontend rollout, new video or public submission.
+
 ## 2026-10-31 — Codex — observe identical close state from a bounded runner clock
 
 [PRIMARY] a8d734d run https://github.com/upgradedev/standby/actions/runs/41192801472 passed corrected label containment/mapRGB before the in-page native-close observer timed out. Later diagnostic showed all native+React close predicates true. Original receipt/PNG are retained in `.runtime/towing-review-a8d734d/`; no scheduling/app cause is asserted from that later observation.

@@ -292,11 +292,20 @@ try {
     await page.getByRole('button', exact('Clear filters')).click();
     await rows.first().waitFor({state: 'visible'});
     step = `${viewport.name}:history-shortcut-in-editable-field`;
+    check(!zones.some(zone=>`${zone.name} ${zone.id}`.includes('/')),'slash-filter-fixture-matches-source');
     await filter.focus();
     await page.keyboard.press('/');
+    // Finish the controlled URL/filter transition before clearing the field.
+    // Filling an already-empty DOM value before React commits '/' can otherwise
+    // observe the wrong action rather than the intended clear-filter behavior.
+    await Promise.all([
+      page.waitForURL(url=>url.searchParams.get('q')==='/',{timeout:15_000}),
+      page.getByRole('heading',exact('No zones match these filters')).waitFor({state:'visible',timeout:15_000}),
+    ]);
     check(await page.locator('dialog.search-modal[open]').count() === 0, 'search-shortcut-intercepts-editable-field');
     step = `${viewport.name}:history-reset-editable-filter`;
     await filter.fill('');
+    await page.waitForURL(url=>!url.searchParams.has('q'),{timeout:15_000});
     await page.waitForFunction(() => document.querySelector('input[aria-label="Filter all demand zones"]')?.value === '' && document.querySelectorAll('table.data-table tbody tr').length > 0,undefined,{polling:100});
 
     step = `${viewport.name}:global-search-beyond-current-page`;

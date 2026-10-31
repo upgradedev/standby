@@ -342,3 +342,5 @@ Actual endpoint inventory (API prefix `/api/v1`):
 | Workspace settings | GET/PATCH `/api/v1/workspaces/:w/settings` | Admin/CAS write with same-scope server refetch confirmation; historical actual-role proof remains source2bbe2d5 |
 
 No `data/demo-data.ts` or `DEMO_MODE` runtime exists in this Route A console (`rg` on apps/console/src). There is no demo fallback to switch off; simulation inputs remain permanently labeled assumptions.
+
+Final bounded lifecycle correction1aab618: retain one lazy MapSelection within [scopeKey,view,runKey,generatedAt,datasetHash], not old job/card content. Native close and inactive tabs hide the same map; invalid raw selection/run/geography immediately blocks and clears geometry. Positive-size initialization/resize/fit only; teardown remains on scope/result/page/config/retry/invalid-selection exits. All existing clear-title/0cards/hidden/URL/25s/map/axe limits stay required. The current history test also waits for committed slash filtering before issuing its clear, retaining15s checks and actual source-derived expected data. Fresh CI/updated captures remain required before preview approval/apply.
