@@ -56,6 +56,7 @@ jobs:
           VOICE_SHA256: ${{ inputs.voice_sha256 }}
           PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
           PROJECT_SHA256: ${{ inputs.project_sha256 }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
         run: |
           python - <<'PY'
           import os,re
@@ -68,6 +69,8 @@ jobs:
           else:
               assert re.fullmatch('[1-9][0-9]{0,19}',os.environ['PROJECT_ASSET_ID'])
               assert re.fullmatch('[a-f0-9]{64}',os.environ['PROJECT_SHA256'])
+          if mode=='pitch-instrument' and os.environ['REUSE_RUN_ID']:
+              assert re.fullmatch('[1-9][0-9]{0,19}',os.environ['REUSE_RUN_ID'])
           print('Validated mode-specific request; no app or voice call.')
           PY
   record:
@@ -219,6 +222,7 @@ jobs:
     timeout-minutes: 18
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -235,6 +239,14 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
           if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '' }}
+        with:
+          name: standby-pitch-take1
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.reuse_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/standby-spent/
       - name: Offline instrument rehearsal or the single specifically approved take
         env:
           PLAYWRIGHT_MODULE: ${{ github.workspace }}/node_modules/playwright
@@ -247,6 +259,17 @@ jobs:
           else
             python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch"
           fi
+      - name: Review only already-spent source windows
+        if: ${{ inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '' }}
+        run: |
+          python tools/pitch/review-spent.py --help
+          python tools/pitch/review-spent.py --project "$RUNNER_TEMP/standby-pitch" --capture "$RUNNER_TEMP/standby-spent" --out "$RUNNER_TEMP/standby-pitch/out/spent-review"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '' }}
+        with:
+          name: standby-pitch-spent-review
+          retention-days: 21
+          path: ${{ runner.temp }}/standby-pitch/out/spent-review/
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:

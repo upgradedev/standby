@@ -1,5 +1,14 @@
 # History
 
+## 2026-10-31T18:27:46.228563+00:00 - Codex - single approved Take1 stopped; original source preserved
+
+[PRIMARY] Offline instrument41228432259 passed actual copied recorder success, deliberate driver rejection, marks/video/frame-grid cutter with0producttakes. Approved actualTake1 run41228706765 at06ae5a2 stopped with shot-actions-exceed-clean-window; sanitized proof records2POST attempts (1coverage+1capacity),1document,0retry. Actual22file web/API/data preflight passed. Current inputa1ab0bdf3def and pairedf1d8b23ec400 show the intended two-collision/one-flatbed scenario; modeledclearance191.65379/availability201.65379 reproduced. S2[13,25] andS4[30.2,50.2] completed, butS5 group ran from54.449 to105.316=50.867seconds against27s. NoS6/S7/newwhat-if call. This is failed capture timing, not a negative capacity outcome or completed release.
+
+Downloaded original artifact13052269370 (14339888compressed bytes) to media/out/take-1-attempt. Original driver3cf3ff8a, sourceZIP50ed668f, marks/raw105s-wall trace and failureproof are retained. Local lightweight contact_sheet on the already-spent WebM shows loading map at60/70/80video seconds and actual map at90/100; ffprobe rawduration103.8s (tail ends before105.3wall stop, honest few-frame time basis plus2s handles; release boundaries still require visual review). Source exports remain raw, no final release or voice/publication.
+
+Root prepares corrected Take2 SOURCEONLY with the same165s/narration/27sS5/28sS6, moving real map/summary preparation before shot-start and keeping S4/S7 trigger/result contiguous. Source scheduling will test the observed50.867s preparation outside versus inside the unchanged27s window. Specific next take needs owner approval; no automatic retry. PartialS2/S4 cuts/review use only the spent artifact, never another app evaluation.
+
+
 ## 2026-10-31T18:13:57.073141+00:00 - Codex - owner approved the specific first take and automated CI method
 
 Owner replied “Εγκρίνω” to the concrete Take1 request. Immutable research/take-1-owner-approval.json binds exact plan SHA256d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb, oneattempt/480seconds/3applicationPOSTattempts, automated driving, noTake2/voice/publication. Root claims generic hosted orchestration/workflow/download metadata; isolated media writers own copied recorder adaptation and Take1 driver. Source checks precede offline recorder success/rejection/cutter fixtures in CI; actual product capture will only follow green instrument plus fresh22file served-hash/config/health/manifest/zone checks. No actual take has run at this entry. Read-only source review fixed exact fixture-rejection classification and duplicate manifest-key counting. Product bytes remain frozen db67b6d/read3802.
