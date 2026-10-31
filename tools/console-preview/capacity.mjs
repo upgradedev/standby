@@ -328,12 +328,24 @@ try {
   assert.notEqual(candidate.inputHash, first.inputHash);
   receipt.candidate = {inputHash:candidate.inputHash, pairedSamplesHash:candidate.pairedSamplesHash, baselineUnchanged:true, baselineUnits:3, candidateUnits:4};
   receipt.checks.push('Candidate+1 uses the same paired samples and unchanged baseline; edits visibly mark previous results');
-  const dismissals=page.getByRole('button',{name:'Dismiss notification',exact:true});
-  while(await dismissals.count()) {
-    const count=await dismissals.count();await dismissals.first().click();
-    await page.waitForFunction(expected=>document.querySelectorAll('.toast').length===expected,count-1);
+  receipt.phase='dismiss-success-notifications';
+  let dismissed=0;
+  while(true) {
+    // Focus atomically pauses this toast's expiry. Another notification may
+    // expire independently, so verify removal of this node, not a global N-1.
+    const handle=await page.evaluateHandle(()=>{
+      const buttons=document.querySelectorAll('.toast button[aria-label="Dismiss notification"]');
+      const button=buttons.item(buttons.length-1);button?.focus();return button;
+    });
+    const button=handle.asElement();if(!button){await handle.dispose();break;}
+    await button.click();
+    await page.waitForFunction(element=>!element.isConnected,button);
+    dismissed++;await handle.dispose();
   }
+  assert.ok(dismissed>0,'A fresh success notification must expose a working dismiss control.');
+  assert.equal(await page.locator('.toast').count(),0);
   receipt.checks.push('Success notifications are dismissible before inspecting the full job table');
+  receipt.phase='candidate-peak-and-map';
   await setPeak(page, candidate, 'baseline');
   await noOverflow(page, 1440);
   await shot('capacity-1440-dark.png');
