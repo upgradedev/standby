@@ -1,4 +1,4 @@
-"""Run the one specifically approved anonymous take in hosted CI, after offline instrument checks."""
+"""Run a specifically approved anonymous take in hosted CI, after offline instrument checks."""
 import argparse
 from datetime import datetime, timezone
 import functools
@@ -16,14 +16,16 @@ import urllib.request
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--project', required=True)
 parser.add_argument('--instrument-only', action='store_true')
+parser.add_argument('--take', choices=['1', '2'], default='1')
 args = parser.parse_args()
 assert os.environ.get('GITHUB_ACTIONS') == 'true', 'Hosted CI only'
 project = Path(args.project).resolve()
 temp = Path(os.environ['RUNNER_TEMP']).resolve()
 assert project.is_relative_to(temp) and project != temp
-out = project / 'out' / 'take1'
+take_number = int(args.take)
+out = project / 'out' / ('take' + args.take)
 out.mkdir(parents=True, exist_ok=True)
-receipt = {'status': 'running', 'scope': 'SPECIFIC_OWNER_APPROVED_TAKE_1',
+receipt = {'status': 'running', 'scope': f'SPECIFIC_OWNER_APPROVED_TAKE_{take_number}',
            'productTakeStarted': False, 'productTakes': 0, 'voiceCalls': 0,
            'paidRouteBuilds': 0, 'publicPublications': 0, 'instrument': []}
 
@@ -124,16 +126,22 @@ def instrument():
 
 try:
     manifest = json.loads((project / 'manifest.json').read_text(encoding='utf-8'))
-    assert manifest['mode'] == 'OWNER_APPROVED_TAKE_1_NO_VOICE_OR_PUBLICATION'
+    assert manifest['mode'] == f'OWNER_APPROVED_TAKE_{take_number}_NO_VOICE_OR_PUBLICATION'
     for name, record in manifest['files'].items():
         assert sha((project / name).read_bytes()) == record['sha256'], 'Verified input changed after transfer'
-    plan_bytes = (project / 'take-1-plan.json').read_bytes()
+    plan_file = project / f'take-{take_number}-plan.json'
+    plan_bytes = plan_file.read_bytes()
     plan = json.loads(plan_bytes)
-    approval = json.loads((project / 'take-1-owner-approval.json').read_text(encoding='utf-8'))
-    assert sha(plan_bytes) == approval['planSha256'] == 'd64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb'
-    assert approval['status'] == 'OWNER_APPROVED_SPECIFIC_TAKE_1'
+    approval = json.loads((project / f'take-{take_number}-owner-approval.json').read_text(encoding='utf-8'))
+    expected_hash = {1: 'd64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',
+                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94'}[take_number]
+    assert sha(plan_bytes) == approval['planSha256'] == expected_hash
+    assert approval['status'] == f'OWNER_APPROVED_SPECIFIC_TAKE_{take_number}'
+    assert approval['take'] == plan['take'] == f'TAKE_{take_number}'
     assert approval['maximumAttempts'] == 1 and approval['maximumApplicationPostAttempts'] == 3
     assert approval['agentDrivenHostedCI'] is True and approval['voiceApproved'] is False
+    assert approval['publicPublicationApproved'] is False and approval['maximumSeconds'] == 480
+    assert approval['take2Approved' if take_number == 1 else 'additionalTakeApproved'] is False
     receipt['planSha256'] = sha(plan_bytes)
     receipt['webRelease'] = plan['webRelease']
     receipt['backendRelease'] = plan['backendRelease']
@@ -150,7 +158,7 @@ try:
         print('PASS offline recorder, deliberate driver failure, marks, video and frame-grid cutter. No product request.')
         raise SystemExit(0)
 
-    assert os.environ.get('GITHUB_RUN_ATTEMPT') == '1', 'Reruns are not authorized for Take1'
+    assert os.environ.get('GITHUB_RUN_ATTEMPT') == '1', 'No take rerun is authorized'
     base = 'https://d34x1513u5u1qs.cloudfront.net'
     web = json.loads((project / 'web-manifest.json').read_text(encoding='utf-8'))
     assert web['webRelease'] == plan['webRelease'] and len(web['files']) == 22
@@ -178,13 +186,13 @@ try:
                             'datasetHash': metadata['dataset']['hash'], 'matrixHash': metadata['matrix']['hash'],
                             'observedAt': datetime.now(timezone.utc).isoformat()}
     # The exclusive marker is written before invoking the actual recorder.
-    with (project / 'take1-started.json').open('x', encoding='utf-8') as marker:
+    with (project / f'take{take_number}-started.json').open('x', encoding='utf-8') as marker:
         json.dump({'runId': os.environ['GITHUB_RUN_ID'], 'planSha256': receipt['planSha256']}, marker)
     receipt['productTakeStarted'] = True
     receipt['productTakes'] = 1
     save()
-    profile = project / 'take1-profile'
-    env = dict(os.environ, STANDBY_TAKE_PLAN=str(project / 'take-1-plan.json'))
+    profile = project / f'take{take_number}-profile'
+    env = dict(os.environ, STANDBY_TAKE_PLAN=str(plan_file))
     try:
         run(['node', 'scripts/capture_app.mjs', 'record', '--url', base + '/map', '--driver',
              str(project / 'scripts/take-driver.mjs'), '--headless', '--size', '1536x864',
@@ -221,12 +229,12 @@ try:
         assert not any(s['codec_type'] == 'audio' for s in info['streams'])
         assert abs(float(info['format']['duration']) - duration) < 0.041
         run(['python', 'scripts/contact_sheet.py', str(file), '--every', '1', '--out',
-             str(out / (id + '-contact.jpg'))], timeout=60)
+             str(out / (id + '-contact.jpg')), '--tile-width', '392'], timeout=60)
         receipt['clips'].append({'id': id, 'duration': duration, 'sha256': sha(file.read_bytes())})
-    receipt['status'] = 'TAKE_1_CAPTURED_REQUIRES_VISUAL_REVIEW'
+    receipt['status'] = f'TAKE_{take_number}_CAPTURED_REQUIRES_VISUAL_REVIEW'
     receipt['rawVideoSha256'] = sha(videos[0].read_bytes())
     save()
-    print('PASS Take1 captured and cut on frame grid. Visual review required; no second take or voice authorized.')
+    print(f'PASS Take{take_number} captured and cut on frame grid. Visual review required; no additional take or voice authorized.')
 except Exception as error:
     receipt['status'] = 'fail'
     receipt['errorClass'] = type(error).__name__

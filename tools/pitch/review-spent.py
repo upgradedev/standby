@@ -45,7 +45,7 @@ file.write_text(json.dumps(cuts, indent=2) + '\n', encoding='utf-8')
 (out / 'cuts.log').write_text(run(['python', 'scripts/cut_clips.py', str(file)]), encoding='utf-8')
 for shot in proof['shots']:
     run(['python', 'scripts/contact_sheet.py', str(out / 'clips' / (shot['id'] + '.mp4')),
-         '--every', '1', '--out', str(out / (shot['id'] + '-contact.jpg'))])
+         '--every', '1', '--out', str(out / (shot['id'] + '-contact.jpg')), '--tile-width', '392'])
 run(['python', 'scripts/contact_sheet.py', str(videos[0]), '--at', '54.44,60,70,80,90,100',
      '--out', str(out / 'transport-diagnostic.jpg')])
 receipt = {'status': 'PARTIAL_SOURCE_WINDOWS_ONLY_NOT_A_CLEAN_TAKE',
