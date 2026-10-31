@@ -8,6 +8,39 @@ import { useStandby } from '../../state';
 import { Busy } from '../ui';
 
 interface Props {zone:DemandZone;site:StandbySite|undefined;unit:CapacityUnit|undefined;expanded:boolean}
+interface LabelPoint {left:number;top:number}
+interface LabelSize {width:number;height:number}
+interface LabelRect extends LabelPoint,LabelSize {}
+
+/** Container pixels only. Neither the site's coordinate nor the camera changes. */
+function placeHomeLabelBox(anchor:LabelPoint,box:LabelSize,frame:LabelSize,controls:readonly LabelRect[]) {
+  const margin=8,gap=13;
+  const maxLeft=Math.max(margin,frame.width-box.width-margin),maxTop=Math.max(margin,frame.height-box.height-margin);
+  const centered=Math.min(maxLeft,Math.max(margin,anchor.left-box.width/2));
+  const above=anchor.top-box.height-gap,below=anchor.top+gap;
+  const fallbackTop=Math.min(maxTop,Math.max(margin,above));
+  const candidates=[];
+  if(above>=margin&&above<=maxTop)candidates.push({left:centered,top:above});
+  if(below>=margin&&below<=maxTop)candidates.push({left:centered,top:below});
+  candidates.push({left:centered,top:fallbackTop});
+  for(const control of controls){
+    candidates.push({left:centered,top:control.top+control.height+margin},{left:centered,top:control.top-box.height-margin},
+      {left:control.left+control.width+margin,top:fallbackTop},{left:control.left-box.width-margin,top:fallbackTop});
+  }
+  let best=candidates[0]!,leastOverlap=Infinity;
+  for(const candidate of candidates){
+    const left=Math.min(maxLeft,Math.max(margin,candidate.left)),top=Math.min(maxTop,Math.max(margin,candidate.top));
+    let overlap=0;
+    for(const control of controls){
+      overlap+=Math.max(0,Math.min(left+box.width,control.left+control.width+4)-Math.max(left,control.left-4))
+        *Math.max(0,Math.min(top+box.height,control.top+control.height+4)-Math.max(top,control.top-4));
+    }
+    if(overlap===0)return {left,top};
+    if(overlap<leastOverlap){leastOverlap=overlap;best={left,top};}
+  }
+  return best;
+}
+
 function fitSelection(instance:MapInstance,zone:DemandZone,site:StandbySite|undefined) {
   const bounds=new maplibregl.LngLatBounds();
   bounds.extend(zone.position);
@@ -76,9 +109,11 @@ export default function CapacityJobMap({zone,site,unit,expanded}:Props) {
       ...(site?[{type:'Feature' as const,properties:{kind:'site'},geometry:{type:'Point' as const,coordinates:site.position}}]:[]),
     ]});
     homeLabel.current?.remove();homeLabel.current=null;
+    let removePlacement:(()=>void)|undefined;
     if(site&&unit){
       // This label is attached to configured home geography, never to a vehicle
       // coordinate inferred from the replay's service/transport phase.
+      const anchor=document.createElement('div');anchor.className='capacity-unit-home-anchor';
       const element=document.createElement('div');element.className='capacity-unit-home-marker';
       element.setAttribute('role','img');element.setAttribute('aria-label',`${unit.id}, ${unit.kind.replace(/_/g,' ')}. Assumed home ${site.name}; current vehicle location is unknown.`);
       element.dataset.testid='capacity-unit-home-marker';
@@ -86,9 +121,40 @@ export default function CapacityJobMap({zone,site,unit,expanded}:Props) {
       const identity=document.createElement('strong');identity.textContent=`${unit.id} · ${kind.charAt(0).toUpperCase()+kind.slice(1)}`;
       const meaning=document.createElement('span');meaning.textContent='Assumed home · not GPS';
       element.append(identity,meaning);
-      homeLabel.current=new maplibregl.Marker({element,anchor:'bottom',offset:[0,-13]}).setLngLat(site.position).addTo(instance);
+      anchor.append(element);
+      // The zero-size marker stays at the exact site. Only its child label box
+      // receives a pixel offset, so edge clipping never moves the geographic dot.
+      const marker=new maplibregl.Marker({element:anchor,anchor:'center'}).setLngLat(site.position).addTo(instance);
+      homeLabel.current=marker;
+      let frame:number|null=null;
+      const place=()=>{
+        const canvas=instance.getContainer(),bounds=canvas.getBoundingClientRect();
+        if(bounds.width<=16||bounds.height<=16){element.style.visibility='hidden';return;}
+        anchor.style.setProperty('--capacity-label-room',`${bounds.width-16}px`);
+        const point=anchor.getBoundingClientRect(),box=element.getBoundingClientRect();
+        if(point.left<bounds.left||point.left>bounds.right||point.top<bounds.top||point.top>bounds.bottom){element.style.visibility='hidden';return;}
+        const controls=Array.from(canvas.parentElement?.querySelectorAll<HTMLElement>('.maplibregl-ctrl-group,.maplibregl-ctrl-attrib,.capacity-map-fit')??[])
+          .map(control=>control.getBoundingClientRect()).filter(control=>control.width>0&&control.height>0)
+          .map(control=>({left:control.left-bounds.left,top:control.top-bounds.top,width:control.width,height:control.height}));
+        const position=placeHomeLabelBox({left:point.left-bounds.left,top:point.top-bounds.top},box,bounds,controls);
+        element.style.left=`${position.left-(point.left-bounds.left)}px`;
+        element.style.top=`${position.top-(point.top-bounds.top)}px`;
+        element.style.visibility='visible';
+      };
+      const schedule=()=>{if(frame===null)frame=requestAnimationFrame(()=>{frame=null;place();});};
+      const observer=new ResizeObserver(schedule);observer.observe(element);observer.observe(instance.getContainer());
+      for(const control of instance.getContainer().parentElement?.querySelectorAll<HTMLElement>('.maplibregl-ctrl-group,.maplibregl-ctrl-attrib,.capacity-map-fit')??[])observer.observe(control);
+      // Marker projection can commit during the SDK's render. Clamp there too,
+      // before paint, rather than relying on a delayed move/resize observation.
+      instance.on('move',schedule);instance.on('resize',schedule);instance.on('render',place);schedule();
+      removePlacement=()=>{
+        if(frame!==null)cancelAnimationFrame(frame);
+        observer.disconnect();instance.off('move',schedule);instance.off('resize',schedule);instance.off('render',place);marker.remove();
+        if(homeLabel.current===marker)homeLabel.current=null;
+      };
     }
     fitSelection(instance,zone,site);
+    return removePlacement;
   },[zone,site,unit,ready]);
 
   return <div className={`capacity-map-wrap ${expanded?'is-expanded':''}`} data-map-ready={ready&&!error?'true':'false'}>
