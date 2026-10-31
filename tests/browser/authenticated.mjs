@@ -13,6 +13,7 @@ const check=(condition,code)=>{if(!condition) throw new Error(code);};
 const exact=(name)=>({name,exact:true});
 const roles=['Analyst','Planner','Admin'];
 const runId=randomUUID().slice(0,12);
+const expectedCandidateSource=process.env.STANDBY_UI_SOURCE??process.env.GITHUB_SHA;
 
 async function visible(locator,code) {
   await locator.waitFor({state:'visible',timeout:25_000});
@@ -67,14 +68,14 @@ async function signIn(identity,base) {
   page.on('response',response=>{
     const url=new URL(response.url());
     if(url.origin===new URL(base).origin&&url.pathname==='/auth/callback'&&response.request().isNavigationRequest())
-      candidateCallback=response.headers()['x-standby-qa-source']===process.env.STANDBY_UI_SOURCE;
+      candidateCallback=!!expectedCandidateSource&&response.headers()['x-standby-qa-source']===expectedCandidateSource;
   });
   const entry=new URL('/settings?theme=dark',base);
   step=`${identity.role}:entry-settings`;
   const document=await page.goto(entry.href,{waitUntil:'domcontentloaded',timeout:45_000});
   overlay.assertHealthy();
   check(document?.status()===200,'operator-entry-not-200');
-  if(process.env.STANDBY_UI_DIST)check(document.headers()['x-standby-qa-source']===process.env.STANDBY_UI_SOURCE,'candidate-entry-not-delivered');
+  if(process.env.STANDBY_UI_DIST)check(document.headers()['x-standby-qa-source']===expectedCandidateSource,'candidate-entry-not-delivered');
   const response=await context.request.get(`${base}/config.json`);
   check(response.status()===200,'auth-config-not-200');
   const config=await response.json();await response.dispose();
