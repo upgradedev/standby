@@ -63,3 +63,4 @@ html{scroll-padding-top:calc(var(--topbar-height,64px) + 16px)}
 
 .comparison-row>div:first-child,.comparison-row strong{font-size:13px}.data-alternative summary{font-size:12px}
 @media(max-width:767px){.comparison-row>div:first-child,.comparison-row strong{font-size:12px}}
+@media(max-width:767px){.settings-form>label{align-items:stretch;flex-direction:column;gap:10px}.settings-form small{max-width:none}.settings-form select{width:100%;min-width:0;max-width:none;min-height:44px;padding-right:30px}}

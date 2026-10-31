@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { AlertCircle, ArrowUpRight, Check, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { ApiError } from '../lib/api';
 import { useStandby } from '../state';
@@ -26,6 +26,11 @@ export function Modal({open,onClose,title,children,className=''}:{open:boolean;o
  }
  return <dialog ref={ref} tabIndex={-1} className={`modal ${className}`} aria-labelledby={label} onKeyDown={trapTab} onClose={onClose} onClick={e=>{if(e.target===e.currentTarget){const box=e.currentTarget.getBoundingClientRect();if(e.clientX<box.left||e.clientX>box.right||e.clientY<box.top||e.clientY>box.bottom)onClose();}}}><div className="modal-heading"><h2 id={label}>{title}</h2><button className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20} aria-hidden="true"/></button></div>{children}</dialog>;
 }
-export function Toasts(){const{toasts,dismissToast}=useStandby();return <div className="toast-stack" aria-live="polite" aria-atomic="false">{toasts.map(t=><div key={t.id} className={`toast ${t.kind}`} role={t.kind==='error'?'alert':'status'}>{t.kind==='error'?<AlertCircle size={18}/>:<Check size={18}/>}<span>{t.message}</span><button aria-label="Dismiss notification" className="icon-button" onClick={()=>dismissToast(t.id)}><X size={16} aria-hidden="true"/></button></div>)}</div>;}
+function ToastMessage({id,message,kind,dismiss}:{id:string;message:string;kind:'success'|'error'|'info';dismiss:(id:string)=>void}){
+ const [hovered,setHovered]=useState(false),[focused,setFocused]=useState(false);
+ useEffect(()=>{if(kind==='error'||hovered||focused)return;const timer=setTimeout(()=>dismiss(id),6000);return()=>clearTimeout(timer);},[id,kind,hovered,focused,dismiss]);
+ return <div className={`toast ${kind}`} role={kind==='error'?'alert':'status'} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} onFocus={()=>setFocused(true)} onBlur={event=>setFocused(event.currentTarget.contains(event.relatedTarget))}>{kind==='error'?<AlertCircle size={18}/>:<Check size={18}/>}<span>{message}</span><button aria-label="Dismiss notification" className="icon-button" onClick={()=>dismiss(id)}><X size={16} aria-hidden="true"/></button></div>;
+}
+export function Toasts(){const{toasts,dismissToast}=useStandby();return <div className="toast-stack" aria-live="polite" aria-atomic="false">{toasts.map(t=><ToastMessage key={t.id} {...t} dismiss={dismissToast}/>)}</div>;}
 export function Busy({label='Computing'}:{label?:string}){return <span className="inline-flex items-center gap-2"><LoaderCircle className="spin" size={15} aria-hidden="true"/>{label}</span>;}
 export function SourceNote(){const{manifest}=useStandby();return <div className="source-note"><span className="source-dot"/><span>Historical coverage uses a hypothetical placement fleet and modeled Car approach. Capacity analysis needs explicit workload and service assumptions.</span><a href={manifest?.dataset.source.url ?? 'https://data.austintexas.gov/d/dx9v-zd7x'} target="_blank" rel="noreferrer">Source & provenance <ArrowUpRight size={13}/></a></div>;}
