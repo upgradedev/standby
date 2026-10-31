@@ -1,5 +1,11 @@
 # History
 
+## 2026-10-31 — Codex — isolate sole towing QA case; prepare read-only preview plan
+
+[PRIMARY]922d8f3 run https://github.com/upgradedev/standby/actions/runs/41190918484 passed71tests/build/matrix86/fullanonymous; towing failed close-hidden after unloading. Failure receipt/images retained. Isolated the same sole towing case on a fresh hosted runner while existing console_qa becomes an always-running fail-closed aggregator requiring both route/anonymous and towing jobs to succeed. No retry, duplicate evaluation, threshold/time-limit change or app modification. Resource/GPU pressure remains an unproven hypothesis; isolated runtime must still pass.
+
+Read-only planner extracted22CI web files, verified byte-identical hashes versus the green owner-approved1e5efce artifact, bound the dedicated AWS account/stack/S3/function targets and saved exact rollback bytes/ETags. Function diff is only /capacity. Independent source/local-hash review passed. Plan `.runtime/frontend-preview-922d8f3/plan.json` has no apply mode and made0cloud mutations. Its source is not green, so it cannot be applied; the eventual candidate must be rebound to a fully green run and fresh guards. Owner UI approval/copilot deferral stand, while Step6 release-item decision and manual checks remain separate.
+
 ## 2026-10-31 — Codex — preserve failed browser observations; strengthen native close barrier
 
 [PRIMARY] c8e68dd run https://github.com/upgradedev/standby/actions/runs/41190281831 failed at tablet history-sort/filter and towing close-hidden; build/71tests/matrix had passed. Original towing receipt/images stay in `.runtime/towing-review-c8e68dd/`. The catch later saw no selected URL/no open dialog; source evidence does not identify a browser scheduling cause or app defect. UI remains identical to owner-approved6ebad3f.

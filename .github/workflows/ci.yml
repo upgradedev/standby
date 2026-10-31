@@ -80,7 +80,7 @@ jobs:
           name: standby-release
           path: release/
           retention-days: 3
-  console_qa:
+  console_routes_qa:
     if: github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.authenticated)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -118,21 +118,6 @@ jobs:
           node --check tests/browser/static-overlay.mjs
           node --check tests/browser/live.mjs
           STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tests/browser/live.mjs
-      - name: One-car towing occupancy and unit-location UI with actual backend
-        if: ${{ !cancelled() && steps.console_build.outcome == 'success' }}
-        env:
-          STANDBY_UI_DIST: apps/console/dist
-          STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
-        run: |
-          node tools/console-preview/towing.mjs --help
-          node --check tools/console-preview/towing.mjs
-          STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tools/console-preview/towing.mjs
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: standby-towing-unit-review
-          path: .runtime/towing-preview/
-          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -150,6 +135,51 @@ jobs:
           name: standby-console-release-qa-shots
           path: .runtime/console-release-qa/shots/
           retention-days: 3
+  towing_qa:
+    if: github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.authenticated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned QA dependencies in hosted CI only
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts axe-core@4.11.0
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Build the exact candidate UI
+        run: npm run build
+      - name: One-car towing occupancy and unit-location UI with actual backend
+        env:
+          STANDBY_UI_DIST: apps/console/dist
+          STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
+        run: |
+          node tools/console-preview/towing.mjs --help
+          node --check tools/console-preview/towing.mjs
+          STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tools/console-preview/towing.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-towing-unit-review
+          path: .runtime/towing-preview/
+          retention-days: 3
+  console_qa:
+    needs: [console_routes_qa, towing_qa]
+    if: ${{ always() && github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.authenticated) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both independent console gates
+        env:
+          ROUTES_RESULT: ${{ needs.console_routes_qa.result }}
+          TOWING_RESULT: ${{ needs.towing_qa.result }}
+        run: |
+          test "$ROUTES_RESULT" = success
+          test "$TOWING_RESULT" = success
   operator_qa:
     if: github.event_name == 'workflow_dispatch' && inputs.authenticated
     runs-on: ubuntu-latest

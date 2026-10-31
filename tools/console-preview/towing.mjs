@@ -173,6 +173,9 @@ try{
   if(page&&!page.isClosed()){
     receipt.failure.ui=await page.evaluate(()=>({cursor:new URL(location.href).searchParams.get('t'),
       selectedInUrl:new URL(location.href).searchParams.has('jobSelected'),
+      nativeDrawer:(()=>{const element=document.querySelector('dialog.capacity-job-drawer');return element?{
+        open:element.open,rectangles:element.getClientRects().length,display:getComputedStyle(element).display,
+        visibility:getComputedStyle(element).visibility}:null;})(),
       phase:document.querySelector('[data-testid="capacity-unit-phase"]')?.getAttribute('data-phase')??null,
       payload:document.querySelector('[data-testid="capacity-unit-payload"]')?.getAttribute('data-payload')??null,
       openDialog:!!document.querySelector('dialog[open]')})).catch(()=>null);
