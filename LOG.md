@@ -1,5 +1,11 @@
 # History
 
+## 2026-10-31 — Codex — preserve failed browser observations; strengthen native close barrier
+
+[PRIMARY] c8e68dd run https://github.com/upgradedev/standby/actions/runs/41190281831 failed at tablet history-sort/filter and towing close-hidden; build/71tests/matrix had passed. Original towing receipt/images stay in `.runtime/towing-review-c8e68dd/`. The catch later saw no selected URL/no open dialog; source evidence does not identify a browser scheduling cause or app defect. UI remains identical to owner-approved6ebad3f.
+
+The test now pre-arms navigation before Escape, waits for the same selected-job URL teardown, verifies the stable native dialog has open=false/no visible rectangle, and retains the semantic hidden assertion. Both25s bounds stay fixed. Two history DOM predicates use100ms polling at the same15s bounds, with exact substeps and sanitized method/frames; their logical checks remain unchanged. No retries, paid routing, app UI, auth or deployment change. Owner UI approval persists; copilot remains deferred and human release items remain open.
+
 ## 2026-10-31 — Codex — owner approved final UI; copilot deferred; URL wait narrowed
 
 Owner explicitly approved the final1e5efce contact sheet, mobile unit map and towing recovery UI, and selected «Πρώτα units και towing». Step5 visual approval is complete; human keyboard/role/native-popup and Step6 open-item decisions remain separate. Updated brief/STATE and handover scope. No new UI, AI runtime, frontend deployment, video or publication.

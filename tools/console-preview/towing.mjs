@@ -44,10 +44,19 @@ async function openJob(page,id){
   const drawer=page.getByRole('dialog',exact(`Modeled job ${id}`));await drawer.waitFor();return drawer;
 }
 async function closeJob(page,drawer){
-  step='close-keyboard';await page.keyboard.press('Escape');
-  step='close-hidden';await drawer.waitFor({state:'hidden'});
-  // Observe SPA history directly, retaining the same URL predicate and 25s limit.
-  step='close-url';await page.waitForURL(url=>!url.searchParams.has('jobSelected'),{waitUntil:'commit',timeout:25_000});
+  check(new URL(page.url()).searchParams.has('jobSelected'),'close-control-has-no-selection');
+  check(await page.locator('dialog.capacity-job-drawer[open]').count()===1,'close-control-is-not-open');
+  // Arm the history observer before Escape; URL teardown and native closure are
+  // separate requirements. Preserve both checks and their original 25s bounds.
+  step='close-url';await Promise.all([
+    page.waitForURL(url=>!url.searchParams.has('jobSelected'),{waitUntil:'commit',timeout:25_000}),
+    page.keyboard.press('Escape'),
+  ]);
+  step='close-hidden';await page.waitForFunction(()=>{
+    const dialog=document.querySelector('dialog.capacity-job-drawer');
+    return !!dialog&&!dialog.open&&dialog.getClientRects().length===0;
+  },undefined,{polling:100,timeout:25_000});
+  check(!await drawer.isVisible(),'closed-drawer-remains-visible');
 }
 const mid=(start,end)=>{const value=Math.round((start+end)*5)/10;assert.ok(start<value&&value<end);return value;};
 async function axe(page,label){

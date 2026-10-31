@@ -46,7 +46,7 @@ async function renderedPage(page, expectedPage, previousIds) {
     const counter = document.querySelector('.table-pagination')?.textContent ?? '';
     const ids = [...document.querySelectorAll('table.data-table tbody .zone-cell small')].map((element) => element.textContent);
     return new RegExp(`Page ${expectedPage} of`).test(counter) && ids.length > 0 && JSON.stringify(ids) !== JSON.stringify(previousIds);
-  }, {expectedPage, previousIds});
+  }, {expectedPage, previousIds}, {polling:100});
 }
 async function navigate(page, label, heading = label) {
   const menu = page.getByRole('button', exact('Open navigation'));
@@ -269,11 +269,13 @@ try {
     const rows = table.locator('tbody tr');
     await rows.first().waitFor({state: 'visible'});
     const firstIds = await rows.locator('.zone-cell small').allTextContents();
+    step = `${viewport.name}:history-next-page`;
     await page.getByRole('button', exact('Next page')).click();
     await page.waitForURL((url) => url.searchParams.get('page') === '2');
     await renderedPage(page, 2, firstIds);
     const nextIds = await rows.locator('.zone-cell small').allTextContents();
     check(nextIds.length > 0 && firstIds.every((id) => !nextIds.includes(id)), 'pagination-repeats-first-page');
+    step = `${viewport.name}:history-sort-training`;
     await table.getByRole('button', exact('Training reports')).click();
     await page.waitForURL((url) => url.searchParams.get('sort') === 'trainCount');
     const expectedSort = new URL(page.url()).searchParams.get('dir') === 'asc' ? 'ascending' : 'descending';
@@ -283,15 +285,19 @@ try {
     const values = counts.map((value) => Number(value.replace(/,/g, '')));
     check(values.every((value, i) => i === 0 || (sortDirection === 'ascending' ? value >= values[i - 1] : value <= values[i - 1])), 'training-sort-wrong-order');
     const filter = page.getByRole('textbox', exact('Filter all demand zones'));
+    step = `${viewport.name}:history-filter-no-match`;
     await filter.fill('no-such-zone-browser-gate');
     await visible(page.getByRole('heading', exact('No zones match these filters')), 'history-empty-state-missing');
+    step = `${viewport.name}:history-clear-filters`;
     await page.getByRole('button', exact('Clear filters')).click();
     await rows.first().waitFor({state: 'visible'});
+    step = `${viewport.name}:history-shortcut-in-editable-field`;
     await filter.focus();
     await page.keyboard.press('/');
     check(await page.locator('dialog.search-modal[open]').count() === 0, 'search-shortcut-intercepts-editable-field');
+    step = `${viewport.name}:history-reset-editable-filter`;
     await filter.fill('');
-    await page.waitForFunction(() => document.querySelector('input[aria-label="Filter all demand zones"]')?.value === '' && document.querySelectorAll('table.data-table tbody tr').length > 0);
+    await page.waitForFunction(() => document.querySelector('input[aria-label="Filter all demand zones"]')?.value === '' && document.querySelectorAll('table.data-table tbody tr').length > 0,undefined,{polling:100});
 
     step = `${viewport.name}:global-search-beyond-current-page`;
     const visibleIds = await rows.locator('.zone-cell small').allTextContents();
@@ -479,6 +485,11 @@ try {
   // Emit the bounded step and our own symbolic assertion only, never DOM/payload dumps.
   const symbolic = error instanceof Error && /^[a-z][a-z0-9-]+$/.test(error.message) ? error.message : 'browser-action-or-timeout';
   console.error(`FAIL ${step}: ${symbolic}`);
+  console.error(JSON.stringify({browserInstrument:{
+    method:error instanceof Error?error.message.match(/^(?:locator|keyboard|page)\.[A-Za-z]+/)?.[0]??null:null,
+    timedOut:error instanceof Error&&/Timeout \d+ms exceeded/.test(error.message),
+    frames:error instanceof Error?[...error.stack?.matchAll(/live\.mjs:\d+:\d+/g)??[]].slice(0,3).map(match=>match[0]):[],
+  }}));
   if(step.includes(':coverage-')&&activePage&&!activePage.isClosed()){
     const geometry=await activePage.evaluate(()=>{
       const map=document.querySelector('.map-canvas.maplibregl-map'),frame=map?.getBoundingClientRect();
