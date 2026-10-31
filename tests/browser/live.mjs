@@ -246,7 +246,7 @@ try {
     await page.getByRole('button', exact('Proposal')).click();
     await renderedAttribute(page, page.getByRole('button', exact('Proposal')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Proposal')).getAttribute('aria-pressed') === 'true', 'proposal-display-not-selected');
-    await page.getByRole('button', {name: /^unit-1, available\./}).click();
+    await page.getByRole('button', {name: /^Unit 1[\s\S]*Available[\s\S]*Toggle availability/}).click();
     await visible(page.getByRole('button', {name: /^unit-1, unavailable\./}), 'availability-toggle-not-rendered');
     const busy = await waitEvaluation(page, () => page.getByRole('button', exact('Compare positions')).click(), {fleetSize: 2, thresholdMinutes: 5, unavailableUnitId: 'unit-1'});
     check(busy.inputHash !== fresh.inputHash, 'availability-change-did-not-change-evaluation');

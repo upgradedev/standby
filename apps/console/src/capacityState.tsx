@@ -26,8 +26,8 @@ const empty = (scope: string, input: CapacityInput | null = null): Snapshot => (
 
 /** In-memory drafts and results live above routes, scoped to one workspace/dataset. */
 export function CapacityProvider({children}: {children: ReactNode}) {
-  const {config, manifest, workspace, loading, error: sourceError, toast} = useStandby();
-  const scope = JSON.stringify([workspace, manifest?.dataset.hash ?? null]);
+  const {config, manifest, scopeKey, loading, error: sourceError, toast} = useStandby();
+  const scope = JSON.stringify([scopeKey, manifest?.dataset.hash ?? null]);
   const [snapshot, setSnapshot] = useState<Snapshot>(() => empty(''));
   const [clock, tick] = useState(0);
   const current = useRef(snapshot);

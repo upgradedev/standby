@@ -4,6 +4,10 @@
   --map-accent: #53c9d8;
   --map-site: #76d6a7;
   --map-stroke: #0b1018;
+  --map-warning: #f2a866;
+  --map-danger: #f58b91;
+  --map-demand-mid: #4388a8;
+  --map-neutral: #435b74;
   --control-border: #6f859e;
   --border-control: var(--control-border);
   --focus: #69d7e4;

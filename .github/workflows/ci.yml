@@ -70,3 +70,46 @@ jobs:
           name: standby-release
           path: release/
           retention-days: 3
+  console_qa:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned QA dependencies in hosted CI only
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts axe-core@4.11.0
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Build and strict console source lint
+        run: |
+          npm run build
+          node tools/console-preview/lint_ui.mjs --help
+          node tools/console-preview/lint_ui.mjs --src apps/console/src --strict
+      - name: All-route release matrix with mandatory axe and live map proof
+        run: |
+          node tools/console-preview/shoot.mjs --help
+          node tools/console-preview/release.mjs --help
+          node --check tools/console-preview/release.mjs
+          node tools/console-preview/release.mjs --source "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-console-release-qa-review
+          path: |
+            .runtime/console-release-qa/*.json
+            .runtime/console-release-qa/*.html
+            .runtime/console-release-qa/contact-sheet*.png
+            .runtime/console-release-qa/skill-overview/report.*
+            .runtime/console-release-qa/skill-overview/contact-sheet*.png
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-console-release-qa-shots
+          path: .runtime/console-release-qa/shots/
+          retention-days: 3

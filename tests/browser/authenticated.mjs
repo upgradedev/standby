@@ -61,7 +61,8 @@ async function signIn(identity,base) {
   contexts.push(context);
   const page=await context.newPage();page.setDefaultTimeout(20_000);
   const errors=[];page.on('pageerror',()=>errors.push('uncaught-runtime-error'));
-  const document=await page.goto(`${base}/settings`,{waitUntil:'domcontentloaded',timeout:45_000});
+  const entry=new URL('/settings?theme=dark',base);
+  const document=await page.goto(entry.href,{waitUntil:'domcontentloaded',timeout:45_000});
   check(document?.status()===200,'operator-entry-not-200');
   const response=await context.request.get(`${base}/config.json`);
   check(response.status()===200,'auth-config-not-200');
@@ -101,7 +102,7 @@ async function signIn(identity,base) {
     'real-token-exchange-missing-verifier');
   const claims=decodeJwtPayload(token.access_token);
   check(claims.token_use==='access'&&(claims.scope??'').split(/\s+/).includes('standby/access'),'real-access-token-scope-invalid');
-  await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname==='/overview',{timeout:30_000});
+  await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname===entry.pathname&&url.searchParams.get('theme')==='dark',{timeout:30_000});
   await page.waitForFunction(()=>{
     try {return typeof JSON.parse(sessionStorage.getItem('standby.auth.v1')??'null')?.accessToken==='string';}
     catch {return false;}
@@ -205,6 +206,9 @@ try {
   check(evaluated.input.fleetSize===input.fleetSize&&evaluated.result.input.thresholdMinutes===input.thresholdMinutes,'trusted-evaluation-input-mismatch');
   await api(planner,'POST',`${path}/evaluate`,{data:{expectedVersion:saved.version},status:409});
   const hashes={inputHash:evaluated.inputHash,resultHash:evaluated.resultHash,configHash:evaluated.configHash};
+  await api(analyst,'POST',plansPath,{data:{planId:evaluated.id,expectedVersion:evaluated.version,name:'Denied analyst revision',input:evaluated.input},headers:{'Idempotency-Key':randomUUID()},status:403});
+  await api(analyst,'POST',`${path}/evaluate`,{data:{expectedVersion:evaluated.version},status:403});
+  await api(analyst,'POST',`${path}/review`,{data:{expectedVersion:evaluated.version,...hashes},status:403});
   await api(planner,'POST',`${path}/review`,{data:{expectedVersion:evaluated.version,...hashes},status:403});
   const plannerSettings=await api(planner,'GET',`/workspaces/${workspaceId}/settings`);
   await api(planner,'PATCH',`/workspaces/${workspaceId}/settings`,{data:{expectedVersion:plannerSettings.settings.version,

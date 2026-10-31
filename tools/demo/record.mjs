@@ -165,7 +165,7 @@ async function actions(page,id,anchor,diagnostics,clock) {
     // thirteen seconds inside the unchanged thirty-second semantic window.
     await at(17,()=>page.locator('.map-panel').scrollIntoViewIfNeeded());
   } else if(id==='unavailable') {
-    await at(2,()=>page.getByRole('button',{name:/^unit-1, available\./}).click());
+    await at(2,()=>page.getByRole('button',{name:/^Unit 1[\s\S]*Available[\s\S]*Toggle availability/}).click());
     await at(6,()=>evaluation(page));
     await at(13,()=>page.getByRole('heading',exact('Priority uncovered zones')).scrollIntoViewIfNeeded());
   } else if(id==='provenance') {
