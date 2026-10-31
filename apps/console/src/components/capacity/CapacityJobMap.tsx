@@ -42,11 +42,12 @@ function placeHomeLabelBox(anchor:LabelPoint,box:LabelSize,frame:LabelSize,contr
 }
 
 function fitSelection(instance:MapInstance,zone:DemandZone,site:StandbySite|undefined) {
+  const container=instance.getContainer();
+  if(container.clientWidth<=0||container.clientHeight<=0)return;
   const bounds=new maplibregl.LngLatBounds();
   bounds.extend(zone.position);
   for(const position of zone.polygon)bounds.extend(position);
   if(site)bounds.extend(site.position);
-  const container=instance.getContainer();
   const horizontal=Math.max(82,container.clientWidth*.18),vertical=Math.max(104,container.clientHeight*.18);
   const padding={left:horizontal,right:horizontal,top:vertical,bottom:vertical};
   instance.fitBounds(bounds,{padding,maxZoom:13,duration:0});
@@ -63,39 +64,53 @@ export default function CapacityJobMap({zone,site,unit,expanded}:Props) {
   useEffect(()=>{
     setReady(false);setError(null);
     if(!container.current||!config?.mapStyleUrl||!bounds){setError('The AWS basemap is not configured. Representative coordinates remain available below.');return;}
-    let instance:MapInstance;let removeFailed:(()=>void)|undefined;let initialized=false;
-    try {
-      const key=config.mapApiKey??new URL(config.mapStyleUrl,location.origin).searchParams.get('key');
-      instance=new maplibregl.Map({container:container.current,style:config.mapStyleUrl,
+    const styleUrl=config.mapStyleUrl,apiKey=config.mapApiKey,area=bounds;
+    let instance:MapInstance|null=null,initialized=false,disposed=false,failed=false;
+    const initialize=()=>{
+      const element=container.current;
+      if(!element||element.clientWidth<=0||element.clientHeight<=0||instance||disposed||failed)return;
+      let created:MapInstance|undefined;
+      try {
+      const key=apiKey??new URL(styleUrl,location.origin).searchParams.get('key');
+      const active=new maplibregl.Map({container:element,style:styleUrl,
         center:selection.current.zone.position,zoom:12,minZoom:8,maxZoom:16,
-        maxBounds:[[bounds[0]-.2,bounds[1]-.2],[bounds[2]+.2,bounds[3]+.2]],
+        maxBounds:[[area[0]-.2,area[1]-.2],[area[2]+.2,area[3]+.2]],
         attributionControl:{compact:true},transformRequest:(url)=>{
           if(key&&/\.amazonaws\.com\//.test(url)){const target=new URL(url);if(!target.searchParams.has('key'))target.searchParams.set('key',key);return{url:target.toString()};}
           return{url};
         }});
-      map.current=instance;removeFailed=()=>instance.remove();
-      instance.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
-      instance.on('load',()=>{
+      created=active;instance=active;map.current=active;
+      active.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
+      active.on('load',()=>{
+        if(disposed)return;
         const style=getComputedStyle(container.current!);
         const accent=style.getPropertyValue('--map-accent').trim(),success=style.getPropertyValue('--map-site').trim();
-        instance.addSource('capacity-selected-zone',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-        instance.addLayer({id:'capacity-zone-fill',type:'fill',source:'capacity-selected-zone',paint:{'fill-color':accent,'fill-opacity':.18}});
-        instance.addLayer({id:'capacity-zone-outline',type:'line',source:'capacity-selected-zone',paint:{'line-color':accent,'line-width':2}});
-        instance.addSource('capacity-selected-points',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-        instance.addLayer({id:'capacity-representative-points',type:'circle',source:'capacity-selected-points',paint:{
+        active.addSource('capacity-selected-zone',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+        active.addLayer({id:'capacity-zone-fill',type:'fill',source:'capacity-selected-zone',paint:{'fill-color':accent,'fill-opacity':.18}});
+        active.addLayer({id:'capacity-zone-outline',type:'line',source:'capacity-selected-zone',paint:{'line-color':accent,'line-width':2}});
+        active.addSource('capacity-selected-points',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+        active.addLayer({id:'capacity-representative-points',type:'circle',source:'capacity-selected-points',paint:{
           'circle-radius':['case',['==',['get','kind'],'site'],8,7],
           'circle-color':['case',['==',['get','kind'],'site'],success,accent],
           'circle-stroke-color':style.getPropertyValue('--map-stroke').trim(),'circle-stroke-width':2}});
-        initialized=true;fitSelection(instance,selection.current.zone,selection.current.site);
+        initialized=true;fitSelection(active,selection.current.zone,selection.current.site);
         setError(null);setReady(true);
       });
-      instance.on('error',()=>setError('The AWS basemap could not finish loading. Use the representative coordinates below or retry the map.'));
-    } catch {removeFailed?.();map.current=null;setError('This browser could not initialize the map. Representative coordinates remain available below.');return;}
+      active.on('error',()=>{if(!disposed)setError('The AWS basemap could not finish loading. Use the representative coordinates below or retry the map.');});
+      } catch {failed=true;created?.remove();instance=null;map.current=null;setError('This browser could not initialize the map. Representative coordinates remain available below.');}
+    };
     const observer=new ResizeObserver(()=>{
-      instance.resize();
-      if(initialized)fitSelection(instance,selection.current.zone,selection.current.site);
+      const element=container.current;
+      // Native close and inactive tabs have zero area. Keep the SDK resource,
+      // without resizing/refitting WebGL against a hidden presentation box.
+      if(!element||element.clientWidth<=0||element.clientHeight<=0)return;
+      const active=instance;
+      if(!active){initialize();return;}
+      active.resize();
+      if(initialized)fitSelection(active,selection.current.zone,selection.current.site);
     });observer.observe(container.current);
-    return()=>{observer.disconnect();homeLabel.current?.remove();homeLabel.current=null;instance.remove();map.current=null;};
+    initialize();
+    return()=>{disposed=true;observer.disconnect();homeLabel.current?.remove();homeLabel.current=null;instance?.remove();map.current=null;};
   },[config?.mapStyleUrl,config?.mapApiKey,bounds,attempt]);
 
   useEffect(()=>{

@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { flexRender, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, type ColumnDef, type PaginationState, type SortingState, type Updater } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Expand, MapPin, Minimize2, Search, X } from 'lucide-react';
 import type { CapacityComparisonResult, CapacityJobType, CapacityReplayJob, CapacityUnit, CapacityUnservedReason } from '../../../../../packages/contracts/src/capacity';
+import type { DemandZone, StandbySite } from '../../../../../packages/contracts/src/index';
 import { jobPhase, JOB_PHASE_LABELS, type JobPhase } from '../../lib/capacityReplay';
 import { capacityJobStages, capacityUnitPhase, type CapacityUnitSnapshot } from '../../lib/capacityUnitPhase';
 import { integer, shortHash, timestamp } from '../../lib/format';
@@ -20,6 +21,7 @@ const TABS=['Location','Summary','Timeline','Assumptions'] as const;
 type DetailTab=typeof TABS[number];
 type View='baseline'|'candidate';
 interface Props {result:CapacityComparisonResult;view:View;minute:number}
+interface MapSelection {zone:DemandZone;site:StandbySite|undefined;unit:CapacityUnit|undefined}
 interface JobRow {job:CapacityReplayJob;phase:JobPhase;unitAtCursor:string|null;zoneName:string;queue:number|null;response:number|null}
 const REASONS:Record<CapacityUnservedReason,string>={no_compatible_unit:'No compatible unit',no_route:'No route from a compatible home site',units_unavailable:'Compatible units are unavailable',no_shift_capacity:'No eligible shift capacity',horizon_queue:'Still queued at the planning horizon'};
 const label=(value:string)=>value.charAt(0).toUpperCase()+value.slice(1);
@@ -36,10 +38,11 @@ function queueLabel(row:JobRow):string {
 }
 
 export function CapacityJobs({result,view,minute}:Props) {
-  const {zones,manifest,preferences}=useStandby();
+  const {zones,manifest,preferences,scopeKey}=useStandby();
   const [params]=useSearchParams(),location=useLocation(),navigate=useNavigate();
   const listRef=useRef<HTMLElement>(null),opener=useRef<HTMLElement|null>(null),previousSelected=useRef<string|null>(null);
   const horizon=result.input.horizonMinutes,replay=result[view].replay,runKey=capacityRunKey(result);
+  const detailScope=JSON.stringify([scopeKey,view,runKey,result.generatedAt,manifest?.dataset.hash??null]);
   const query=(params.get('jobQ')??'').slice(0,80);
   const type=JOB_TYPES.includes(params.get('jobType') as CapacityJobType)?params.get('jobType')!:'all';
   const phase=Object.hasOwn(JOB_PHASE_LABELS,params.get('jobPhase')??'')?params.get('jobPhase')!:'all';
@@ -137,19 +140,32 @@ export function CapacityJobs({result,view,minute}:Props) {
     <Modal open={!!selectedId} onClose={closeDrawer} title={`Modeled job ${selectedId??''}`} className={`capacity-job-drawer ${expanded?'is-map-expanded':''}`}>
       {selected?<><div className="capacity-job-detail-context"><Badge tone="accent">Synthetic job · first replication</Badge><Badge tone={phaseTone(jobPhase(selected,minute,horizon))}>{JOB_PHASE_LABELS[jobPhase(selected,minute,horizon)]}</Badge><span>{view} · cursor +{minute.toFixed(1)} min</span></div>
       <div className="capacity-job-tabs" role="tablist" aria-label="Modeled job details">{TABS.map((item,index)=><button type="button" key={item} id={`capacity-job-tab-${item}`} data-testid={`capacity-job-tab-${item.toLowerCase()}`} role="tab" aria-selected={tab===item} aria-controls="capacity-job-detail-panel" tabIndex={tab===item?0:-1} onClick={()=>changeTab(item)} onKeyDown={event=>tabKey(event,index)}>{item}</button>)}</div>
-      <div id="capacity-job-detail-panel" className="capacity-job-detail-panel" role="tabpanel" aria-labelledby={`capacity-job-tab-${tab}`} tabIndex={0}>
-        <JobDetail result={result} job={selected} view={view} minute={minute} tab={tab} expanded={expanded} onExpand={()=>update({jobMap:expanded?null:'expanded'})}/>
-      </div></>:<div className="capacity-job-unavailable" role="alert"><h3>Modeled job unavailable</h3><p>{runMatches?'This job is not part of the selected result.':'This detail link does not match the current comparison. Select a job from the current list.'}</p><code>{runMatches?'JOB_NOT_FOUND':'RUN_MISMATCH'}</code></div>}
+      </>:selectedId?<div className="capacity-job-unavailable" role="alert"><h3>Modeled job unavailable</h3><p>{runMatches?'This job is not part of the selected result.':'This detail link does not match the current comparison. Select a job from the current list.'}</p><code>{runMatches?'JOB_NOT_FOUND':'RUN_MISMATCH'}</code></div>:null}
+      <div id="capacity-job-detail-panel" className="capacity-job-detail-panel" role="tabpanel" aria-labelledby={`capacity-job-tab-${tab}`} tabIndex={0} hidden={!selected}>
+        <JobDetail key={detailScope} result={result} job={selected} allowMapCache={rawSelected===null||!!selected} view={view} minute={minute} tab={tab} expanded={expanded} onExpand={()=>update({jobMap:expanded?null:'expanded'})}/>
+      </div>
     </Modal>
   </section>;
 }
 
-function JobDetail({result,job,view,minute,tab,expanded,onExpand}:{result:CapacityComparisonResult;job:CapacityReplayJob;view:View;minute:number;tab:DetailTab;expanded:boolean;onExpand:()=>void}) {
+function JobDetail({result,job,allowMapCache,view,minute,tab,expanded,onExpand}:{result:CapacityComparisonResult;job:CapacityReplayJob|undefined;allowMapCache:boolean;view:View;minute:number;tab:DetailTab;expanded:boolean;onExpand:()=>void}) {
   const {zones,manifest,preferences}=useStandby();
-  const horizon=result.input.horizonMinutes,spatialMatch=manifest?.dataset.hash===result.datasetHash,zone=spatialMatch?zones.find(item=>item.id===job.zoneId):undefined;
-  const assigned=job.assignedAtMinutes!==null&&job.assignedAtMinutes<=minute;
-  const unit=assigned?result.input[view].units.find(item=>item.id===job.unitId):undefined;
+  const horizon=result.input.horizonMinutes,spatialMatch=manifest?.dataset.hash===result.datasetHash,zone=spatialMatch&&job?zones.find(item=>item.id===job.zoneId):undefined;
+  const assigned=!!job&&job.assignedAtMinutes!==null&&job.assignedAtMinutes<=minute;
+  const unitId=job?.unitId,unit=assigned?result.input[view].units.find(item=>item.id===unitId):undefined;
   const site=unit&&spatialMatch?manifest?.dataset.sites.find(item=>item.id===unit.siteId):undefined;
+  const mapAllowed=allowMapCache&&spatialMatch&&(!job||!!zone);
+  const currentMap=useMemo<MapSelection|null>(()=>job&&tab==='Location'&&zone?{zone,site,unit}:null,[job,tab,zone,site,unit]);
+  // Retain geometry only, never an old job/card. The parent key bounds this one
+  // resource to the exact result, policy, scope generation and geography.
+  const [retainedMap,setRetainedMap]=useState<MapSelection|null>(null);
+  useEffect(()=>{if(!mapAllowed)setRetainedMap(null);else if(currentMap)setRetainedMap(currentMap);},[mapAllowed,currentMap]);
+  const mapSelection=mapAllowed?(currentMap??retainedMap):null;
+  const mapSlot=<div hidden={!job||tab!=='Location'}>
+    {job&&tab==='Location'?<div className="capacity-job-map-heading"><div><h3><MapPin size={17}/>Approximate modeled location</h3><p>The zone representative is not an exact incident or driver location.</p></div><button type="button" className="button secondary" onClick={onExpand} aria-label={expanded?'Exit expanded map':'Expand modeled job map'}>{expanded?<Minimize2 size={16}/>:<Expand size={16}/>}<span>{expanded?'Exit expanded map':'Expand map'}</span></button></div>:null}
+    {mapSelection?<Suspense key="retained-map" fallback={<div className="capacity-map-wrap"><div className="capacity-map-message" role="status"><Busy label="Loading map view"/></div></div>}><CapacityJobMap zone={mapSelection.zone} site={mapSelection.site} unit={mapSelection.unit} expanded={!!job&&expanded}/></Suspense>:null}
+  </div>;
+  if(!job)return <>{mapSlot}</>;
   const jobs=result[view].replay.jobs,events=result[view].replay.events.filter(event=>event.jobId===job.id);
   const snapshot=capacityUnitPhase(job,unit,jobs,minute,horizon),activeJob=jobs.find(item=>item.id===snapshot.activeJobId);
   const stages=unit?capacityJobStages(job,unit.kind):null;
@@ -157,14 +173,15 @@ function JobDetail({result,job,view,minute,tab,expanded,onExpand}:{result:Capaci
   const cycle=[['Queue before assignment',job.queueMinutes],['Preparation',job.prepMinutes],['Outbound Car approach',job.travelMinutes],[unit?.kind==='flatbed'?'On-site handling / loading allowance':'On-site service',job.onSiteMinutes],['Flatbed transport allowance',job.transportMinutes],['Flatbed drop-off / unloading allowance',job.dropoffMinutes],['Fixed-home recovery allowance',job.recoveryMinutes]] as const;
   const unitStatus=<UnitAtCursor unit={unit} snapshot={snapshot} activeJob={activeJob} assigned={assigned} offset={offset}/>;
   if(tab==='Location')return <>
-    <div className="capacity-job-map-heading"><div><h3><MapPin size={17}/>Approximate modeled location</h3><p>The zone representative is not an exact incident or driver location.</p></div><button type="button" className="button secondary" onClick={onExpand} aria-label={expanded?'Exit expanded map':'Expand modeled job map'}>{expanded?<Minimize2 size={16}/>:<Expand size={16}/>}<span>{expanded?'Exit expanded map':'Expand map'}</span></button></div>
-    {zone?<Suspense fallback={<div className="capacity-map-wrap"><div className="capacity-map-message" role="status"><Busy label="Loading map view"/></div></div>}><CapacityJobMap zone={zone} site={site} unit={spatialMatch?unit:undefined} expanded={expanded}/></Suspense>:<div className="capacity-job-unavailable" role="alert"><h3>Location unavailable</h3><p>The selected result does not match the active geography, or its zone is unavailable. No coordinate is invented.</p><code>{spatialMatch?'ZONE_UNAVAILABLE':'DATASET_MISMATCH'}</code></div>}
+    {mapSlot}
+    {!zone?<div className="capacity-job-unavailable" role="alert"><h3>Location unavailable</h3><p>The selected result does not match the active geography, or its zone is unavailable. No coordinate is invented.</p><code>{spatialMatch?'ZONE_UNAVAILABLE':'DATASET_MISMATCH'}</code></div>:null}
     <div className="capacity-map-legend"><span><i className="capacity-map-zone-dot"/>Zone representative &amp; polygon</span>{site?<span><i className="capacity-map-site-dot"/>{unit?.id} · assumed home site</span>:<span>{assigned?'Assigned site metadata unavailable':'No assigned home site at cursor'}</span>}</div>
     {unitStatus}
     <dl className="capacity-job-definition"><dt>Approximate zone</dt><dd>{zone?.name??job.zoneId} · {job.zoneId}</dd><dt>Latitude / longitude</dt><dd>{zone?`${zone.position[1].toFixed(5)}, ${zone.position[0].toFixed(5)}`:'Not available'}</dd><dt>Assigned unit at cursor</dt><dd>{assigned?(job.unitId??'Not recorded'):'Unassigned at cursor'}</dd><dt>Home site</dt><dd>{site?`${site.name} · ${site.id} · Assumed`:assigned?'Site metadata unavailable':'Not assigned at cursor'}</dd><dt>Street / postal code</dt><dd>Not connected. The point is a geographic approximation.</dd></dl>
     <p className="capacity-job-notice">The unit label marks its assumed home, including while it is busy elsewhere in the replay. Actual vehicle GPS and workshop coordinates are not connected. No moving vehicle, return route or routed tow leg is shown.</p>
   </>;
   if(tab==='Summary')return <>
+    {mapSlot}
     <div className="capacity-job-detail-cards"><div><span>Modeled type</span><strong>{label(job.type)}</strong></div><div><span>At selected cursor</span><strong>{JOB_PHASE_LABELS[jobPhase(job,minute,horizon)]}</strong></div><div><span>Assigned at cursor</span><strong>{assigned?(job.unitId??'Not recorded'):'Unassigned'}</strong></div></div>
     {unitStatus}
     <dl className="capacity-job-definition"><dt>Modeled arrival</dt><dd>{offset(job.arrivalMinutes)}</dd><dt>Modeled assignment</dt><dd>{offset(job.assignedAtMinutes)}</dd><dt>Modeled response arrival</dt><dd>{offset(job.arrivedAtMinutes)}</dd><dt>Modeled job clearance</dt><dd>{offset(job.completedAtMinutes)}</dd><dt>Unit available again</dt><dd>{offset(job.availableAgainMinutes)}</dd><dt>Horizon outcome</dt><dd>{job.status==='in_progress'?'In progress at horizon':label(job.status)}{job.reason?` · ${REASONS[job.reason]}`:''}</dd><dt>Target outcome at horizon</dt><dd>{result.input.responseTargetMinutes} min · Assumed{job.onTime===null?' · not reached by horizon':job.onTime?' · reached within target':' · reached late'}</dd></dl>
@@ -172,6 +189,7 @@ function JobDetail({result,job,view,minute,tab,expanded,onExpand}:{result:Capaci
     {unit?.kind==='flatbed'?<p className="capacity-job-notice">One vehicle per flatbed is assumed. The dispatch slot stays reserved through loading, transport, unloading and recovery. Completing drop-off clears the modeled vehicle payload; the unit becomes available only after the fixed-home recovery allowance.</p>:null}
   </>;
   if(tab==='Timeline')return <>
+    {mapSlot}
     {unitStatus}
     <h3 className="capacity-cycle-heading">Selected job · recorded unit cycle</h3>
     <p className="capacity-job-muted">Recorded elapsed-time segments for this job. Loading uses the on-site allowance; no separate loading-complete measurement or chosen garage is recorded.</p>
@@ -190,6 +208,7 @@ function JobDetail({result,job,view,minute,tab,expanded,onExpand}:{result:Capaci
   </>;
   const profile=result.input.typeProfiles[job.type];
   return <>
+    {mapSlot}
     <h3>Assumptions frozen in this comparison</h3><dl className="capacity-job-definition"><dt>Type share</dt><dd>{(profile.share*100).toFixed(1)}% · Assumed</dd><dt>On-site triangular duration</dt><dd>{profile.onSiteMinutes.min} / {profile.onSiteMinutes.mode} / {profile.onSiteMinutes.max} min · min / mode / max · Assumed</dd><dt>Transport / drop-off</dt><dd>{profile.flatbedTransportMinutes} / {profile.flatbedDropoffMinutes} min · flatbeds only · Assumed</dd><dt>Travel sensitivity</dt><dd>{result.input.travelMultiplier}× · Car profile for every unit kind</dd><dt>Generated</dt><dd><time dateTime={result.generatedAt}>{timestamp(result.generatedAt,preferences.timezone)} · {preferences.timezone}</time></dd><dt>Input / model</dt><dd><code>{shortHash(result.inputHash)} / {result.modelVersion}</code></dd><dt>Dataset / matrix</dt><dd><code>{shortHash(result.datasetHash)} / {shortHash(result.matrix.hash)}</code></dd><dt>Routing snapshot expires</dt><dd>{timestamp(result.matrix.expiresAt,preferences.timezone)} · {preferences.timezone}</dd></dl>
     <details className="capacity-job-assumptions"><summary>Read all model limitations</summary><ul>{result.assumptions.map(item=><li key={item}>{item}</li>)}</ul></details>
     <p className="capacity-job-notice">Actual Austin geography and prepared Car road times support this scenario. Arrival time, type, roster and service duration are modeled assumptions, not measured service performance.</p>
