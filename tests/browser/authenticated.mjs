@@ -4,6 +4,7 @@
  * The coordinator creates and removes the synthetic identities and workspace.
  */
 import {randomUUID} from 'node:crypto';
+import {createServer} from 'node:http';
 import {chromium} from 'playwright';
 import {prepareCandidateUI} from './static-overlay.mjs';
 
@@ -170,6 +171,22 @@ async function assertAccessBoundaries(actor) {
   await api(actor,'GET','/workspaces',{token:actor.idToken,status:[401,403]});
   await api(actor,'GET',`/workspaces/forbidden-${runId}/plans`,{status:403});
 }
+async function proveRedirectOverlay(base){
+  if(!process.env.STANDBY_UI_DIST)return;
+  step='candidate-overlay-redirect-selftest';
+  const server=createServer((_request,response)=>{response.writeHead(302,{Location:base+'/auth/callback?qa=redirect-probe','Cache-Control':'no-store'});response.end();});
+  const context=await browser.newContext({serviceWorkers:'block'});contexts.push(context);
+  try{
+    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+    const page=await context.newPage(),overlay=await installUI(context,page);
+    const response=await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'commit',timeout:20_000});
+    check(response?.status()===200&&response.headers()['x-standby-qa-source']===expectedCandidateSource,'candidate-redirect-selftest-failed');
+    overlay.assertHealthy();
+    console.log('PASS candidate callback across an actual HTTP redirect before operator sign-in');
+  }finally{
+    await context.close().catch(()=>{});server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
+}
 function assertTrustedEvaluation(plan) {
   check(plan.evaluationStatus==='SUCCEEDED'&&plan.reviewStatus==='NEEDS_REVIEW'&&plan.version>=2,'saved-evaluation-state-invalid');
   const result=plan.result;
@@ -190,6 +207,7 @@ try {
   check(base&&new URL(base).protocol==='https:','live-url-must-use-https');
   installUI=await prepareCandidateUI(base);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+  await proveRedirectOverlay(base);
   const analyst=await signIn(identities.find(value=>value.role==='Analyst'),base);
   await assertAccessBoundaries(analyst);
   const workspaceId=analyst.workspaceId,plansPath=`/workspaces/${workspaceId}/plans`;
@@ -324,6 +342,8 @@ try {
   const updated=await changedResponse.json();
   check(updated.settings.version===before.settings.version+1&&updated.settings.defaultThresholdMinutes===nextThreshold&&updated.configHash!==before.configHash,
     'settings-version-or-config-hash-unchanged');
+  await visible(admin.page.getByRole('status').filter({hasText:`Workspace defaults confirmed by the server at version ${updated.settings.version}.`}),
+    'settings-confirmed-version-not-shown');
   step='Admin:settings-stale-version-conflict';
   const staleSettings=await api(admin,'PATCH',settingsPath,{data:{expectedVersion:before.settings.version,
     defaultThresholdMinutes:nextThreshold,maxFleetSize:before.settings.maxFleetSize,enabledSiteIds:before.settings.enabledSiteIds},status:409});
