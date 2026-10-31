@@ -14,6 +14,7 @@ const check=(condition,code)=>{if(!condition) throw new Error(code);};
 const exact=(name)=>({name,exact:true});
 const roles=['Analyst','Planner','Admin'];
 const runId=randomUUID().slice(0,12);
+let nextDirectRequestAt=0;
 const expectedCandidateSource=process.env.STANDBY_UI_SOURCE??process.env.GITHUB_SHA;
 
 async function visible(locator,code) {
@@ -36,6 +37,10 @@ function parseIdentities() {
   return identities;
 }
 async function api(actor,method,path,{data,headers={},token=actor.accessToken,status=200}={}) {
+  // Respect the live stage's 3 requests/second setting without retrying mutations.
+  const wait=Math.max(0,nextDirectRequestAt-Date.now());
+  if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+  nextDirectRequestAt=Date.now()+400;
   const response=await actor.context.request.fetch(`${actor.apiBase}${path}`,{
     method,timeout:30_000,failOnStatusCode:false,
     headers:{Accept:'application/json',...(data===undefined?{}:{'Content-Type':'application/json'}),
@@ -263,10 +268,12 @@ try {
   const unchanged=await api(planner,'GET',path);
   check(unchanged.version===saved.version&&unchanged.evaluationStatus==='NOT_RUN','forged-result-mutated-plan');
   const evaluated=await api(planner,'POST',`${path}/evaluate`,{data:{expectedVersion:saved.version}});
+  step='Planner:trusted-evaluation-provenance';
   assertTrustedEvaluation(evaluated);
   check(evaluated.input.fleetSize===input.fleetSize&&evaluated.result.input.thresholdMinutes===input.thresholdMinutes,'trusted-evaluation-input-mismatch');
   await api(planner,'POST',`${path}/evaluate`,{data:{expectedVersion:saved.version},status:409});
   const hashes={inputHash:evaluated.inputHash,resultHash:evaluated.resultHash,configHash:evaluated.configHash};
+  step='Planner:denied-role-mutations';
   await api(analyst,'POST',plansPath,{data:{planId:evaluated.id,expectedVersion:evaluated.version,name:'Denied analyst revision',input:evaluated.input},headers:{'Idempotency-Key':randomUUID()},status:403});
   await api(analyst,'POST',`${path}/evaluate`,{data:{expectedVersion:evaluated.version},status:403});
   await api(analyst,'POST',`${path}/review`,{data:{expectedVersion:evaluated.version,...hashes},status:403});
@@ -381,7 +388,7 @@ try {
   console.log('PASS real Cognito authorization acceptance. No credentials, provider payloads or media artifacts retained.');
 } catch(error) {
   // Browser/library errors can quote inputs, DOM values and HTTP headers: never print them.
-  const symbolic=error instanceof Error&&/^[a-z][a-z-]+$/.test(error.message)?error.message:'browser-action-or-timeout';
+  const symbolic=error instanceof Error&&/^[a-z][a-z0-9-]+$/.test(error.message)?error.message:'browser-action-or-timeout';
   console.error(`FAIL ${step}: ${symbolic}`);process.exitCode=1;
 } finally {
   for(const context of contexts) await context.close().catch(()=>{});
