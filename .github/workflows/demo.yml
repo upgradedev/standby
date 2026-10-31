@@ -149,8 +149,35 @@ jobs:
             .runtime/demo/captions.srt
             .runtime/demo/verification.json
             .runtime/demo/project.json
-  pitch_scenes:
+  pitch_project:
     needs: request
+    if: ${{ inputs.mode == 'pitch-scenes' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # GitHub requires push access to read unpublished draft release assets.
+      # This job only verifies/extracts bytes; it never executes the scene package.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Download only the sealed scene project from this repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
+          PROJECT_SHA256: ${{ inputs.project_sha256 }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          python tools/pitch/download-project.py --help
+          python tools/pitch/download-project.py --asset-id "$PROJECT_ASSET_ID" --sha256 "$PROJECT_SHA256" --release "$RELEASE" --out "$RUNNER_TEMP/standby-pitch"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standby-pitch-verified-project
+          retention-days: 3
+          path: ${{ runner.temp }}/standby-pitch/
+  pitch_scenes:
+    needs: [request, pitch_project]
     if: ${{ inputs.mode == 'pitch-scenes' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -163,20 +190,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: standby-pitch-verified-project
+          path: ${{ runner.temp }}/standby-pitch/
       - name: Install pinned media dependencies in hosted CI only
         run: |
           npm ci
           npx playwright install --with-deps chromium
           if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
-      - name: Download only the sealed scene project from this repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
-          PROJECT_SHA256: ${{ inputs.project_sha256 }}
-          RELEASE: ${{ inputs.release }}
-        run: |
-          python tools/pitch/download-project.py --help
-          python tools/pitch/download-project.py --asset-id "$PROJECT_ASSET_ID" --sha256 "$PROJECT_SHA256" --release "$RELEASE" --out "$RUNNER_TEMP/standby-pitch"
       - name: Review deterministic scenes without app, voice or external browser requests
         env:
           PLAYWRIGHT_MODULE: ${{ github.workspace }}/node_modules/playwright
