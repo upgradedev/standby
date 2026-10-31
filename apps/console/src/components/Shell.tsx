@@ -16,8 +16,6 @@ export function Shell({children}:{children:ReactNode}){
  const navigate=useNavigate(),location=useLocation(),{theme,setTheme}=useTheme();
  const mainRef=useRef<HTMLElement>(null),topbarRef=useRef<HTMLElement>(null),firstPath=useRef(location.pathname),searchInput=useRef<HTMLInputElement>(null);
  const [tooltipsDismissed,setTooltipsDismissed]=useState(false);
- const lastScope=useRef(state.scopeKey);
- useEffect(()=>{if(lastScope.current!==state.scopeKey){lastScope.current=state.scopeKey;mainRef.current?.focus({preventScroll:true});}},[state.scopeKey]);
  function scoped(to:string){const target=new URL(to,window.location.origin);if(workspace!=='public')target.searchParams.set('workspace',workspace);return target.pathname+target.search+target.hash;}
  const title=nav.find(item=>location.pathname.startsWith(item.path))?.label??'Operator access';
  const overviewReady=!loading&&(!!error||!zones.length||!manifest?.matrix||!!result||!!evaluationError)&&!state.evaluating;
