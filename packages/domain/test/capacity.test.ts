@@ -57,6 +57,63 @@ test('two simultaneous jobs and one unit have hand-calculated queue, response an
   close(result.units[0]!.utilization, .6);
 });
 
+test('one flatbed carries two simultaneous tow jobs serially through drop-off and recovery', () => {
+  const result = trace([job('tow-b', 0, 'collision'), job('tow-a', 0, 'collision')], ({input}) => {
+    input.horizonMinutes = 120; input.arrivalWeights = [1, 1];
+    input.baseline.units = [unit({id: 'flatbed-1', kind: 'flatbed', capabilities: ['collision'], shiftEndMinutes: 120})];
+    input.candidate = structuredClone(input.baseline);
+    input.typeProfiles.collision.flatbedTransportMinutes = 20;
+    input.typeProfiles.collision.flatbedDropoffMinutes = 7;
+  });
+  const [first, second] = result.jobs;
+  // 2 prep + 1 approach + 10 handling + 20 transport + 7 drop-off = 40; 5 recovery = release45.
+  assert.deepEqual([first!.id, first!.assignedAtMinutes, first!.arrivedAtMinutes, first!.completedAtMinutes, first!.availableAgainMinutes],
+    ['tow-a', 0, 3, 40, 45]);
+  assert.deepEqual([second!.id, second!.assignedAtMinutes, second!.arrivedAtMinutes, second!.completedAtMinutes, second!.availableAgainMinutes],
+    ['tow-b', 45, 48, 85, 90]);
+  assert.equal(first!.unitId, 'flatbed-1'); assert.equal(second!.unitId, 'flatbed-1');
+  assert.equal(second!.queueMinutes, 45);
+  assert.ok(second!.assignedAtMinutes! > first!.completedAtMinutes!, 'Completed unloading does not skip recovery.');
+  assert.equal(second!.assignedAtMinutes, first!.availableAgainMinutes, 'The next car starts only at the half-open release boundary.');
+  assert.deepEqual(result.events.filter(event => event.type === 'assigned').map(event => event.atMinutes), [0, 45]);
+  assert.ok(result.events.find(event => event.type === 'service_completed' && event.jobId === first!.id)!.sequence
+    < result.events.find(event => event.type === 'available' && event.jobId === first!.id)!.sequence);
+  assert.deepEqual([result.metrics.completed, result.metrics.inProgress, result.metrics.unserved, result.metrics.maxQueue], [2, 0, 0, 1]);
+  assert.equal(result.units[0]!.busyMinutes, 90); close(result.units[0]!.utilization, .75);
+});
+
+test('a tow unfinished at the horizon retains the unit through its later drop-off and recovery', () => {
+  const result = trace([job('tow-a', 0, 'collision'), job('tow-b', 0, 'collision')], ({input}) => {
+    input.horizonMinutes = 30;
+    input.baseline.units = [unit({id: 'flatbed-1', kind: 'flatbed', capabilities: ['collision'], shiftEndMinutes: 30})];
+    input.candidate = structuredClone(input.baseline);
+    input.typeProfiles.collision.flatbedTransportMinutes = 20;
+    input.typeProfiles.collision.flatbedDropoffMinutes = 7;
+  });
+  assert.deepEqual([result.jobs[0]!.status, result.jobs[0]!.completedAtMinutes, result.jobs[0]!.availableAgainMinutes], ['in_progress', 40, 45]);
+  assert.equal(result.jobs[1]!.reason, 'horizon_queue'); assert.equal(result.jobs[1]!.assignedAtMinutes, null);
+  assert.equal(result.events.filter(event => event.type === 'assigned').length, 1);
+  assert.ok(result.events.some(event => event.type === 'service_completed' && event.atMinutes === 40));
+  assert.ok(result.events.some(event => event.type === 'off_shift' && event.jobId === 'tow-a' && event.atMinutes === 45));
+  assert.deepEqual([result.metrics.completed, result.metrics.inProgress, result.metrics.unserved], [0, 1, 1]);
+  assert.deepEqual([result.units[0]!.busyMinutes, result.units[0]!.busyWithinHorizonMinutes, result.units[0]!.overtimeMinutes], [45, 30, 15]);
+  assert.equal(result.metrics.onTimePct, 50, 'Both arrivals remain the denominator, including the waiting tow.');
+});
+
+test('a flatbed released exactly at shift end cannot accept the next queued tow', () => {
+  const result = trace([job('tow-a', 0, 'collision'), job('tow-b', 0, 'collision')], ({input}) => {
+    input.horizonMinutes = 120; input.arrivalWeights = [1, 1];
+    input.baseline.units = [unit({id: 'flatbed-1', kind: 'flatbed', capabilities: ['collision'], shiftEndMinutes: 45})];
+    input.candidate = structuredClone(input.baseline);
+    input.typeProfiles.collision.flatbedTransportMinutes = 20;
+    input.typeProfiles.collision.flatbedDropoffMinutes = 7;
+  });
+  assert.equal(result.jobs[0]!.availableAgainMinutes, 45);
+  assert.equal(result.jobs[1]!.assignedAtMinutes, null); assert.equal(result.jobs[1]!.reason, 'horizon_queue');
+  assert.deepEqual(result.events.filter(event => event.type === 'assigned').map(event => event.jobId), ['tow-a']);
+  assert.deepEqual([result.units[0]!.busyMinutes, result.units[0]!.overtimeMinutes], [45, 0]);
+});
+
 test('eligible-pool FCFS allows an idle flatbed to serve collision while an older battery waits', () => {
   const result = trace([job('a'), job('b'), job('c', 0, 'collision'), job('d', 0, 'tyre')], ({input}) => {
     input.baseline.units = [unit({id: 'bike', kind: 'motorcycle'}), unit({id: 'tow', kind: 'flatbed', capabilities: ['collision']})];
