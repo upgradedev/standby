@@ -98,6 +98,7 @@ jobs:
           npx playwright install --with-deps chromium
           if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
       - name: Build and strict console source lint
+        id: console_build
         run: |
           npm run build
           node tools/console-preview/lint_ui.mjs --help
@@ -118,6 +119,7 @@ jobs:
           node --check tests/browser/live.mjs
           STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tests/browser/live.mjs
       - name: One-car towing occupancy and unit-location UI with actual backend
+        if: ${{ !cancelled() && steps.console_build.outcome == 'success' }}
         env:
           STANDBY_UI_DIST: apps/console/dist
           STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea

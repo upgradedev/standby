@@ -46,15 +46,16 @@ export default function MapCanvas({plan,layer,selected,selectedSite,selectedUnit
   markers.current.forEach(marker=>marker.remove());markers.current=[];
   for(const site of manifest?.dataset.sites??[]){
    const units=plan?.units.filter(unit=>unit.siteId===site.id)??[],active=units.some(unit=>unit.available);
+   const countText=plan?`${units.length} ${units.length===1?'unit':'units'} · evaluated`:'Not evaluated';
    const element=document.createElement('button');element.type='button';
    element.className=`site-marker unit-site-marker ${units.length?'selected':''} ${units.length&&!active?'unavailable':''}`;
    element.dataset.siteId=site.id;element.dataset.unitIds=units.map(unit=>unit.id).join(',');element.dataset.residentCount=String(units.length);
    element.setAttribute('aria-controls','coverage-site-details');
-   element.setAttribute('aria-label',`${site.id}. ${site.name}. ${plan?`${units.length} evaluated units. ${units.map(unit=>`${unit.id}: ${unit.available?'Available':'Unavailable'}`).join('. ')}`:'Not evaluated.'} Assumed planning site, not live GPS. Select site details.`);
+   element.setAttribute('aria-label',`${site.id} ${countText} ${units.map(unit=>`${unit.id} ${unit.available?'Available':'Unavailable'}`).join(' ')}. ${site.name}. Assumed planning site, not live GPS. Select site details.`);
    const pin=document.createElement('span');pin.className='unit-site-pin';pin.setAttribute('aria-hidden','true');element.append(pin);
    const label=document.createElement('span');label.className='unit-site-label';label.dataset.testid=`coverage-site-label-${site.id}`;
    const heading=document.createElement('strong');heading.className='unit-site-id';heading.textContent=site.id;label.append(heading);
-   const count=document.createElement('span');count.className='unit-site-count';count.textContent=plan?`${units.length} ${units.length===1?'unit':'units'} · evaluated`:'Not evaluated';label.append(count);
+   const count=document.createElement('span');count.className='unit-site-count';count.textContent=countText;label.append(count);
    for(const unit of units){
     const row=document.createElement('span');row.className='unit-site-resident';row.dataset.unitId=unit.id;row.dataset.available=String(unit.available);
     const id=document.createElement('strong');id.textContent=unit.id;
@@ -62,7 +63,8 @@ export default function MapCanvas({plan,layer,selected,selectedSite,selectedUnit
     row.append(id,status);label.append(row);
    }
    const help=document.createElement('span');help.className='sr-only';help.textContent=`${site.name}. Assumed planning site, not live GPS. Select site details.`;label.append(help);element.append(label);
-   element.addEventListener('click',()=>siteCallback.current(site.id));
+   // A site click must not also select the demand polygon below its DOM marker.
+   element.addEventListener('click',event=>{event.stopPropagation();siteCallback.current(site.id);});
    markers.current.push(new maplibregl.Marker({element,anchor:'center'}).setLngLat(site.position).addTo(map.current));
    if(focusedSite===site.id)element.focus({preventScroll:true});
   }
