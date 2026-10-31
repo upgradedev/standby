@@ -51,7 +51,7 @@ export default function Capacity() {
       <p>Austin training counts weight zone locations. Job arrivals, incident mix, durations, rosters and shifts are editable assumptions. This is a planning experiment, not a forecast or a staffing guarantee.</p>
     </div></div>
     {!lab.input?unavailable??<LoadingState/>:<>
-      <div className="capacity-draft-summary" aria-label="Current draft assumptions">
+      <div className="capacity-draft-summary" role="group" aria-label="Current draft assumptions">
         <span><strong>{draftNumber(lab.input.baseline.units.length)}</strong> baseline units</span>
         <span><strong>{draftNumber(lab.input.candidate.units.length)}</strong> candidate units</span>
         <span><strong>{draftNumber(lab.input.jobCount)}</strong> modeled jobs</span>
