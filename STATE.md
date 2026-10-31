@@ -2,10 +2,11 @@
 
 ## Current outcome
 
-Owner has now explicitly approved the revised ConceptA165s/nine-shot exact English plan, including S7what-if/fallback. Approval hashes are sealed at media/standby-pitch-v2/research/owner-plan-approval.json. Root claims production brief/timeline/narration/pipeline metadata and hosted scene review; capacity_assumptions_ui owns only media scenesS1/S9; capacity_jobs_ui owns only scenesS3/S8/overlays. Workers read the shared brief in existing10_assets.md and never touch app/cloud or other writers files. New takes, paid voice and public publication remain separately gated.
+Owner approved the exact ConceptA165s/nine-shot English pitch plan including bothS7variants. Step2 contracts and Step3 hosted scene review are COMPLETE. [PRIMARY] https://github.com/upgradedev/standby/actions/runs/41223726786 PASSED at toolingf995853 (`gh run view 41223726786 --repo upgradedev/standby --json headSha,status,conclusion,jobs`); out/scene-review-r1/receipt.json records4deterministic half-scale scenes,2transparent overlays and3negative controls. Root inspected4contact sheets/4full-size final stills; no narrated cut exists. Exact approved253words/165s remain in timeline/narration. Review gallery: media/standby-pitch-v2/out/scene-review-r1/review.html. StandardCI also PASSED atf995853, run41223722631.
 
+Next gate: specific Take1 and its agent-driven CI method, fully described in media/standby-pitch-v2/live/take-1-review.html and take-1-plan.json. No new product take, paid voice or public publication occurred. Proposed one fresh anonymous context, one attempt/480seconds maximum, at most3application POST attempts (1automatic coverage +2paired capacity), no reload/retry/protected save/new route build/model call. It shows located units,2collisions/1flatbed, payload1transport, payload0butbusyrecovery, thencandidate+1compatibleflatbed with identical shared samples. Approval of Take1 does not authorize Take2 or voice/publication.
 
-Pitch-video Step1 exact plan is OWNER APPROVED. Step2 production brief is filled in existing media/standby-pitch-v2/10_assets.md (the workspace prohibits a new Markdown BRIEF); timeline.json/narration.json preserve the approved253 spoken words and165s/nine-shot windows. Step3 has four deterministic HTML scenes and two overlay kinds; source checks pass, actual hosted render/layout review is next. No new product take, paid voice or public publication has occurred. Capture target remains deployed webdb67b6d/API3802; app bytes are unchanged.
+Recording source freeze is named now: webdb67b6d0a2455549736be0d6574c184309fe0277, read/config3802d94e5ae5a66b6b7fb8fc67030393d0a276ea. Product bytes remain unchanged; source/tooling/documentation commits do not imply a new app release. Recheck actual served hashes before each take. Human keyboard/role/native-popup/incomplete-axe release judgments stay PENDING.
 
 
 The owner explicitly approved the controlled frontend preview of `db67b6d0a2455549736be0d6574c184309fe0277`. It is now DEPLOYED and VERIFIED at https://d34x1513u5u1qs.cloudfront.net/capacity . Only the reviewed web manifest and dedicated viewer function's /capacity route were activated. Backend/config remain3802d94e5ae5a66b6b7fb8fc67030393d0a276ea. This is the approved preview for human checks, not a human-attested final release or video/publication approval.
@@ -75,7 +76,7 @@ Standby is implemented and live at https://d34x1513u5u1qs.cloudfront.net/ . Publ
 
 ## Frozen release and exact evidence
 
-**Existing live/video freeze: `5ad96cc4c6e50503556bb706f1698477764d2dd2`, declared before the final capture.** The evidence below verifies that release. Its runtime was unchanged through the final capture; the owner-authorized capacity-MVP code is now a separate next-release branch, not a deployment or replacement video. Do not use the old video as proof of that new code.
+**Historical video freeze: `5ad96cc4c6e50503556bb706f1698477764d2dd2`, declared before the original capture.** The evidence below verifies that historical release only. Owner-requested Capacity/towing changes are now deployed in controlled previewdb67b6d/read3802 and name the new recording freeze above. A replacement video is being prepared; the old video cannot prove the new UI.
 
 | Evidence | Exact result and reproduction |
 |---|---|
@@ -127,7 +128,7 @@ Eligibility requires age18+ and eligible actual residence, with Amazon employmen
 
 1. COMPLETED: owner approved the final UI and the exact-source Step6 controlled preview; frontenddb67b6d is deployed and verified. Structure, shell/Overview and first list/detail approvals remain in force. Remaining human release judgments stay open.
 2. Complete human keyboard1440/390, role-menu/native-popup and axe incomplete judgments on the deployed preview before final release; keep these user-gated until a person attests them. Automated post-deploy acceptance already passed against actual served bytes.
-3. COMPLETED: owner approved the exact165s/nine-shot English pitch plan, including S7 matched-job what-if and fallback. Complete hosted scene review, then show concrete recording click scripts for the specific-take gate. Paid voice/provider selection and public publication remain later gates. Pin db67b6d/API3802 before capture; old5ad footage does not evidence Capacity.
+3. COMPLETED: exact165s/nine-shot pitch plan approval and hosted scene review. NEXT: approve specific Take1 and proposed agent-driven CI method, per live/take-1-review.html. Take2, paid voice/provider selection and public publication remain later gates. Reverify frozen db67b6d/API3802 before capture; old5ad footage does not evidence Capacity.
 4. Resolve the remaining household-exclusion eligibility declaration. Age18+, Greece and no Amazon employment/related family are already human-attested.
 5. Obtain action-time approval for public video upload to Efthimios and AWS Builder publication/submission, including terms. Then add the real public video URL, publish and visibly verify qualification/Submitted. Keep Builder in draft and never infer submission from saved text.
 
@@ -138,7 +139,7 @@ Owner enrollment helper: `python tools/create-operator.py --username <owner-choi
 
 ## Writer claims
 
-Root ACTIVE: Step2/3 media contracts and hosted scene-only review pipeline in reserved standby-capacity-root. Scene writers capacity_assumptions_ui (S1/S9) and capacity_jobs_ui (S3/S8/overlays) completed and released their file claims. capacity_results_ui independently reviews pipeline read-only. Product/infra/cloud remain unchanged. Specific new takes, paid voice and public publication are later owner gates.
+Production preparation COMPLETE through scene review and concrete Take1 click script. All writer claims released at the specific-take owner gate. Root reserves standby-capacity-root integration checkout for coordination. Scene writers and read-only pipeline/clickscript reviewers completed; no worker used browser/cloud. Product/infra/cloud remain unchanged. Do not record or synthesize voice on the authority of this handoff.
 
 
 All UI/QA workers have completed and released their file claims. Root completed approved preview deployment, actual served-byte verification and post-deploy acceptance, and releases active implementation/cloud work. Integration checkout ../../worktrees/standby-capacity-root remains reserved for owner handoff on feat/capacity-mvp; do not share it or switch/reset/stash/rebase/commit the dirty canonical metadata repo. Root alone coordinates any later separately scoped release step.
