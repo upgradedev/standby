@@ -2,8 +2,9 @@ import { lazy, Suspense, useEffect, useMemo, useRef, type KeyboardEvent, type Mo
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { flexRender, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, type ColumnDef, type PaginationState, type SortingState, type Updater } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Expand, MapPin, Minimize2, Search, X } from 'lucide-react';
-import type { CapacityComparisonResult, CapacityJobType, CapacityReplayJob, CapacityUnservedReason } from '../../../../../packages/contracts/src/capacity';
+import type { CapacityComparisonResult, CapacityJobType, CapacityReplayJob, CapacityUnit, CapacityUnservedReason } from '../../../../../packages/contracts/src/capacity';
 import { jobPhase, JOB_PHASE_LABELS, type JobPhase } from '../../lib/capacityReplay';
+import { capacityJobStages, capacityUnitPhase, type CapacityUnitSnapshot } from '../../lib/capacityUnitPhase';
 import { integer, shortHash, timestamp } from '../../lib/format';
 import { capacityRunKey } from '../../lib/capacity';
 import { useStandby } from '../../state';
@@ -146,29 +147,46 @@ export function CapacityJobs({result,view,minute}:Props) {
 function JobDetail({result,job,view,minute,tab,expanded,onExpand}:{result:CapacityComparisonResult;job:CapacityReplayJob;view:View;minute:number;tab:DetailTab;expanded:boolean;onExpand:()=>void}) {
   const {zones,manifest,preferences}=useStandby();
   const horizon=result.input.horizonMinutes,spatialMatch=manifest?.dataset.hash===result.datasetHash,zone=spatialMatch?zones.find(item=>item.id===job.zoneId):undefined;
-  const unit=result.input[view].units.find(item=>item.id===job.unitId);
   const assigned=job.assignedAtMinutes!==null&&job.assignedAtMinutes<=minute;
-  const site=assigned&&spatialMatch?manifest?.dataset.sites.find(item=>item.id===unit?.siteId):undefined;
-  const events=result[view].replay.events.filter(event=>event.jobId===job.id);
+  const unit=assigned?result.input[view].units.find(item=>item.id===job.unitId):undefined;
+  const site=unit&&spatialMatch?manifest?.dataset.sites.find(item=>item.id===unit.siteId):undefined;
+  const jobs=result[view].replay.jobs,events=result[view].replay.events.filter(event=>event.jobId===job.id);
+  const snapshot=capacityUnitPhase(job,unit,jobs,minute,horizon),activeJob=jobs.find(item=>item.id===snapshot.activeJobId);
+  const stages=unit?capacityJobStages(job,unit.kind):null;
   const offset=(value:number|null)=>value===null?'Not modeled':`+${value.toFixed(1)} min${value>horizon?' · after horizon':value>minute?' · after cursor':''}`;
-  const cycle=[['Queue before assignment',job.queueMinutes],['Preparation',job.prepMinutes],['Outbound Car approach',job.travelMinutes],['On-site service',job.onSiteMinutes],['Flatbed transport allowance',job.transportMinutes],['Flatbed drop-off allowance',job.dropoffMinutes],['Assumed recovery',job.recoveryMinutes]] as const;
+  const cycle=[['Queue before assignment',job.queueMinutes],['Preparation',job.prepMinutes],['Outbound Car approach',job.travelMinutes],[unit?.kind==='flatbed'?'On-site handling / loading allowance':'On-site service',job.onSiteMinutes],['Flatbed transport allowance',job.transportMinutes],['Flatbed drop-off / unloading allowance',job.dropoffMinutes],['Fixed-home recovery allowance',job.recoveryMinutes]] as const;
+  const unitStatus=<UnitAtCursor unit={unit} snapshot={snapshot} activeJob={activeJob} assigned={assigned} offset={offset}/>;
   if(tab==='Location')return <>
     <div className="capacity-job-map-heading"><div><h3><MapPin size={17}/>Approximate modeled location</h3><p>The zone representative is not an exact incident or driver location.</p></div><button type="button" className="button secondary" onClick={onExpand} aria-label={expanded?'Exit expanded map':'Expand modeled job map'}>{expanded?<Minimize2 size={16}/>:<Expand size={16}/>}<span>{expanded?'Exit expanded map':'Expand map'}</span></button></div>
-    {zone?<Suspense fallback={<div className="capacity-map-wrap"><div className="capacity-map-message" role="status"><Busy label="Loading map view"/></div></div>}><CapacityJobMap zone={zone} site={site} expanded={expanded}/></Suspense>:<div className="capacity-job-unavailable" role="alert"><h3>Location unavailable</h3><p>The selected result does not match the active geography, or its zone is unavailable. No coordinate is invented.</p><code>{spatialMatch?'ZONE_UNAVAILABLE':'DATASET_MISMATCH'}</code></div>}
-    <div className="capacity-map-legend"><span><i className="capacity-map-zone-dot"/>Zone representative &amp; polygon</span>{site?<span><i className="capacity-map-site-dot"/>Assumed home site</span>:<span>{assigned?'Assigned site metadata unavailable':'No assigned home site at cursor'}</span>}</div>
+    {zone?<Suspense fallback={<div className="capacity-map-wrap"><div className="capacity-map-message" role="status"><Busy label="Loading map view"/></div></div>}><CapacityJobMap zone={zone} site={site} unit={spatialMatch?unit:undefined} expanded={expanded}/></Suspense>:<div className="capacity-job-unavailable" role="alert"><h3>Location unavailable</h3><p>The selected result does not match the active geography, or its zone is unavailable. No coordinate is invented.</p><code>{spatialMatch?'ZONE_UNAVAILABLE':'DATASET_MISMATCH'}</code></div>}
+    <div className="capacity-map-legend"><span><i className="capacity-map-zone-dot"/>Zone representative &amp; polygon</span>{site?<span><i className="capacity-map-site-dot"/>{unit?.id} · assumed home site</span>:<span>{assigned?'Assigned site metadata unavailable':'No assigned home site at cursor'}</span>}</div>
+    {unitStatus}
     <dl className="capacity-job-definition"><dt>Approximate zone</dt><dd>{zone?.name??job.zoneId} · {job.zoneId}</dd><dt>Latitude / longitude</dt><dd>{zone?`${zone.position[1].toFixed(5)}, ${zone.position[0].toFixed(5)}`:'Not available'}</dd><dt>Assigned unit at cursor</dt><dd>{assigned?(job.unitId??'Not recorded'):'Unassigned at cursor'}</dd><dt>Home site</dt><dd>{site?`${site.name} · ${site.id} · Assumed`:assigned?'Site metadata unavailable':'Not assigned at cursor'}</dd><dt>Street / postal code</dt><dd>Not connected. The point is a geographic approximation.</dd></dl>
-    <p className="capacity-job-notice">Only a home site and zone are shown. No moving vehicle, reverse route or routed tow leg is calculated.</p>
+    <p className="capacity-job-notice">The unit label marks its assumed home, including while it is busy elsewhere in the replay. Actual vehicle GPS and workshop coordinates are not connected. No moving vehicle, return route or routed tow leg is shown.</p>
   </>;
   if(tab==='Summary')return <>
     <div className="capacity-job-detail-cards"><div><span>Modeled type</span><strong>{label(job.type)}</strong></div><div><span>At selected cursor</span><strong>{JOB_PHASE_LABELS[jobPhase(job,minute,horizon)]}</strong></div><div><span>Assigned at cursor</span><strong>{assigned?(job.unitId??'Not recorded'):'Unassigned'}</strong></div></div>
+    {unitStatus}
     <dl className="capacity-job-definition"><dt>Modeled arrival</dt><dd>{offset(job.arrivalMinutes)}</dd><dt>Modeled assignment</dt><dd>{offset(job.assignedAtMinutes)}</dd><dt>Modeled response arrival</dt><dd>{offset(job.arrivedAtMinutes)}</dd><dt>Modeled job clearance</dt><dd>{offset(job.completedAtMinutes)}</dd><dt>Unit available again</dt><dd>{offset(job.availableAgainMinutes)}</dd><dt>Horizon outcome</dt><dd>{job.status==='in_progress'?'In progress at horizon':label(job.status)}{job.reason?` · ${REASONS[job.reason]}`:''}</dd><dt>Target outcome at horizon</dt><dd>{result.input.responseTargetMinutes} min · Assumed{job.onTime===null?' · not reached by horizon':job.onTime?' · reached within target':' · reached late'}</dd></dl>
     <p className="capacity-job-notice">Insured/driver data is not connected. No operational incident start/end records are connected; these offsets belong to a simulated job.</p>
+    {unit?.kind==='flatbed'?<p className="capacity-job-notice">One vehicle per flatbed is assumed. The dispatch slot stays reserved through loading, transport, unloading and recovery. Completing drop-off clears the modeled vehicle payload; the unit becomes available only after the fixed-home recovery allowance.</p>:null}
   </>;
   if(tab==='Timeline')return <>
+    {unitStatus}
+    <h3 className="capacity-cycle-heading">Selected job · recorded unit cycle</h3>
+    <p className="capacity-job-muted">Recorded elapsed-time segments for this job. Loading uses the on-site allowance; no separate loading-complete measurement or chosen garage is recorded.</p>
+    {stages?.length?<ol className="capacity-job-cycle" aria-label="Selected job unit occupancy cycle" data-testid="capacity-job-cycle">{stages.map(stage=>{
+      const current=stage.startMinutes<=minute&&minute<stage.endMinutes;
+      const payload=unit?.kind!=='flatbed'?null:stage.phase==='handling_loading'?'Loading · up to 1 vehicle':stage.payloadCount===null?null:`${stage.payloadCount} of 1 vehicle`;
+      return <li key={stage.phase} className={current?'is-current':''} data-phase={stage.phase}>
+        <strong>{stage.label}</strong><span>{offset(stage.startMinutes)} → {offset(stage.endMinutes)}</span>
+        <small>{current?'At cursor':minute>=stage.endMinutes?'Completed interval':'After cursor'}{payload?` · ${payload}`:''}</small>
+      </li>;
+    })}</ol>:<p className="capacity-job-muted">{!assigned?'No unit is assigned at this cursor. Move the replay to assignment to inspect its recorded unit cycle.':'Unit cycle timings could not be verified for this result.'}</p>}
     <h3>Simulator events · minutes since scenario start</h3><p className="capacity-job-muted">Events are emitted by the model. Accepted jobs may continue after the planning horizon; those entries are marked below.</p>
     <ol className="capacity-job-events">{events.map(event=><li key={event.sequence} className={event.atMinutes>horizon?'is-post-horizon':''}><span className="capacity-event-time">{offset(event.atMinutes)}</span><div><strong>{event.type.replace(/_/g,' ')}</strong>{event.unitId?<span>{event.unitId}</span>:null}{event.reason?<small>{event.reason.replace(/_/g,' ')}</small>:null}</div></li>)}</ol>
     <h3>Modeled occupancy components</h3><dl className="capacity-job-definition">{cycle.map(([name,value])=><div className="capacity-definition-row" key={name}><dt>{name}</dt><dd>{duration(value)}</dd></div>)}</dl>
-    <p className="capacity-job-notice">Recovery keeps the unit busy after job clearance. It is an assumed fixed-home renewal allowance, not a calculated return trip.</p>
+    <p className="capacity-job-notice">Transport and drop-off are editable time allowances, without a chosen real workshop, garage queue or routed transfer. Payload is released at the end of drop-off; recovery still keeps the unit reserved until its available-again time. Fixed-home recovery is assumed, not a calculated return journey.</p>
   </>;
   const profile=result.input.typeProfiles[job.type];
   return <>
@@ -176,4 +194,22 @@ function JobDetail({result,job,view,minute,tab,expanded,onExpand}:{result:Capaci
     <details className="capacity-job-assumptions"><summary>Read all model limitations</summary><ul>{result.assumptions.map(item=><li key={item}>{item}</li>)}</ul></details>
     <p className="capacity-job-notice">Actual Austin geography and prepared Car road times support this scenario. Arrival time, type, roster and service duration are modeled assumptions, not measured service performance.</p>
   </>;
+}
+
+function UnitAtCursor({unit,snapshot,activeJob,assigned,offset}:{unit:CapacityUnit|undefined;snapshot:CapacityUnitSnapshot;activeJob:CapacityReplayJob|undefined;assigned:boolean;offset:(value:number|null)=>string}) {
+  const payload=unit?.kind!=='flatbed'?'N/A · no towing payload modeled':snapshot.phase==='handling_loading'?'Loading · up to 1 vehicle':snapshot.payloadCount===null?'Unknown · one-vehicle limit':`${snapshot.payloadCount} of 1 vehicle · ${snapshot.payloadCount?'occupied':'empty'}`;
+  const dispatch=snapshot.busy===true?`Busy · reserved through ${offset(activeJob?.availableAgainMinutes??null)}`:snapshot.phase==='available'?'Available at assumed home':snapshot.label;
+  return <section className="capacity-unit-status" aria-label="Modeled assigned unit at cursor" data-testid="capacity-unit-status">
+    <div className="capacity-unit-status-heading"><h3>Unit at selected cursor</h3><strong>{unit?`${unit.id} · ${label(unit.kind.replace(/_/g,' '))}`:assigned?'Unit specification unavailable':'Unassigned at cursor'}</strong><span>Scenario replay · not live telemetry</span></div>
+    <dl>
+      <div><dt>Unit phase</dt><dd data-testid="capacity-unit-phase" data-phase={snapshot.phase}>{snapshot.label}</dd></div>
+      <div><dt>Physical payload · assumed</dt><dd data-testid="capacity-unit-payload" data-payload={snapshot.payloadCount??'unknown'}>{unit?payload:'Not determined'}</dd></div>
+      <div><dt>Dispatch availability</dt><dd data-testid="capacity-dispatch-lock" data-busy={snapshot.busy??'unknown'}>{dispatch}</dd></div>
+      <div><dt>Active modeled job</dt><dd data-testid="capacity-unit-active-job">{snapshot.activeJobId??(snapshot.busy===null?'Not determined':'None at cursor')}</dd></div>
+      <div><dt>Actual vehicle GPS</dt><dd>Unknown · not connected</dd></div>
+      <div><dt>Workshop destination</dt><dd>Unknown · not connected</dd></div>
+    </dl>
+    {snapshot.activeJobId&&!snapshot.servingSelectedJob?<p className="capacity-unit-other-job">This unit is now serving {snapshot.activeJobId}. Its phase, payload and reservation above describe that job. The selected older job's cycle and clearance times remain separate.</p>:null}
+    {unit?.kind==='flatbed'?<p>One active job reserves this flatbed's dispatch slot. The physical loading instant is unknown within the on-site allowance; transport and unloading hold one vehicle. Recovery has zero payload and keeps the unit reserved for its configured allowance.</p>:!unit?<p>{assigned?'The assigned unit specification is unavailable; no unit position or capacity is invented.':'The selected job has no assigned unit at this cursor. No future assignment is shown as a current vehicle.'}</p>:null}
+  </section>;
 }

@@ -3,25 +3,27 @@ import maplibregl, { type GeoJSONSource, type Map as MapInstance } from 'maplibr
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { AlertCircle, LocateFixed } from 'lucide-react';
 import type { DemandZone, StandbySite } from '../../../../../packages/contracts/src/index';
+import type { CapacityUnit } from '../../../../../packages/contracts/src/capacity';
 import { useStandby } from '../../state';
 import { Busy } from '../ui';
 
-interface Props {zone:DemandZone;site:StandbySite|undefined;expanded:boolean}
+interface Props {zone:DemandZone;site:StandbySite|undefined;unit:CapacityUnit|undefined;expanded:boolean}
 function fitSelection(instance:MapInstance,zone:DemandZone,site:StandbySite|undefined) {
   const bounds=new maplibregl.LngLatBounds();
   bounds.extend(zone.position);
   for(const position of zone.polygon)bounds.extend(position);
   if(site)bounds.extend(site.position);
   const container=instance.getContainer();
-  const horizontal=Math.max(55,container.clientWidth*.18),vertical=Math.max(55,container.clientHeight*.18);
+  const horizontal=Math.max(82,container.clientWidth*.18),vertical=Math.max(104,container.clientHeight*.18);
   const padding={left:horizontal,right:horizontal,top:vertical,bottom:vertical};
   instance.fitBounds(bounds,{padding,maxZoom:13,duration:0});
 }
 
 /** Geography only: the point represents a zone, never a customer or vehicle position. */
-export default function CapacityJobMap({zone,site,expanded}:Props) {
+export default function CapacityJobMap({zone,site,unit,expanded}:Props) {
   const {config,manifest}=useStandby();
   const container=useRef<HTMLDivElement>(null),map=useRef<MapInstance|null>(null);
+  const homeLabel=useRef<maplibregl.Marker|null>(null);
   const selection=useRef({zone,site});selection.current={zone,site};
   const [ready,setReady]=useState(false),[error,setError]=useState<string|null>(null),[attempt,setAttempt]=useState(0);
   const bounds=manifest?.dataset.bounds;
@@ -60,7 +62,7 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
       instance.resize();
       if(initialized)fitSelection(instance,selection.current.zone,selection.current.site);
     });observer.observe(container.current);
-    return()=>{observer.disconnect();instance.remove();map.current=null;};
+    return()=>{observer.disconnect();homeLabel.current?.remove();homeLabel.current=null;instance.remove();map.current=null;};
   },[config?.mapStyleUrl,config?.mapApiKey,bounds,attempt]);
 
   useEffect(()=>{
@@ -73,8 +75,21 @@ export default function CapacityJobMap({zone,site,expanded}:Props) {
       {type:'Feature',properties:{kind:'zone'},geometry:{type:'Point',coordinates:zone.position}},
       ...(site?[{type:'Feature' as const,properties:{kind:'site'},geometry:{type:'Point' as const,coordinates:site.position}}]:[]),
     ]});
+    homeLabel.current?.remove();homeLabel.current=null;
+    if(site&&unit){
+      // This label is attached to configured home geography, never to a vehicle
+      // coordinate inferred from the replay's service/transport phase.
+      const element=document.createElement('div');element.className='capacity-unit-home-marker';
+      element.setAttribute('role','img');element.setAttribute('aria-label',`${unit.id}, ${unit.kind.replace(/_/g,' ')}. Assumed home ${site.name}; current vehicle location is unknown.`);
+      element.dataset.testid='capacity-unit-home-marker';
+      const kind=unit.kind.replace(/_/g,' ');
+      const identity=document.createElement('strong');identity.textContent=`${unit.id} · ${kind.charAt(0).toUpperCase()+kind.slice(1)}`;
+      const meaning=document.createElement('span');meaning.textContent='Assumed home · not GPS';
+      element.append(identity,meaning);
+      homeLabel.current=new maplibregl.Marker({element,anchor:'bottom',offset:[0,-13]}).setLngLat(site.position).addTo(instance);
+    }
     fitSelection(instance,zone,site);
-  },[zone,site,ready]);
+  },[zone,site,unit,ready]);
 
   return <div className={`capacity-map-wrap ${expanded?'is-expanded':''}`} data-map-ready={ready&&!error?'true':'false'}>
     <div ref={container} className="capacity-job-map" role="region" aria-label="AWS map of the modeled job zone representative and assigned assumed home site" data-testid="capacity-job-map"/>
