@@ -64,6 +64,7 @@ async function signIn(identity,base) {
   const page=await context.newPage();page.setDefaultTimeout(20_000);
   const errors=[];page.on('pageerror',()=>errors.push('uncaught-runtime-error'));
   const entry=new URL('/settings?theme=dark',base);
+  step=`${identity.role}:entry-settings`;
   const document=await page.goto(entry.href,{waitUntil:'domcontentloaded',timeout:45_000});
   check(document?.status()===200,'operator-entry-not-200');
   const response=await context.request.get(`${base}/config.json`);
@@ -82,8 +83,10 @@ async function signIn(identity,base) {
     new URL(value.url()).pathname==='/oauth2/token'&&value.request().method()==='POST',{timeout:60_000}).catch(()=>null);
   const workspaceResponsePromise=page.waitForResponse(value=>value.url()===`${apiBase}/workspaces`&&value.request().method()==='GET',
     {timeout:60_000}).catch(()=>null);
+  step=`${identity.role}:open-sign-in`;
   await page.locator('.user-menu summary').click();
   await page.locator('.user-dropdown').getByRole('button',exact('Operator sign in')).click();
+  step=`${identity.role}:hosted-ui-redirect`;
   await page.waitForURL(url=>url.hostname===authDomain.hostname,{timeout:30_000});
   const authorization=new URL(page.url());
   check(authorization.searchParams.get('response_type')==='code'&&authorization.searchParams.get('code_challenge_method')==='S256',
@@ -92,9 +95,11 @@ async function signIn(identity,base) {
   const requestedScopes=(authorization.searchParams.get('scope')??'').split(/\s+/);
   check(['openid','profile','standby/access'].every(scope=>requestedScopes.includes(scope)),'operator-scope-not-requested');
   // Grounded on the actual Cognito Hosted UI HTML; it contains two responsive forms.
+  step=`${identity.role}:hosted-ui-credentials`;
   await page.locator('input[name="username"]:visible').first().fill(identity.username);
   await page.locator('input[name="password"]:visible').first().fill(identity.password);
   await page.locator('input[name="signInSubmitButton"]:visible').first().click();
+  step=`${identity.role}:pkce-token-exchange`;
   const tokenResponse=await tokenResponsePromise;
   check(tokenResponse&&tokenResponse.status()===200,'real-token-exchange-failed');
   const token=await tokenResponse.json();
@@ -104,6 +109,7 @@ async function signIn(identity,base) {
     'real-token-exchange-missing-verifier');
   const claims=decodeJwtPayload(token.access_token);
   check(claims.token_use==='access'&&(claims.scope??'').split(/\s+/).includes('standby/access'),'real-access-token-scope-invalid');
+  step=`${identity.role}:sign-in-return-path`;
   await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname===entry.pathname&&url.searchParams.get('theme')==='dark',{timeout:30_000});
   await page.waitForFunction(()=>{
     try {return typeof JSON.parse(sessionStorage.getItem('standby.auth.v1')??'null')?.accessToken==='string';}
@@ -111,11 +117,13 @@ async function signIn(identity,base) {
   });
   const stored=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('standby.auth.v1')??'null'));
   check(stored?.accessToken===token.access_token,'app-session-token-mismatch');
+  step=`${identity.role}:server-memberships`;
   const workspaceResponse=await workspaceResponsePromise;
   check(workspaceResponse&&workspaceResponse.status()===200,'app-membership-request-failed');
   const memberships=await workspaceResponse.json();
   const membership=memberships.workspaces?.find(value=>value.workspaceId===identity.workspaceId);
   check(membership?.role===identity.role,'server-membership-role-mismatch');
+  step=`${identity.role}:select-authorized-workspace`;
   const select=page.getByRole('combobox',exact('Active workspace'));
   await select.locator(`option[value="${identity.workspaceId}"]`).waitFor({state:'attached'});
   await select.selectOption(identity.workspaceId);
@@ -124,6 +132,7 @@ async function signIn(identity,base) {
   const workspaces=await api(actor,'GET','/workspaces');
   check(workspaces.workspaces?.some(value=>value.workspaceId===identity.workspaceId&&value.role===identity.role),'workspace-list-inconsistent');
   await api(actor,'GET',`/workspaces/${identity.workspaceId}/plans`);
+  step=`${identity.role}:authorized-queue`;
   await navigate(actor,'Planning queues');
   await visible(page.getByText('Authorized workspace plans',{exact:true}),'workspace-queue-scope-missing');
   if(identity.role==='Analyst') {
