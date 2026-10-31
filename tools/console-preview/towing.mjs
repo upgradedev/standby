@@ -43,7 +43,11 @@ async function openJob(page,id){
   await page.getByTestId('capacity-jobs').getByRole('link',exact(`${id}: open modeled job details`)).click();
   const drawer=page.getByRole('dialog',exact(`Modeled job ${id}`));await drawer.waitFor();return drawer;
 }
-async function closeJob(page,drawer){await page.keyboard.press('Escape');await drawer.waitFor({state:'hidden'});}
+async function closeJob(page,drawer){
+  step='close-keyboard';await page.keyboard.press('Escape');
+  step='close-hidden';await drawer.waitFor({state:'hidden'});
+  step='close-url';await page.waitForFunction(()=>!new URL(location.href).searchParams.has('jobSelected'));
+}
 const mid=(start,end)=>{const value=Math.round((start+end)*5)/10;assert.ok(start<value&&value<end);return value;};
 async function axe(page,label){
   if(!await page.evaluate(()=>!!window.axe))await page.addScriptTag({url:base+'/standby-towing-qa-axe.js'});
@@ -153,8 +157,12 @@ try{
 }catch(error){
   const code=error instanceof Error&&/^[a-z][a-z0-9-]+$/.test(error.message)?error.message:'browser-action-or-assertion';
   receipt.status='fail';receipt.failure={step,code};console.error(`FAIL towing:${step}: ${code}`);process.exitCode=1;
+  receipt.failure.instrument={method:error instanceof Error?error.message.match(/^(?:locator|keyboard|page)\.[A-Za-z]+/)?.[0]??null:null,
+    timedOut:error instanceof Error&&/Timeout \d+ms exceeded/.test(error.message),
+    frames:error instanceof Error?[...error.stack?.matchAll(/towing\.mjs:\d+:\d+/g)??[]].slice(0,3).map(match=>match[0]):[]};
   if(page&&!page.isClosed()){
     receipt.failure.ui=await page.evaluate(()=>({cursor:new URL(location.href).searchParams.get('t'),
+      selectedInUrl:new URL(location.href).searchParams.has('jobSelected'),
       phase:document.querySelector('[data-testid="capacity-unit-phase"]')?.getAttribute('data-phase')??null,
       payload:document.querySelector('[data-testid="capacity-unit-payload"]')?.getAttribute('data-payload')??null,
       openDialog:!!document.querySelector('dialog[open]')})).catch(()=>null);
