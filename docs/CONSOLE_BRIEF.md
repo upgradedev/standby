@@ -1,13 +1,13 @@
 # Console brief: Standby
 
 - Brief owner: ιδιοκτήτης προϊόντος / υπεύθυνος λειτουργίας οδικής βοήθειας.
-- Last updated: 2026-10-30.
-- Status: **OWNER-AGREED bounded MVP scope and assumption-based scenario mode; wireframe structure OWNER-APPROVED; shell/overview review next**.
+- Last updated: 2026-10-31.
+- Status: **Wireframe, shell/Overview and first list/detail OWNER-APPROVED; automated candidate QA passed. Owner-requested unit-map/towing clarity is implemented and automated QA passed at1e5efce; renewed Step5 owner visual review remains pending.**
 - Route: **A / adapt**, ήδη εγκεκριμένο. Διατηρούνται router, tokens, auth, API conventions και TanStack Table.
 - Project: C:/dev/solutions/private_nebius_aiserverless_challenge/repos/aws-map-it. Το παρόν draft συντάχθηκε σε απομονωμένο worktree docs/capacity-design.
 - Template: αντίγραφο του ops-console-ui/assets/console-brief.md, με τα ίδια 17 τμήματα. Τα skills μένουν ανέπαφα.
 - Latest owner agreement: ενσωμάτωση της έρευνας και υλοποίηση MVP με μικτό στόλο, ταυτόχρονα incidents, ουρές, διαφοροποιημένους χρόνους και what-if, με εμφανείς επεξεργάσιμες παραδοχές όπου λείπουν δεδομένα. Δεν απαιτούνται πραγματικά insured/driver δεδομένα για αυτό το MVP.
-- Gate: ο owner ενέκρινε ρητά και τη δομή του wireframe. Συνεχίζουμε Step4 Route A με shell/overview, που χρειάζονται το επόμενο explicit review πριν από list/detail. Private integrations, πραγματικό dispatch, δημοσίευση και μεταγενέστερα UI/video checkpoints διατηρούν τις χωριστές προϋποθέσεις τους.
+- Gate: οι προηγούμενες εγκρίσεις wireframe, shell/Overview και first list/detail ισχύουν. Το τελευταίο «Ok προχώρα» εγκρίνει τις προτεινόμενες βελτιώσεις εντοπισμού units και τον έλεγχο towing. Η δομή παραμένει έξι προορισμών και τεσσάρων detail tabs. Step5 οπτικό review των ανανεωμένων captures, human keyboard/role checks και χωριστά video/publication gates παραμένουν.
 - Existing = frozen live release 5ad96cc. MVP = συμφωνημένο επόμενο increment, όχι ήδη deployed. Deferred = διατηρημένο αίτημα εκτός παρούσας υλοποίησης. Assumed = editable scenario input, όχι εμπειρική εκτίμηση ή SLA.
 
 ## 1. Product and users
@@ -36,6 +36,8 @@
 | C12 | What-if | MVP: baseline/candidate fleet mix/site/availability/shifts, shared arrivals/seed/durations και σαφείς αλλαγμένες παραδοχές. |
 | C13 | Weather/wind/rain/traffic/crowding | Deferred adapters και empirical effects. Μόνο explicit travelMultiplier scenario assumption, όχι live traffic ή weather data. |
 | C14 | Application shell | Existing shell διατηρείται, με έκτο nav item Capacity lab, states/RBAC/responsive και action badges. |
+| C15 | Πού βρίσκονται τα units στον χάρτη; | MVP implemented and verified: εμφανή resident unit IDs, σαφές site ID/count, Locate και ξεχωριστό availability toggle, αμφίδρομη επιλογή χάρτη/λίστας, χωρίς πλαστά GPS offsets. Historical fleet παραμένει generic· mixed kind προκύπτει μόνο από το Capacity roster. |
+| C16 | Μία πλατφόρμα μεταφέρει ένα όχημα μέχρι παράδοση σε συνεργείο | Existing engine ήδη δεσμεύει μία μονάδα για ένα job μέχρι το availableAgain. MVP verified: hand-computed concurrency regression και εμφανής modeled φόρτωση/μεταφορά/εκφόρτωση/recovery. Πραγματικό συνεργείο, διαδρομή/ουρά παράδοσης και επόμενη προσέγγιση από το συνεργείο δεν είναι συνδεδεμένα· οι χρόνοι παραμένουν παραδοχές. |
 
 Budget USD25 total παραμένει εγκεκριμένο. Η live5ad παραμένει μέχρι να επαληθευτεί η αντικατάσταση. Υπάρχον video αφορά αποκλειστικά5ad και χρειάζεται νέο evidence εφόσον αλλάξει το submitted runtime.
 
@@ -73,7 +75,7 @@ Desktop-first, phone-complete. Χρήστες/shift-centre workflow και willi
 | CapacityRun / Comparison | Baseline/candidate roster, shared streams, inputs/result hashes, result totals and job/unit timeline | Immutable modeled result tied to inputs |
 | ExistingPlan | Υφιστάμενο spatial evaluation/review record | Existing server-authorized store |
 
-Modeled job states: queued → assigned/en_route → on_scene/in_service → completed, με χωριστή unit recovery/release. Unserved/unfinished στο horizon διατηρούνται στο αποτέλεσμα. Οι ακριβείς wire enums ακολουθούν το συμφωνημένο domain DTO, όχι ανεξάρτητο αντίγραφο στο UI. Καμία διπλή ενεργή ανάθεση μονάδας.
+Modeled job states: queued → assigned/en_route → on_scene/in_service → completed, με χωριστή unit recovery/release. Unserved/unfinished στο horizon διατηρούνται στο αποτέλεσμα. Οι ακριβείς wire enums ακολουθούν το συμφωνημένο domain DTO, όχι ανεξάρτητο αντίγραφο στο UI. Καμία διπλή ενεργή ανάθεση μονάδας. Flatbed dispatch capacity=ένα ενεργό job/μία δεσμευμένη θέση· οι μονάδες δεν ανατίθενται ξανά πριν το recorded availableAgain. Μεταφορά και drop-off περιλαμβάνονται πριν το job completion, recovery προστίθεται πριν τη διαθεσιμότητα. Κατά handling/loading το ακριβές loaded instant δεν καταγράφεται: φορτίο unknown έως τη modeled μεταφορά,1 στη μεταφορά/εκφόρτωση,0 μετά το drop-off. Το recovery μπορεί να κρατά τη μονάδα busy με φορτίο0. Οι ενδείξεις είναι modeled, όχι live telemetry. Η κατάσταση μονάδας στο cursor υπολογίζεται από όλα τα jobs της ίδιας policy/replication· ένα παλιό selected completed job δεν περιγράφει μόνο του τη σημερινή απασχόληση.
 
 Unit states στο replay: off_shift, available, busy/recovering, unavailable, όπως παράγονται από το event log. Run UI states: not_run, invalid_inputs, running, succeeded, failed, stale. Existing plan evaluation NOT_RUN/SUCCEEDED/FAILED και review NOT_READY/NEEDS_REVIEW/REVIEWED παραμένουν ανεξάρτητα.
 
@@ -246,6 +248,7 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
 | W5 calendar/weather/anomalies | Deferred pending adequate joint data/support/validation | Empirical seasonal views/detector claims |
 | W6 capture/video/publication | Existing independent owner gates remain pending | Public upload/submission and new video production |
+| W7 bounded Bedrock/Strands copilot | Scope clarification pending: first units/towing or copilot also now. No AI runtime/service activation is inferred before that answer | New copilot implementation scope only; units/towing proceed |
 
 No open item authorizes guessed measurements. Engine runtime limits and actual outputs must be measured by CI before claims/deployment.
 
@@ -284,6 +287,18 @@ Required next gate from [ops-console-ui/SKILL.md](C:/Users/tf/.claude/skills/ops
 - Real: geography, prepared directional Car road snapshot and server-computed modeled results. Assumed: arrivals/type mix/service/recovery/rosters/shifts. No private insured records or product demo-data fallback. UI preview is not a web deployment; read backend3802 is live, existing web5ad stays intact.
 - First list/detail is owner-approved. Full release QA is underway; owner Step5 contact-sheet review, human keyboard/role judgment and OS-native dropdown popup inspection remain pending. Small mobile word-wrapping was corrected and reverified after visual review.
 
+
+### Step5 unit-location/towing follow-up — 2026-10-31
+
+Unit pins show evaluated resident IDs/counts and assumed home sites. Locate is separate from draft availability. Empty-site labels appear on hover/focus/selection; occupied IDs stay visible. Native pin clicks no longer also select the polygon below. Capacity detail shows current unit phase, one-car payload, dispatch reservation and later active-job context. Two overlapping tows serialize on one flatbed through unloading/recovery; payload1 during transport/unloading becomes0 during recovery while dispatch stays busy.
+
+[PRIMARY] Source1e5efcea81f83ebc15398df973ced74e1cc325a3: https://github.com/upgradedev/standby/actions/runs/41187469472 SUCCESS (`gh run view 41187469472 --json headSha,status,conclusion`). Hosted npm tests71/71, build/typecheck, strict UI lint and existing gates passed. Fresh matrix receipt has86 mandatory axe scans/0failed/0missing/0violations. Full anonymous1440/768/375 acceptance passed Locate/Back, exact colocated IDs, URL/draft isolation and unchanged actual-map geometry/RGB gates. Dedicated towing proof is PASS:1actual synthetic API evaluation,0new paid route builds,5mandatory axe scans/0violations and6screenshots. Reproduce counts with `json.load` on integration `.runtime/unit-towing-followup-checks.json`, `.runtime/console-qa-review-1e5efce/receipt.json` and `.runtime/towing-review-1e5efce/receipt.json`.
+
+Workshop destination/routing/queue, actual GPS and next dispatch from a workshop are NOT connected. Transport/drop-off/fixed-home recovery are visible editable allowances. No staffing guarantee or AI runtime was added. Existing web5ad/read3802 and USD25total remain unchanged; this is not a frontend deployment. Renewed ops-console-ui Step5 owner contact-sheet review, human keyboard/role/native-popup and axe incomplete judgments remain pending. Video/publication and optional copilot scope remain separate.
+
+Failure evidence remains retained: a9f9eb5 wrong exact job-link name;401c3c9/b5ce34e native pin event bubbling and visible empty-label overlap;6ebad3f repeated-drawer instrument timeout after unloading. The harness now waits for both native closure and selected-job URL teardown before the next scrub/open. The subsequent full run passed without widening timeouts, axe or map gates. Precise original timeout await was not established before the stronger barrier; no unsupported app-bug claim is made.
+
+Review packages: integration `.runtime/console-qa-review-1e5efce/` and `.runtime/towing-review-1e5efce/`. Six destinations/four tabs stay approved; renewed owner visual review remains PENDING.
 
 ### Step5 candidate release record — 2026-10-31
 
