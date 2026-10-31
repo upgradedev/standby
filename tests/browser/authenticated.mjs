@@ -59,9 +59,9 @@ function decodeJwtPayload(token) {
 async function signIn(identity,base) {
   step=`${identity.role}:hosted-ui-login`;
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',serviceWorkers:'block'});
-  await installUI(context);
   contexts.push(context);
   const page=await context.newPage();page.setDefaultTimeout(20_000);
+  const overlay=await installUI(context,page);
   const errors=[];page.on('pageerror',()=>errors.push('uncaught-runtime-error'));
   let candidateCallback=false;
   page.on('response',response=>{
@@ -72,7 +72,9 @@ async function signIn(identity,base) {
   const entry=new URL('/settings?theme=dark',base);
   step=`${identity.role}:entry-settings`;
   const document=await page.goto(entry.href,{waitUntil:'domcontentloaded',timeout:45_000});
+  overlay.assertHealthy();
   check(document?.status()===200,'operator-entry-not-200');
+  if(process.env.STANDBY_UI_DIST)check(document.headers()['x-standby-qa-source']===process.env.STANDBY_UI_SOURCE,'candidate-entry-not-delivered');
   const response=await context.request.get(`${base}/config.json`);
   check(response.status()===200,'auth-config-not-200');
   const config=await response.json();await response.dispose();
@@ -107,7 +109,9 @@ async function signIn(identity,base) {
   await page.locator('input[name="signInSubmitButton"]:visible').first().click();
   step=`${identity.role}:pkce-token-exchange`;
   const tokenResponse=await tokenResponsePromise;
+  overlay.assertHealthy();
   check(tokenResponse&&tokenResponse.status()===200,'real-token-exchange-failed');
+  if(process.env.STANDBY_UI_DIST)check(candidateCallback,'candidate-callback-not-delivered');
   const token=await tokenResponse.json();
   check(typeof token.access_token==='string'&&typeof token.id_token==='string','real-tokens-missing');
   const exchange=new URLSearchParams(tokenResponse.request().postData()??'');
@@ -144,7 +148,8 @@ async function signIn(identity,base) {
   await select.locator(`option[value="${identity.workspaceId}"]`).waitFor({state:'attached'});
   await select.selectOption(identity.workspaceId);
   await visible(page.locator('.workspace-mode .badge').filter({hasText:identity.role}),'authorized-workspace-role-not-shown');
-  const actor={...identity,context,page,apiBase,accessToken:token.access_token,idToken:token.id_token,errors};
+  overlay.assertHealthy();
+  const actor={...identity,context,page,apiBase,accessToken:token.access_token,idToken:token.id_token,errors,overlay};
   const workspaces=await api(actor,'GET','/workspaces');
   check(workspaces.workspaces?.some(value=>value.workspaceId===identity.workspaceId&&value.role===identity.role),'workspace-list-inconsistent');
   await api(actor,'GET',`/workspaces/${identity.workspaceId}/plans`);
@@ -350,7 +355,7 @@ try {
   check(await admin.page.evaluate(()=>sessionStorage.getItem('standby.auth.v1')===null),'expired-session-storage-retained');
   check(await admin.page.locator('.workspace-mode').count()===0,'private-role-marker-retained-after-expiry');
   console.log('PASS client session expiry clears private detail, role scope and stored session');
-  for(const actor of [analyst,planner,admin]) check(actor.errors.length===0,'authenticated-browser-runtime-error');
+  for(const actor of [analyst,planner,admin]) {actor.overlay.assertHealthy();check(actor.errors.length===0,'authenticated-browser-runtime-error');}
   console.log('PASS Admin exact-result review, settings CAS and stale-review invalidation');
   console.log('PASS real Cognito authorization acceptance. No credentials, provider payloads or media artifacts retained.');
 } catch(error) {
