@@ -368,7 +368,12 @@ try {
     await visible(page.getByRole('heading', exact('We could not load this view')), 'outage-route-error-state-missing');
     await page.unroute(outagePattern);
     await page.locator('.api-banner').getByRole('button', exact('Retry')).click();
+    // The shell keeps a screen-reader route heading during loading/error. Wait
+    // for actual page content and the settled load, not that preserved heading.
+    await visible(page.getByLabel(/^Display timezone/), 'outage-settings-content-did-not-recover');
+    await page.locator('main[data-ready="true"]').waitFor();
     await visible(page.getByRole('heading', exact('Settings')), 'outage-retry-did-not-recover');
+    await page.locator('.api-banner').waitFor({state:'hidden'});
     check(await page.locator('.api-banner').count() === 0, 'outage-banner-remains-after-recovery');
     overlay.assertHealthy();
     check(pageErrors.length === 0, 'uncaught-browser-runtime-error');
