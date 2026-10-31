@@ -38,7 +38,7 @@ export async function prepareCandidateUI(base) {
       const document=request.isNavigationRequest()&&routes.has(url.pathname);
       const filename=document?files.get('/index.html'):files.get(url.pathname);
       if(!filename||(!document&&request.resourceType()==='document'))return route.continue();
-      return route.fulfill({status:200,headers:{...headers,'content-type':mime[path.extname(filename)]??'application/octet-stream','cache-control':'no-store'},body:await readFile(filename)});
+      return route.fulfill({status:200,headers:{...headers,'content-type':mime[path.extname(filename)]??'application/octet-stream','cache-control':'no-store','x-standby-qa-source':source},body:await readFile(filename)});
     });
   };
 }

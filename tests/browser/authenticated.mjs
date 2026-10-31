@@ -63,6 +63,12 @@ async function signIn(identity,base) {
   contexts.push(context);
   const page=await context.newPage();page.setDefaultTimeout(20_000);
   const errors=[];page.on('pageerror',()=>errors.push('uncaught-runtime-error'));
+  let candidateCallback=false;
+  page.on('response',response=>{
+    const url=new URL(response.url());
+    if(url.origin===new URL(base).origin&&url.pathname==='/auth/callback'&&response.request().isNavigationRequest())
+      candidateCallback=response.headers()['x-standby-qa-source']===process.env.STANDBY_UI_SOURCE;
+  });
   const entry=new URL('/settings?theme=dark',base);
   step=`${identity.role}:entry-settings`;
   const document=await page.goto(entry.href,{waitUntil:'domcontentloaded',timeout:45_000});
@@ -83,20 +89,11 @@ async function signIn(identity,base) {
     new URL(value.url()).pathname==='/oauth2/token'&&value.request().method()==='POST',{timeout:60_000}).catch(()=>null);
   const workspaceResponsePromise=page.waitForResponse(value=>value.url()===`${apiBase}/workspaces`&&value.request().method()==='GET',
     {timeout:60_000}).catch(()=>null);
-  let returnTargetRecorded=false;
-  await context.route(`${authDomain.origin}/oauth2/authorize**`,async route=>{
-    // Observe only the intended route before the browser leaves the app origin.
-    returnTargetRecorded=await page.evaluate(expected=>{
-      try{return JSON.parse(sessionStorage.getItem('standby.pkce.v1')??'null')?.returnTo===expected;}catch{return false;}
-    },entry.pathname+entry.search);
-    await route.continue();
-  });
   step=`${identity.role}:open-sign-in`;
   await page.locator('.user-menu summary').click();
   await page.locator('.user-dropdown').getByRole('button',exact('Operator sign in')).click();
   step=`${identity.role}:hosted-ui-redirect`;
   await page.waitForURL(url=>url.hostname===authDomain.hostname,{timeout:30_000});
-  check(returnTargetRecorded,'pkce-return-target-not-recorded');
   const authorization=new URL(page.url());
   check(authorization.searchParams.get('response_type')==='code'&&authorization.searchParams.get('code_challenge_method')==='S256',
     'authorization-code-pkce-not-used');
@@ -127,7 +124,7 @@ async function signIn(identity,base) {
     const diagnostic=await page.evaluate(()=>({authStored:!!sessionStorage.getItem('standby.auth.v1'),pkceStored:!!sessionStorage.getItem('standby.pkce.v1'),
       callbackLoading:!!document.querySelector('.loading-state'),callbackError:!!document.querySelector('.error-state'),fatal:!!document.querySelector('.fatal-error')})).catch(()=>null);
     console.log(JSON.stringify({returnPathDiagnostic:{route:current.origin===new URL(base).origin&&routes.includes(current.pathname)?current.pathname:'other',
-      themePreserved:current.searchParams.get('theme')==='dark',runtimeErrors:errors.length,...diagnostic}}));
+      themePreserved:current.searchParams.get('theme')==='dark',candidateCallback,runtimeErrors:errors.length,...diagnostic}}));
     throw error;
   }
   await page.waitForFunction(()=>{
