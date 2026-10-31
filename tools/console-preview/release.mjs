@@ -45,6 +45,7 @@ const out=path.resolve(arg('--out','.runtime/console-release-qa'));
 const scripts=path.dirname(fileURLToPath(import.meta.url));
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const scrub=error=>String(error instanceof Error?error.message:error).replace(/https?:\/\/[^\s"')]+/g,value=>{try{const url=new URL(value);return `${url.origin}${url.pathname}`;}catch{return '[URL redacted]';}}).slice(0,1400);
+const safeTargets=value=>(Array.isArray(value)?value.flatMap(safeTargets):value==null?[]:[scrub(value).slice(0,240)]).slice(0,6);
 const receipt={source,startedAt:new Date().toISOString(),status:'running',origin,
   scope:'New static build overlay; actual public API responses cached transiently; real AWS basemap. NOT a deployment or authenticated-role verification.',
   human:{keyboard:'PENDING human pass at1440/390',roles:'PENDING authorized test identities and human role matrix',visual:'PENDING contact-sheet and individual-shot inspection'},
@@ -125,9 +126,35 @@ function telemetry(page,record){
   });
 }
 async function paint(page){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}
-async function geometry(page){
+async function geometry(page,record){
   await paint(page);
-  const value=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth}));
+  const value=await page.evaluate(()=>{
+    const viewport=innerWidth,width=document.documentElement.scrollWidth;
+    if(width<=viewport+1)return {viewport,width};
+    const rect=element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    const identify=element=>({tag:element.tagName,id:element.id.slice(0,64),className:typeof element.className==='string'?element.className.slice(0,160):''});
+    const candidates=[...document.querySelectorAll('body *')].slice(0,4000),offenders=[];
+    for(const element of candidates){
+      const box=rect(element);if(box.width<=0||box.height<=0||box.right<=viewport+1&&box.x>=-1)continue;
+      const style=getComputedStyle(element);if(style.display==='none'||style.visibility==='hidden')continue;
+      let clippedLeft=box.x,clippedRight=box.right;const clipping=[];
+      for(let ancestor=element.parentElement;ancestor;ancestor=ancestor.parentElement){
+        const parentStyle=getComputedStyle(ancestor);
+        if(/hidden|clip|scroll|auto/.test(parentStyle.overflowX)){
+          const bounds=rect(ancestor);clippedLeft=Math.max(clippedLeft,bounds.x);clippedRight=Math.min(clippedRight,bounds.right);
+          if(clipping.length<4)clipping.push({...identify(ancestor),rect:bounds,overflowX:parentStyle.overflowX,clientWidth:ancestor.clientWidth,scrollWidth:ancestor.scrollWidth});
+        }
+      }
+      offenders.push({...identify(element),rect:box,clippedLeft,clippedRight,escapesClipping:clippedRight>clippedLeft&&(clippedRight>viewport+1||clippedLeft< -1),
+        layout:{display:style.display,position:style.position,width:style.width,minWidth:style.minWidth,maxWidth:style.maxWidth,overflowX:style.overflowX},clipping});
+    }
+    offenders.sort((a,b)=>Number(b.escapesClipping)-Number(a.escapesClipping)||b.clippedRight-a.clippedRight);
+    return {viewport,width,height:innerHeight,clientWidth:document.documentElement.clientWidth,bodyClientWidth:document.body.clientWidth,bodyScrollWidth:document.body.scrollWidth,
+      visualViewport:visualViewport?{width:visualViewport.width,height:visualViewport.height,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop,scale:visualViewport.scale}:null,
+      mobileBreakpoint:matchMedia('(max-width:767px)').matches,scannedElements:candidates.length,offenderCount:offenders.length,offenders:offenders.slice(0,16)};
+  });
+  // Preserve evidence before the unchanged gate throws; no text, URLs or full DOM.
+  record.geometry=value;
   assert.ok(value.width<=value.viewport+1,'Document reflow must stay within viewport+1px.');return value;
 }
 async function runAxe(page,record){
@@ -136,13 +163,18 @@ async function runAxe(page,record){
   const running=page.evaluate(async()=>{
     if(!window.axe?.run)throw new Error('axe-core did not load under the unchanged CSP.');
     const scan=await window.axe.run(document);
-    return {version:scan.testEngine.version,passes:scan.passes.length,incomplete:scan.incomplete.map(item=>({id:item.id,impact:item.impact})),violations:scan.violations.map(item=>({id:item.id,impact:item.impact,help:item.help,helpUrl:item.helpUrl,targets:item.nodes.slice(0,6).flatMap(node=>node.target)}))};
+    return {version:scan.testEngine.version,passes:scan.passes.length,
+      incomplete:scan.incomplete.map(item=>({id:item.id,impact:item.impact,help:item.help,helpUrl:item.helpUrl,totalNodes:item.nodes.length,
+        nodes:item.nodes.slice(0,6).map(node=>({targets:node.target,failureSummary:node.failureSummary??[...(node.any??[]),...(node.all??[]),...(node.none??[])].map(check=>check.message).filter(Boolean).join('\n')}))})),
+      violations:scan.violations.map(item=>({id:item.id,impact:item.impact,help:item.help,helpUrl:item.helpUrl,targets:item.nodes.slice(0,6).flatMap(node=>node.target)}))};
   });
   let result;
   try{result=await Promise.race([running,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Mandatory axe scan exceeded20seconds.')),20000);})]);}
   finally{clearTimeout(timer);}
   assert.equal(result.version,axeVersion,'The explicitly installed axe-core must run.');
   assert.ok(result.passes>0,'An empty accessibility run cannot count as a pass.');
+  result.incomplete=result.incomplete.map(item=>({...item,nodes:item.nodes.map(node=>({targets:safeTargets(node.targets),failureSummary:scrub(node.failureSummary??'')}))}));
+  result.violations=result.violations.map(item=>({...item,targets:safeTargets(item.targets)}));
   record.axe=result;
 }
 async function ready(page,route,state,theme){
@@ -218,7 +250,7 @@ async function noMatch(page,route){
   }else if(route==='capacity'){
     await page.getByRole('textbox',{name:'Filter all generated modeled jobs by ID, type, zone or assigned unit at cursor',exact:true}).fill('__standby_qa_no_match__');
     await page.getByRole('heading',{name:'No modeled jobs match these filters',exact:true}).waitFor();
-    assert.equal(await page.locator('.capacity-job-table tbody tr').count(),0);await page.getByRole('button',{name:'Reset filters',exact:true}).waitFor();
+    assert.equal(await page.locator('.capacity-job-table tbody tr').count(),0);await page.locator('.capacity-jobs .empty-state').getByRole('button',{name:'Reset filters',exact:true}).waitFor();
   }else if(route==='queues'){
     await page.getByRole('tab',{name:/Reviewed/}).click();
     await page.getByRole('heading',{name:'No plans marked reviewed',exact:true}).waitFor();
@@ -240,7 +272,7 @@ async function capture(route,width,theme,state='normal'){
   try{
     await ready(page,route,state,theme);
     if(state==='no-match')await noMatch(page,route);
-    record.geometry=await geometry(page);
+    record.geometry=await geometry(page,record);
     if(route==='map'&&state==='normal'){
       // The map proof is independent of axe, SDK initialization and success UI.
       record.mapProof=await assertRenderedMap(page,{requirePixels:true});
