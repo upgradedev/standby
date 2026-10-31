@@ -49,6 +49,9 @@
   box-shadow: 0 2px 6px var(--map-stroke);
 }
 .unit-site-marker[data-resident-count="0"] .unit-site-label { width: 112px; }
+/* Empty planning sites keep their exact pins and accessible names. Show their
+   detail label on intent, so they do not obscure the units operators locate. */
+.unit-site-marker[data-resident-count="0"]:not(.focused):not(:hover):not(:focus-visible) .unit-site-label { visibility: hidden; pointer-events: none; }
 .unit-site-id { font-family: var(--font-mono, monospace); font-size: 12px; }
 .unit-site-count { color: var(--muted); }
 .unit-site-resident { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 5px; border-top: 1px solid var(--border-strong); padding-top: 3px; }

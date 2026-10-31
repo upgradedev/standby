@@ -11,7 +11,7 @@ const base = process.env.STANDBY_LIVE_URL?.replace(/\/$/, '');
 if (!base || new URL(base).protocol !== 'https:') throw new Error('STANDBY_LIVE_URL must be an HTTPS deployment.');
 const expectedRelease = process.env.STANDBY_EXPECTED_RELEASE;
 const candidateSource = process.env.STANDBY_UI_SOURCE ?? process.env.GITHUB_SHA;
-let step = 'browser-launch';
+let step = 'browser-launch', activePage;
 const check = (condition, code) => { if (!condition) throw new Error(code); };
 const exact = (name) => ({ name, exact: true });
 const regexEscape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -185,7 +185,7 @@ try {
   for (const viewport of [{name: 'desktop', width: 1440}, {name: 'tablet', width: 768}, {name: 'mobile', width: 375}]) {
     step = `${viewport.name}:http-and-provenance`;
     const context = await browser.newContext({viewport: {width: viewport.width, height: 950}, reducedMotion: 'reduce', serviceWorkers: 'block'});
-    const page = await context.newPage();
+    const page = await context.newPage();activePage=page;
     const overlay = await installUI(context, page);
     page.setDefaultTimeout(15_000);
     const pageErrors = [];
@@ -354,6 +354,7 @@ try {
     await page.getByRole('button', exact('Depot')).click();
     await renderedAttribute(page, page.getByRole('button', exact('Depot')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Depot')).getAttribute('aria-pressed') === 'true', 'depot-display-not-selected');
+    step = `${viewport.name}:coverage-depot-resident-effect`;
     await evaluatedSiteResidents(page, manifest.dataset.sites, fresh.plans.depot);
     const [depotUnit, secondDepotUnit] = fresh.plans.depot.units;
     check(depotUnit && secondDepotUnit && fresh.plans.depot.units.every(unit => unit.siteId === depotUnit.siteId), 'depot-does-not-colocate-evaluated-units');
@@ -361,18 +362,25 @@ try {
     const locate = page.getByTestId(`coverage-locate-${depotUnit.id}`);
     check(await locate.getAttribute('aria-label') === `Locate ${depotUnit.id}`, 'locate-control-name-wrong');
     check(await locate.evaluate(element => element instanceof HTMLAnchorElement && element.tabIndex >= 0), 'locate-is-not-native-keyboard-link');
+    step = `${viewport.name}:coverage-locate-first`;
     await locate.focus();await locate.press('Enter');
     await locatedUnit(page, depotUnit);
+    step = `${viewport.name}:coverage-located-label-bounds`;
     await coverageLabelsFit(page);
     check(JSON.stringify(await draftAvailability(page)) === beforeLocateAvailability, 'locate-mutates-draft-availability');
+    step = `${viewport.name}:coverage-locate-second`;
     await page.getByTestId(`coverage-locate-${secondDepotUnit.id}`).click();
     await locatedUnit(page, secondDepotUnit);
+    step = `${viewport.name}:coverage-back-first`;
     await page.goBack();await locatedUnit(page, depotUnit);
+    step = `${viewport.name}:coverage-select-site-pin`;
     await page.locator('.site-marker.focused').click();
     await page.waitForURL(url => url.searchParams.get('site') === depotUnit.siteId && !url.searchParams.has('unit'));
     await page.waitForFunction(() => document.querySelectorAll('#coverage-site-details .coverage-residents > li.is-selected-unit').length === 0);
     check(await page.locator('#coverage-site-details .coverage-residents > li').count() === fresh.plans.depot.units.length, 'colocated-site-details-omit-unit');
+    step = `${viewport.name}:coverage-back-from-site`;
     await page.goBack();await locatedUnit(page, depotUnit);
+    step = `${viewport.name}:coverage-back-original`;
     await page.goBack();await page.waitForURL(beforeLocateUrl);
     check(JSON.stringify(await draftAvailability(page)) === beforeLocateAvailability, 'site-selection-or-back-mutates-draft-availability');
     check(placementRequests === beforeLocateRequests, 'locate-site-selection-or-back-starts-evaluation');
@@ -471,6 +479,21 @@ try {
   // Emit the bounded step and our own symbolic assertion only, never DOM/payload dumps.
   const symbolic = error instanceof Error && /^[a-z][a-z0-9-]+$/.test(error.message) ? error.message : 'browser-action-or-timeout';
   console.error(`FAIL ${step}: ${symbolic}`);
+  if(step.includes(':coverage-')&&activePage&&!activePage.isClosed()){
+    const geometry=await activePage.evaluate(()=>{
+      const map=document.querySelector('.map-canvas.maplibregl-map'),frame=map?.getBoundingClientRect();
+      const labels=[...document.querySelectorAll('.unit-site-label')].filter(label=>getComputedStyle(label).visibility!=='hidden');
+      const overflow={left:0,right:0,top:0,bottom:0};let clippedIds=0;
+      for(const label of labels){const rect=label.getBoundingClientRect();if(frame){overflow.left=Math.max(overflow.left,frame.left-rect.left);overflow.right=Math.max(overflow.right,rect.right-frame.right);overflow.top=Math.max(overflow.top,frame.top-rect.top);overflow.bottom=Math.max(overflow.bottom,rect.bottom-frame.bottom);}
+        clippedIds+=[...label.querySelectorAll('.unit-site-id,.unit-site-resident strong')].filter(id=>id.scrollWidth>id.clientWidth+1).length;}
+      const focused=document.querySelector('.site-marker.focused'),rect=focused?.getBoundingClientRect(),top=rect?document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2):null;
+      return{markers:document.querySelectorAll('.site-marker').length,selectedMarkers:document.querySelectorAll('.site-marker.focused').length,
+        selectedResidents:document.querySelectorAll('#coverage-site-details .coverage-residents>li.is-selected-unit').length,
+        visibleLabels:labels.length,clippedIds,overflow:Object.fromEntries(Object.entries(overflow).map(([key,value])=>[key,Math.round(value)])),
+        focusedPinReceivesPointer:top?!!top.closest('.site-marker.focused'):null};
+    }).catch(()=>null);
+    console.error(JSON.stringify({coverageGeometry:geometry}));
+  }
   process.exitCode = 1;
 } finally {
   await browser.close();
