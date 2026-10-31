@@ -2,7 +2,7 @@
 
 - Brief owner: ιδιοκτήτης προϊόντος / υπεύθυνος λειτουργίας οδικής βοήθειας.
 - Last updated: 2026-10-31.
-- Status: **Wireframe, shell/Overview and first list/detail OWNER-APPROVED; automated candidate QA passed. Owner-requested unit-map/towing clarity is implemented and automated QA passed at1e5efce; renewed Step5 owner visual review remains pending.**
+- Status: **Wireframe, shell/Overview and first list/detail OWNER-APPROVED; automated candidate QA passed. Owner-requested unit-map/towing clarity is implemented and automated QA passed at1e5efce; renewed Step5 owner visual review is APPROVED; Step6 handover follows final CI confirmation.**
 - Route: **A / adapt**, ήδη εγκεκριμένο. Διατηρούνται router, tokens, auth, API conventions και TanStack Table.
 - Project: C:/dev/solutions/private_nebius_aiserverless_challenge/repos/aws-map-it. Το παρόν draft συντάχθηκε σε απομονωμένο worktree docs/capacity-design.
 - Template: αντίγραφο του ops-console-ui/assets/console-brief.md, με τα ίδια 17 τμήματα. Τα skills μένουν ανέπαφα.
@@ -242,13 +242,13 @@ Resolved by latest owner instruction: Q1 no private insured data required; Q2 ex
 | W1 wireframe structure | **OWNER APPROVED** six destinations, Capacity lab regions and detail/map | Resolved; shell/overview subsequently approved |
 | W1b shell/overview preview | **OWNER APPROVED** source67673a8 and verified desktop/mobile preview | Resolved |
 | W1c first functional list/detail | **OWNER APPROVED** by 2026-10-31 instruction «Συνέχισε τις εργασίες» after source2ce3156 and its verified list/detail images | Resolved; Step5 final QA proceeds |
-| W1d final contact sheet | Full release QA and exact role verification underway; explicit Step5 visual review still required | **PENDING OWNER OK**; human keyboard/role judgment remains separate |
+| W1d final contact sheet | Owner explicitly answered «Εγκρίνω το UI» for the1e5efce contact sheet, mobile unit map and recovery card | **OWNER APPROVED**; human keyboard/role/native-popup checks remain separate |
 | W2 final field/enum/bounds mapping | Resolved in `packages/contracts/src/capacity.ts`; defaults factory shared with future UI; domain/API typecheck/tests/build passed in CI41110905525 | UI must consume this single contract |
 | W3 real staffing targets / service logs | Deferred; editable scenario target/durations are sufficient for this MVP | Any real-world staffing/SLA claim |
 | W4 private insured/driver/telemetry | Deferred, no source needed now | Real operational integrations only |
 | W5 calendar/weather/anomalies | Deferred pending adequate joint data/support/validation | Empirical seasonal views/detector claims |
 | W6 capture/video/publication | Existing independent owner gates remain pending | Public upload/submission and new video production |
-| W7 bounded Bedrock/Strands copilot | Scope clarification pending: first units/towing or copilot also now. No AI runtime/service activation is inferred before that answer | New copilot implementation scope only; units/towing proceed |
+| W7 bounded Bedrock/Strands copilot | Owner answered «Πρώτα units και towing» | **RESOLVED: deferred from the current increment**; no AI runtime/service activation |
 
 No open item authorizes guessed measurements. Engine runtime limits and actual outputs must be measured by CI before claims/deployment.
 
@@ -298,7 +298,7 @@ Workshop destination/routing/queue, actual GPS and next dispatch from a workshop
 
 Failure evidence remains retained: a9f9eb5 wrong exact job-link name;401c3c9/b5ce34e native pin event bubbling and visible empty-label overlap;6ebad3f repeated-drawer instrument timeout after unloading. The harness now waits for both native closure and selected-job URL teardown before the next scrub/open. The subsequent full run passed without widening timeouts, axe or map gates. Precise original timeout await was not established before the stronger barrier; no unsupported app-bug claim is made.
 
-Review packages: integration `.runtime/console-qa-review-1e5efce/` and `.runtime/towing-review-1e5efce/`. Six destinations/four tabs stay approved; renewed owner visual review remains PENDING.
+Review packages: integration `.runtime/console-qa-review-1e5efce/` and `.runtime/towing-review-1e5efce/`. Six destinations/four tabs and renewed owner visual review are APPROVED. Human release judgments are separate.
 
 ### Step5 candidate release record — 2026-10-31
 
@@ -313,6 +313,16 @@ Review packages: integration `.runtime/console-qa-review-1e5efce/` and `.runtime
 - Human keyboard1440/390 and human role-menu judgment: **PENDING**. Automated keyboard/actual-role tests do not provide human attestation. Native OS select popup pixels were not captured by headless Chromium and require manual inspection. Axe incomplete gradient/short-number/empty-table judgments are explicitly open. Supplemental source-cascade contrast endpoint calculations pass4.5:1 for the checked text/gradient endpoints; this is not a rendered-pixel or whole-app WCAG certificate.
 - Real: config/manifest/zones, public placement and Capacity evaluations, Cognito and protected plan/settings APIs, Amazon Location basemap and prepared directional Car snapshot. Assumed: generated arrivals/types/service/recovery/fleet/shift inputs, with persistent scenario labels. Empirical insured/driver/operational records and calendar/weather/anomaly forecasts remain not connected. No fabricated fallback dataset.
 - Deployment: **NOT a frontend deployment**. Existing web5ad/read3802 remain live. Candidate /capacity edge routing and web assets need deployment and post-deploy acceptance after the owner gate. Current review does not freeze or recut video, change Builder publication or accept submission terms.
-- Owner Step5 contact-sheet review: **PENDING**. Required sentence from the explicitly invoked skill: “The user looks at the contact sheet with you and names anything that reads wrong to them.” The existing six-page structure and first list/detail are already approved; this is final visual review.
+- Owner Step5 contact-sheet review: **APPROVED2026-10-31** for the final1e5efce images. Required sentence from the explicitly invoked skill: “The user looks at the contact sheet with you and names anything that reads wrong to them.” The existing six-page structure and first list/detail are already approved; this is final visual review.
 
 - Review package: integration `.runtime/console-qa-review-b16d812/{contact-sheet-normal.png,contact-sheet-states.png,report.html,receipt.json}`. Detailed source2bbe2d5 images cover the same unchanged application. Actual-role acceptance/cleanup receipts stay in `.runtime/qa-operators-d4a91e2b6c70/`; no credential file remains.
+
+### Step6 owner handover decisions — 2026-10-31
+
+Owner explicitly approved the final UI and chose units/towing first; copilot is deferred. The same UI approval remains valid through test-tool/metadata-only edits. Latest be328f6 rerun exposed a close-url synchronization timeout; its failed receipt is retained and the event-based wait uses the identical predicate/25s limit. Confirm the corrected head through CI before release.
+
+- Real: config/health, public manifest/zones, stateless placement and Capacity evaluation API, AWS basemap and prepared Car approach snapshot. Protected workspace operations have separately recorded real Cognito/API acceptance.
+- Demo/assumed: no fallback operational demo dataset. Capacity generates clearly labeled workload/service/fleet scenarios; actual insured/driver/garage/GPS records are not connected. Route A already uses the real API; no DEMO_MODE activation is needed.
+- Open items: human keyboard1440/390, human role-menu and OS-native dropdown inspection; axe incomplete judgments; frontend deployment and post-deploy acceptance; separate video exact-text/shot-list and publication gates. Transport/drop-off/recovery remain editable assumptions. One documented strict-lint suppression applies only to fixed skeleton placeholders whose unavailable state is owned by DataGate.
+
+Owner Step6 decisions on these open release items remain pending. Public frontend assets/edge route are not deployed; no video/Builder publication is authorized by the UI approval.

@@ -1,5 +1,11 @@
 # History
 
+## 2026-10-31 — Codex — owner approved final UI; copilot deferred; URL wait narrowed
+
+Owner explicitly approved the final1e5efce contact sheet, mobile unit map and towing recovery UI, and selected «Πρώτα units και towing». Step5 visual approval is complete; human keyboard/role/native-popup and Step6 open-item decisions remain separate. Updated brief/STATE and handover scope. No new UI, AI runtime, frontend deployment, video or publication.
+
+[PRIMARY] Metadata-onlybe328f6 rerun https://github.com/upgradedev/standby/actions/runs/41188092415 failed towing close-url at page.waitForFunction (`gh run view ... --log-failed`; receipt in `.runtime/towing-review-be328f6/`). Native Escape/hidden and unloading capture had passed; later diagnostic saw selectedInUrl=false and openDialog=false. This does not prove rAF starvation or an application bug. Replaced that predicate poll with event-based page.waitForURL for the same URL condition and25s limit, retaining hidden/map/axe gates and single-evaluation budget. Official API semantics: https://playwright.dev/docs/api/class-page#page-wait-for-url . Independent read-only review agrees with this narrower navigation synchronization; new runtime result remains to be verified.
+
 ## 2026-10-31 — Codex — explicit unit positions and one-car towing cycle verified
 
 Unit pins show evaluated resident IDs/counts and assumed home sites. Locate is separate from draft availability. Empty-site labels appear on hover/focus/selection; occupied IDs stay visible. Native pin clicks no longer also select the polygon below. Capacity detail shows current unit phase, one-car payload, dispatch reservation and later active-job context. Two overlapping tows serialize on one flatbed through unloading/recovery; payload1 during transport/unloading becomes0 during recovery while dispatch stays busy.

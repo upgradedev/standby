@@ -46,7 +46,8 @@ async function openJob(page,id){
 async function closeJob(page,drawer){
   step='close-keyboard';await page.keyboard.press('Escape');
   step='close-hidden';await drawer.waitFor({state:'hidden'});
-  step='close-url';await page.waitForFunction(()=>!new URL(location.href).searchParams.has('jobSelected'));
+  // Observe SPA history directly, retaining the same URL predicate and 25s limit.
+  step='close-url';await page.waitForURL(url=>!url.searchParams.has('jobSelected'),{waitUntil:'commit',timeout:25_000});
 }
 const mid=(start,end)=>{const value=Math.round((start+end)*5)/10;assert.ok(start<value&&value<end);return value;};
 async function axe(page,label){
