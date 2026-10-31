@@ -4,6 +4,15 @@ on:
     branches-ignore: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      authenticated:
+        description: Exercise receipt-bound synthetic operator roles
+        type: boolean
+        default: false
+      service_release:
+        description: Exact live API release for the optional operator check
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -76,6 +85,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -95,7 +106,7 @@ jobs:
           node tools/console-preview/shoot.mjs --help
           node tools/console-preview/release.mjs --help
           node --check tools/console-preview/release.mjs
-          node tools/console-preview/release.mjs --source "$GITHUB_SHA"
+          node tools/console-preview/release.mjs --source "$(git rev-parse HEAD)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -113,3 +124,29 @@ jobs:
           name: standby-console-release-qa-shots
           path: .runtime/console-release-qa/shots/
           retention-days: 3
+  operator_qa:
+    if: github.event_name == 'workflow_dispatch' && inputs.authenticated
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the reviewed candidate UI in hosted CI
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Actual Cognito and workspace role acceptance with candidate UI
+        env:
+          STANDBY_LIVE_URL: https://d34x1513u5u1qs.cloudfront.net
+          STANDBY_EXPECTED_RELEASE: ${{ inputs.service_release }}
+          STANDBY_UI_DIST: apps/console/dist
+          STANDBY_UI_SOURCE: ${{ github.sha }}
+          STANDBY_TEST_IDENTITIES: ${{ secrets.STANDBY_TEST_IDENTITIES }}
+        run: |
+          node -e "if(!/^[a-f0-9]{40}$/.test(process.env.STANDBY_EXPECTED_RELEASE||''))throw new Error('Exact service release required')"
+          node --check tests/browser/static-overlay.mjs
+          node --check tests/browser/authenticated.mjs
+          node tests/browser/authenticated.mjs

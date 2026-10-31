@@ -5,8 +5,9 @@
  */
 import {randomUUID} from 'node:crypto';
 import {chromium} from 'playwright';
+import {prepareCandidateUI} from './static-overlay.mjs';
 
-let step='initialization',browser;
+let step='initialization',browser,installUI=async()=>{};
 const contexts=[];
 const check=(condition,code)=>{if(!condition) throw new Error(code);};
 const exact=(name)=>({name,exact:true});
@@ -58,6 +59,7 @@ function decodeJwtPayload(token) {
 async function signIn(identity,base) {
   step=`${identity.role}:hosted-ui-login`;
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',serviceWorkers:'block'});
+  await installUI(context);
   contexts.push(context);
   const page=await context.newPage();page.setDefaultTimeout(20_000);
   const errors=[];page.on('pageerror',()=>errors.push('uncaught-runtime-error'));
@@ -155,6 +157,7 @@ try {
   const identities=parseIdentities();
   const base=process.env.STANDBY_LIVE_URL?.replace(/\/$/,'');
   check(base&&new URL(base).protocol==='https:','live-url-must-use-https');
+  installUI=await prepareCandidateUI(base);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
   const analyst=await signIn(identities.find(value=>value.role==='Analyst'),base);
   await assertAccessBoundaries(analyst);
@@ -172,6 +175,15 @@ try {
 
   const planner=await signIn(identities.find(value=>value.role==='Planner'),base);
   await assertAccessBoundaries(planner);
+  step='Planner:workspace-history';
+  const workspaceSelect=planner.page.getByRole('combobox',exact('Active workspace'));
+  await planner.page.waitForURL(url=>url.searchParams.get('workspace')===workspaceId);
+  await workspaceSelect.selectOption('public');
+  await planner.page.waitForURL(url=>!url.searchParams.has('workspace'));
+  await visible(planner.page.getByText('Local scenarios',{exact:true}),'public-scope-after-switch-missing');
+  await planner.page.goBack();
+  await planner.page.waitForURL(url=>url.searchParams.get('workspace')===workspaceId);
+  await visible(planner.page.locator('.workspace-mode .badge').filter({hasText:'Planner'}),'workspace-back-did-not-restore-verified-role');
   step='Planner:ui-plan-create';
   const uiPlanName=`UI acceptance ${runId}`;
   await planner.page.getByRole('button',exact('Create workspace plan')).click();
@@ -213,7 +225,17 @@ try {
   const plannerSettings=await api(planner,'GET',`/workspaces/${workspaceId}/settings`);
   await api(planner,'PATCH',`/workspaces/${workspaceId}/settings`,{data:{expectedVersion:plannerSettings.settings.version,
     defaultThresholdMinutes:15,maxFleetSize:plannerSettings.settings.maxFleetSize,enabledSiteIds:plannerSettings.settings.enabledSiteIds},status:403});
-  console.log('PASS Planner idempotency, trusted evaluation and server-enforced review denial');
+  step='Planner:reload-and-review-menu';
+  await planner.page.reload({waitUntil:'domcontentloaded'});
+  await visible(planner.page.locator('.workspace-mode .badge').filter({hasText:'Planner'}),'workspace-reload-did-not-restore-verified-role');
+  await planner.page.getByRole('tab',{name:/^Needs review/}).click();
+  const plannerCard=planner.page.locator('article.scenario-card').filter({has:planner.page.getByRole('heading',exact(name))});
+  await plannerCard.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
+  const plannerDetail=planner.page.getByRole('dialog',exact(name));
+  await visible(plannerDetail,'planner-detail-missing');
+  check(await plannerDetail.getByRole('button',exact('Mark exact result reviewed')).count()===0,'planner-sees-admin-review-menu');
+  await planner.page.keyboard.press('Escape');await plannerDetail.waitFor({state:'hidden'});
+  console.log('PASS Planner workspace history/reload, idempotency, trusted evaluation and server-enforced review denial');
 
   const admin=await signIn(identities.find(value=>value.role==='Admin'),base);
   await assertAccessBoundaries(admin);
@@ -223,7 +245,7 @@ try {
   await admin.page.getByRole('tab',{name:/^Needs review/}).click();
   const card=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
   await visible(card,'evaluated-plan-not-in-admin-review-queue');
-  await card.getByRole('button',exact('Inspect')).click();
+  await card.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
   const details=admin.page.getByRole('dialog',exact(name));
   await visible(details,'admin-plan-detail-missing');
   await visible(details.getByRole('heading',exact('Server-calculated proposal')),'admin-trusted-result-not-visible');
@@ -284,11 +306,25 @@ try {
   await admin.page.getByRole('tab',{name:/^Draft/}).click();
   const staleCard=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
   await visible(staleCard,'stale-plan-not-in-ui-draft-queue');
-  await staleCard.getByRole('button',exact('Inspect')).click();
+  await staleCard.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
   const staleDetail=admin.page.getByRole('dialog',exact(name));
   await visible(staleDetail.getByText('No fresh result is available. Re-evaluate this plan before reviewing its coverage.',{exact:true}),
     'stale-plan-ui-reason-missing');
   check(await staleDetail.getByRole('button',exact('Mark exact result reviewed')).count()===0,'stale-plan-can-be-reviewed-in-ui');
+  step='Admin:client-session-expiry';
+  await admin.page.keyboard.press('Escape');await staleDetail.waitFor({state:'hidden'});
+  // Shorten only the browser's session lifetime; the real JWT and server membership remain unchanged.
+  await admin.page.evaluate(()=>{const key='standby.auth.v1',value=JSON.parse(sessionStorage.getItem(key));value.expiresAt=Date.now()+15_000;sessionStorage.setItem(key,JSON.stringify(value));});
+  await admin.page.reload({waitUntil:'domcontentloaded'});
+  await visible(admin.page.locator('.workspace-mode .badge').filter({hasText:'Admin'}),'workspace-reload-role-missing-before-expiry');
+  const expiringCard=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
+  await expiringCard.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
+  await visible(admin.page.getByRole('dialog',exact(name)),'private-detail-not-open-before-expiry');
+  await admin.page.waitForFunction(()=>document.querySelector('select[aria-label="Active workspace"]')?.value==='public'&&!document.querySelector('dialog[open]'));
+  check(await admin.page.getByRole('heading',exact(name)).count()===0,'private-plan-remained-after-client-expiry');
+  check(await admin.page.evaluate(()=>sessionStorage.getItem('standby.auth.v1')===null),'expired-session-storage-retained');
+  check(await admin.page.locator('.workspace-mode').count()===0,'private-role-marker-retained-after-expiry');
+  console.log('PASS client session expiry clears private detail, role scope and stored session');
   for(const actor of [analyst,planner,admin]) check(actor.errors.length===0,'authenticated-browser-runtime-error');
   console.log('PASS Admin exact-result review, settings CAS and stale-review invalidation');
   console.log('PASS real Cognito authorization acceptance. No credentials, provider payloads or media artifacts retained.');

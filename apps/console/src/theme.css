@@ -174,3 +174,27 @@ input:disabled, select:disabled, textarea:disabled {
 .gap-card > div > svg:first-child { color: var(--warning); }
 .queue-tabs > button > span { background: var(--raised); }
 .server-comparison { border-color: var(--warning-border); }
+
+/* Coverage controls keep their intrinsic sizes inside the available content column. */
+.map-controls{flex-wrap:wrap}
+.map-controls>label{min-width:0;flex:1 1 140px}
+.map-controls select{min-width:0;max-width:100%;width:100%}
+.planning-layout>*{min-width:0}
+.planning-sidebar>.panel{min-width:0}
+.map-legend{flex-wrap:wrap}
+@media(max-width:1100px){
+ .map-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .planning-layout{display:flex;flex-direction:column}
+ .planning-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+ .map-panel-top{height:auto;min-height:56px;flex-wrap:wrap;padding-block:10px}
+}
+@media(max-width:767px){
+ .planning-sidebar{grid-template-columns:minmax(0,1fr)}
+ .unit-row small{max-width:none}
+}
+@media(max-width:374px){
+ .map-controls{grid-template-columns:minmax(0,1fr)}
+ .map-controls .button{width:100%;height:auto;min-height:44px;white-space:normal}
+ .map-panel-top .layer-select{width:100%;min-width:0}
+ .map-panel-top .layer-select select{flex:1;max-width:100%}
+}
