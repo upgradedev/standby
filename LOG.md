@@ -1,5 +1,11 @@
 # History
 
+## 2026-10-31 — Codex — observe identical close state from a bounded runner clock
+
+[PRIMARY] a8d734d run https://github.com/upgradedev/standby/actions/runs/41192801472 passed corrected label containment/mapRGB before the in-page native-close observer timed out. Later diagnostic showed all native+React close predicates true. Original receipt/PNG are retained in `.runtime/towing-review-a8d734d/`; no scheduling/app cause is asserted from that later observation.
+
+Replaced only the long-lived in-page poller with runner-driven read-only DOM probes. Same exists/!open/rects0/cleared-title/0cards and semantic-hidden predicates; actual open-state negative control; each read and final visibility query share one strict monotonic25s deadline, including a post-resolution deadline check. Timers are cleared, late reads cannot pass, no action/API retry or data interception. Independent source review found no false-pass/deadline/promise blocker; runtime verification remains required. No additional UI change, cloud write, video or publication.
+
 ## 2026-10-31 — Codex — fix actual home-label clipping and await React drawer teardown
 
 [PRIMARY] Clean-run towing QA at9f15f33 / https://github.com/upgradedev/standby/actions/runs/41191666673 failed unit-home-label-clipped before reaching repeated closes; matrix86/fullanonymous/71tests passed. Its actual image shows the label cut at the top while the exact site dot remains in-frame. The required console_qa aggregator correctly failed; local exact-shell controls independently confirmed1positive and15negative dependency pairs. Receipts remain intact.

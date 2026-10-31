@@ -43,25 +43,45 @@ async function openJob(page,id){
   await page.getByTestId('capacity-jobs').getByRole('link',exact(`${id}: open modeled job details`)).click();
   const drawer=page.getByRole('dialog',exact(`Modeled job ${id}`));await drawer.waitFor();return drawer;
 }
+async function readDrawerState(page){
+  return page.evaluate(()=>{
+    const dialog=document.querySelector('dialog.capacity-job-drawer');
+    return dialog?{exists:true,open:dialog.open,rectangles:dialog.getClientRects().length,
+      headingCleared:dialog.querySelector('.modal-heading h2')?.textContent?.trim()==='Modeled job',
+      detailCards:dialog.querySelectorAll('[data-testid="capacity-unit-status"]').length}:{exists:false};
+  });
+}
+function drawerStateClosed(value){return value.exists&&!value.open&&value.rectangles===0&&value.headingCleared&&value.detailCards===0;}
+async function beforeDeadline(operation,deadline){
+  const remaining=deadline-performance.now();check(remaining>0,'drawer-close-state-timeout');let timer;
+  try{
+    const value=await Promise.race([operation(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('drawer-close-state-timeout')),remaining);})]);
+    check(performance.now()<=deadline,'drawer-close-state-timeout');return value;
+  }finally{clearTimeout(timer);}
+}
 async function closeJob(page,drawer){
   check(new URL(page.url()).searchParams.has('jobSelected'),'close-control-has-no-selection');
   check(await page.locator('dialog.capacity-job-drawer[open]').count()===1,'close-control-is-not-open');
   check(await page.locator('dialog.capacity-job-drawer').getByTestId('capacity-unit-status').count()===1,'close-control-has-no-detail');
+  const initial=await beforeDeadline(()=>readDrawerState(page),performance.now()+25_000);check(!drawerStateClosed(initial),'close-control-already-satisfies-closed-gate');
+  receipt.closeChecks??=[];const record={observer:'host-driven-read-only-dom',negativeControl:initial,samples:0};receipt.closeChecks.push(record);
   // Arm the history observer before Escape; URL teardown and native closure are
   // separate requirements. Preserve both checks and their original 25s bounds.
   step='close-url';await Promise.all([
     page.waitForURL(url=>!url.searchParams.has('jobSelected'),{waitUntil:'commit',timeout:25_000}),
     page.keyboard.press('Escape'),
   ]);
-  step='close-hidden';await page.waitForFunction(()=>{
-    const dialog=document.querySelector('dialog.capacity-job-drawer');
-    // Native Escape and History can settle before React's selectedId=null
-    // render. The next scrub must use the committed, unselected view params.
-    return !!dialog&&!dialog.open&&dialog.getClientRects().length===0
-      && dialog.querySelector('.modal-heading h2')?.textContent?.trim()==='Modeled job'
-      && !dialog.querySelector('[data-testid="capacity-unit-status"]');
-  },undefined,{polling:100,timeout:25_000});
-  check(!await drawer.isVisible(),'closed-drawer-remains-visible');
+  // Read the identical native+React predicates from the runner clock, without
+  // a long-lived in-page poller. Each read and the entire barrier stay bounded.
+  step='close-hidden';const started=performance.now(),deadline=started+25_000;
+  for(;;){
+    const snapshot=await beforeDeadline(()=>readDrawerState(page),deadline);record.samples++;record.last=snapshot;
+    if(drawerStateClosed(snapshot)){
+      check(!await beforeDeadline(()=>drawer.isVisible(),deadline),'closed-drawer-remains-visible');
+      record.elapsedMilliseconds=Math.round(performance.now()-started);return;
+    }
+    await new Promise(resolve=>setTimeout(resolve,Math.min(100,Math.max(0,deadline-performance.now()))));
+  }
 }
 const mid=(start,end)=>{const value=Math.round((start+end)*5)/10;assert.ok(start<value&&value<end);return value;};
 async function axe(page,label){
@@ -173,7 +193,7 @@ try{
   const code=error instanceof Error&&/^[a-z][a-z0-9-]+$/.test(error.message)?error.message:'browser-action-or-assertion';
   receipt.status='fail';receipt.failure={step,code};console.error(`FAIL towing:${step}: ${code}`);process.exitCode=1;
   receipt.failure.instrument={method:error instanceof Error?error.message.match(/^(?:locator|keyboard|page)\.[A-Za-z]+/)?.[0]??null:null,
-    timedOut:error instanceof Error&&/Timeout \d+ms exceeded/.test(error.message),
+    timedOut:error instanceof Error&&(/Timeout \d+ms exceeded/.test(error.message)||error.message==='drawer-close-state-timeout'),
     frames:error instanceof Error?[...error.stack?.matchAll(/towing\.mjs:\d+:\d+/g)??[]].slice(0,3).map(match=>match[0]):[]};
   if(page&&!page.isClosed()){
     receipt.failure.ui=await page.evaluate(()=>({cursor:new URL(location.href).searchParams.get('t'),
