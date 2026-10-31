@@ -61,7 +61,7 @@ async function evaluation(page) {
 }
 async function mapReady(page) {
   await route(page,'/map','Coverage map');
-  await visible(page.locator('.site-marker').first());
+  await visible(page.locator('.site-marker:visible').first());
   check(await page.locator('.map-error').count()===0,'demo-basemap-not-ready');
   await page.getByRole('combobox',exact('Hypothetical fleet size')).selectOption('3');
   await page.getByRole('combobox',exact('Road approach threshold')).selectOption('10');
@@ -165,7 +165,7 @@ async function actions(page,id,anchor,diagnostics,clock) {
     // thirteen seconds inside the unchanged thirty-second semantic window.
     await at(17,()=>page.locator('.map-panel').scrollIntoViewIfNeeded());
   } else if(id==='unavailable') {
-    await at(2,()=>page.getByRole('button',{name:/^Unit 1[\s\S]*Available[\s\S]*Toggle availability/}).click());
+    await at(2,async()=>{const availability=page.getByTestId('coverage-availability-unit-1');check(await availability.getAttribute('aria-label')==='Available: toggle unit-1 draft availability','demo-draft-availability-name-wrong');await availability.click();});
     await at(6,()=>evaluation(page));
     await at(13,()=>page.getByRole('heading',exact('Priority uncovered zones')).scrollIntoViewIfNeeded());
   } else if(id==='provenance') {

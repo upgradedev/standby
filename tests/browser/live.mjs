@@ -130,6 +130,55 @@ async function waitEvaluation(page, action, expectedInput) {
   await page.waitForFunction(() => !document.querySelector('.stale-banner') && !document.querySelector('.map-controls button:disabled'));
   return result;
 }
+async function evaluatedSiteResidents(page, sites, plan) {
+  const expected = sites.map(site => ({id: site.id, units: plan.units.filter(unit => unit.siteId === site.id).map(unit => ({id: unit.id, available: unit.available}))}));
+  // Wait for the marker effect, not merely the placement tab's React commit.
+  await page.waitForFunction(expected => {
+    const markers = [...document.querySelectorAll('.site-marker')];
+    return markers.length === expected.length && expected.every(site => {
+      const matches = markers.filter(marker => marker.dataset.siteId === site.id);
+      if (matches.length !== 1) return false;
+      const marker = matches[0], rows = [...marker.querySelectorAll('.unit-site-resident')];
+      return marker.dataset.unitIds === site.units.map(unit => unit.id).join(',')
+        && marker.dataset.residentCount === String(site.units.length)
+        && marker.querySelector('.unit-site-id')?.textContent === site.id
+        && marker.querySelector('.unit-site-count')?.textContent === `${site.units.length} ${site.units.length === 1 ? 'unit' : 'units'} · evaluated`
+        && rows.length === site.units.length && site.units.every((unit, index) => rows[index].dataset.unitId === unit.id
+          && rows[index].querySelector('strong')?.textContent === unit.id
+          && rows[index].querySelector('span')?.textContent === (unit.available ? 'Available' : 'Unavailable'));
+    });
+  }, expected);
+  check(await page.locator('.site-marker').count() === sites.length, 'evaluated-site-marker-count-changed');
+}
+async function coverageLabelsFit(page) {
+  await page.locator('.map-canvas.maplibregl-map').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => {
+    const map = document.querySelector('.map-canvas.maplibregl-map');
+    if (!map) return false;
+    const frame = map.getBoundingClientRect();
+    const labels = [...map.querySelectorAll('.unit-site-label')].filter(label => getComputedStyle(label).visibility !== 'hidden');
+    return labels.length > 0 && labels.every(label => {
+      const rect = label.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.left >= frame.left - 1 && rect.right <= frame.right + 1
+        && rect.top >= frame.top - 1 && rect.bottom <= frame.bottom + 1
+        && [...label.querySelectorAll('.unit-site-id, .unit-site-resident strong')].every(id => id.scrollWidth <= id.clientWidth + 1);
+    });
+  });
+  await noHorizontalOverflow(page);
+}
+async function draftAvailability(page) {
+  return page.locator('.coverage-availability').evaluateAll(buttons => buttons.map(button => ({
+    id: button.dataset.testid, pressed: button.getAttribute('aria-pressed'), name: button.getAttribute('aria-label'),
+  })));
+}
+async function locatedUnit(page, unit) {
+  await page.waitForURL(url => url.searchParams.get('site') === unit.siteId && url.searchParams.get('unit') === unit.id);
+  await page.waitForFunction(unit => {
+    const marker = [...document.querySelectorAll('.site-marker')].find(marker => marker.dataset.siteId === unit.siteId);
+    const residents = [...document.querySelectorAll('#coverage-site-details .coverage-residents > li.is-selected-unit')];
+    return marker?.getAttribute('aria-pressed') === 'true' && residents.length === 1 && residents[0].dataset.unitId === unit.id;
+  }, unit);
+}
 
 try {
   const installUI = await prepareCandidateUI(base);
@@ -140,8 +189,13 @@ try {
     const overlay = await installUI(context, page);
     page.setDefaultTimeout(15_000);
     const pageErrors = [];
-    let capacityRequests = 0;
-    page.on('request', request => {if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/public/capacity-evaluations')) capacityRequests++;});
+    let capacityRequests = 0, placementRequests = 0;
+    page.on('request', request => {
+      if (request.method() !== 'POST') return;
+      const path = new URL(request.url()).pathname;
+      if (path.endsWith('/public/capacity-evaluations')) capacityRequests++;
+      if (path.endsWith('/public/evaluations')) placementRequests++;
+    });
     page.on('pageerror', () => pageErrors.push('uncaught-page-error'));
     page.on('response', (received) => {
       const path = new URL(received.url()).pathname;
@@ -287,7 +341,7 @@ try {
     step = `${viewport.name}:live-map-evaluation-and-unit-unavailable`;
     await navigate(page, 'Coverage map');
     await visible(page.locator('.maplibregl-canvas'), 'map-canvas-missing');
-    await visible(page.locator('.site-marker').first(), 'aws-map-did-not-finish-loading');
+    await visible(page.locator('.site-marker:visible').first(), 'aws-map-did-not-finish-loading');
     check(await page.locator('.site-marker').count() === manifest.dataset.sites.length, 'map-site-layer-incomplete');
     check(await page.locator('.map-error').count() === 0, 'basemap-reported-loading-error');
     await assertRenderedMap(page,{requirePixels:true});
@@ -296,20 +350,51 @@ try {
     await visible(page.getByText('Inputs changed. The map shows the previous comparison until you calculate again.', {exact: true}), 'map-stale-state-missing');
     const fresh = await waitEvaluation(page, () => page.getByRole('button', exact('Compare positions')).click(), {fleetSize: 2, thresholdMinutes: 5});
     check(fresh.datasetHash === manifest.dataset.hash, 'map-evaluated-wrong-snapshot');
+    step = `${viewport.name}:coverage-unit-location-and-colocation`;
     await page.getByRole('button', exact('Depot')).click();
     await renderedAttribute(page, page.getByRole('button', exact('Depot')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Depot')).getAttribute('aria-pressed') === 'true', 'depot-display-not-selected');
+    await evaluatedSiteResidents(page, manifest.dataset.sites, fresh.plans.depot);
+    const [depotUnit, secondDepotUnit] = fresh.plans.depot.units;
+    check(depotUnit && secondDepotUnit && fresh.plans.depot.units.every(unit => unit.siteId === depotUnit.siteId), 'depot-does-not-colocate-evaluated-units');
+    const beforeLocateUrl = page.url(), beforeLocateAvailability = JSON.stringify(await draftAvailability(page)), beforeLocateRequests = placementRequests;
+    const locate = page.getByTestId(`coverage-locate-${depotUnit.id}`);
+    check(await locate.getAttribute('aria-label') === `Locate ${depotUnit.id}`, 'locate-control-name-wrong');
+    check(await locate.evaluate(element => element instanceof HTMLAnchorElement && element.tabIndex >= 0), 'locate-is-not-native-keyboard-link');
+    await locate.focus();await locate.press('Enter');
+    await locatedUnit(page, depotUnit);
+    await coverageLabelsFit(page);
+    check(JSON.stringify(await draftAvailability(page)) === beforeLocateAvailability, 'locate-mutates-draft-availability');
+    await page.getByTestId(`coverage-locate-${secondDepotUnit.id}`).click();
+    await locatedUnit(page, secondDepotUnit);
+    await page.goBack();await locatedUnit(page, depotUnit);
+    await page.locator('.site-marker.focused').click();
+    await page.waitForURL(url => url.searchParams.get('site') === depotUnit.siteId && !url.searchParams.has('unit'));
+    await page.waitForFunction(() => document.querySelectorAll('#coverage-site-details .coverage-residents > li.is-selected-unit').length === 0);
+    check(await page.locator('#coverage-site-details .coverage-residents > li').count() === fresh.plans.depot.units.length, 'colocated-site-details-omit-unit');
+    await page.goBack();await locatedUnit(page, depotUnit);
+    await page.goBack();await page.waitForURL(beforeLocateUrl);
+    check(JSON.stringify(await draftAvailability(page)) === beforeLocateAvailability, 'site-selection-or-back-mutates-draft-availability');
+    check(placementRequests === beforeLocateRequests, 'locate-site-selection-or-back-starts-evaluation');
     await page.getByRole('button', exact('Proposal')).click();
     await renderedAttribute(page, page.getByRole('button', exact('Proposal')), 'aria-pressed', 'true');
     check(await page.getByRole('button', exact('Proposal')).getAttribute('aria-pressed') === 'true', 'proposal-display-not-selected');
-    await page.getByRole('button', {name: /^Unit 1[\s\S]*Available[\s\S]*Toggle availability/}).click();
-    const unavailableUnit = page.getByRole('button', {name: /^Unit 1[\s\S]*Unavailable[\s\S]*Toggle availability/});
+    await evaluatedSiteResidents(page, manifest.dataset.sites, fresh.plans.proposal);
+    step = `${viewport.name}:coverage-draft-vs-evaluated-availability`;
+    const beforeToggleUrl = page.url(), availability = page.getByTestId('coverage-availability-unit-1');
+    check(await availability.getAttribute('aria-label') === 'Available: toggle unit-1 draft availability', 'draft-availability-name-wrong');
+    await availability.click();
+    const unavailableUnit = page.getByRole('button', exact('Unavailable: toggle unit-1 draft availability'));
     await visible(unavailableUnit, 'availability-toggle-not-rendered');
     check(await unavailableUnit.getAttribute('aria-pressed') === 'false', 'availability-toggle-not-unavailable');
+    check(page.url() === beforeToggleUrl, 'draft-availability-toggle-mutates-url');
+    await evaluatedSiteResidents(page, manifest.dataset.sites, fresh.plans.proposal);
     const busy = await waitEvaluation(page, () => page.getByRole('button', exact('Compare positions')).click(), {fleetSize: 2, thresholdMinutes: 5, unavailableUnitId: 'unit-1'});
     check(busy.inputHash !== fresh.inputHash, 'availability-change-did-not-change-evaluation');
     check(busy.plans.proposal.units.filter((unit) => unit.available).length === 1, 'unavailable-unit-still-counts-as-available');
     check(busy.plans.proposal.backupCoveredDemand === 0, 'single-available-unit-creates-backup');
+    await evaluatedSiteResidents(page, manifest.dataset.sites, busy.plans.proposal);
+    await coverageLabelsFit(page);
     await page.getByRole('button', exact('Accessible list of all zones')).click();
     await page.locator('.accessible-zone-list button').first().waitFor({state: 'visible'});
     check(await page.locator('.accessible-zone-list button').count() === zones.length, 'accessible-map-list-incomplete');
