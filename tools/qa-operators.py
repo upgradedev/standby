@@ -176,6 +176,14 @@ class Cloud:
             ExpressionAttributeValues={f':v{i}': item[key] for i, key in enumerate(fields)})
 
 
+def pinned_username(cloud, user):
+    # The live target pool rejects sub as Username; never retry with another identity.
+    live = cloud.user(user['username'])
+    require(live and live['Username'] == user['username'] and user.get('sub')
+        and any(entry['Name'] == 'sub' and entry['Value'] == user['sub'] for entry in live['UserAttributes']), 'unbound-or-replaced-user')
+    return user['username']
+
+
 def inventory(cloud, receipt):
     workspace, token = receipt['workspaceId'], receipt['ownershipToken']
     members = []
@@ -226,11 +234,8 @@ def create(cloud, run, apply):
             require(created['Username'] == user['username'], 'created-username-mismatch')
             user['phase'] = 'created'
             save(path, receipt)
-            live = cloud.user(user['username'])
-            require(live and live['Username'] == user['username'] and any(entry['Name'] == 'sub' and entry['Value'] == user['sub'] for entry in live['UserAttributes']), 'created-user-verification-failed')
-            # Address subsequent mutations by the immutable recorded sub, not a reusable username.
-            cloud.cognito.admin_set_user_password(UserPoolId=cloud.binding['UserPool'], Username=user['sub'], Password=password, Permanent=True)
-            cloud.cognito.admin_add_user_to_group(UserPoolId=cloud.binding['UserPool'], Username=user['sub'], GroupName=user['role'])
+            cloud.cognito.admin_set_user_password(UserPoolId=cloud.binding['UserPool'], Username=pinned_username(cloud, user), Password=password, Permanent=True)
+            cloud.cognito.admin_add_user_to_group(UserPoolId=cloud.binding['UserPool'], Username=pinned_username(cloud, user), GroupName=user['role'])
             cloud.ddb.put_item(TableName=cloud.binding['PlansTable'], Item={'pk': {'S': 'USER#' + user['sub']}, 'sk': {'S': 'WORKSPACE#' + workspace},
                 'workspaceId': {'S': workspace}, 'name': {'S': f'Synthetic QA {run}'}, 'role': {'S': user['role']}}, ConditionExpression='attribute_not_exists(pk)')
             user['phase'] = 'ready'
@@ -266,8 +271,7 @@ def cleanup(cloud, path, apply):
         for user in receipt['users']:
             live = cloud.user(user['username'])
             if live:
-                require(live['Username'] == user['username'] and any(entry['Name'] == 'sub' and entry['Value'] == user.get('sub') for entry in live['UserAttributes']), 'user-changed-before-delete')
-                cloud.cognito.admin_delete_user(UserPoolId=cloud.binding['UserPool'], Username=user['sub'])
+                cloud.cognito.admin_delete_user(UserPoolId=cloud.binding['UserPool'], Username=pinned_username(cloud, user))
         # Existing Writer timeout is 15s. Membership removal blocks new transactions;
         # allow already-started requests to finish before collecting scoped results.
         if members or rows or objects:
