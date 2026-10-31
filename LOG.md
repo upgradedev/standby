@@ -1,5 +1,14 @@
 # History
 
+## 2026-10-31T11:08:53.476237+00:00 - Codex - corrected units/towing candidate qualified; Step6 proposal awaits owner
+
+[PRIMARY] Source db67b6d0a2455549736be0d6574c184309fe0277 passed https://github.com/upgradedev/standby/actions/runs/41195126428:71npm tests, required build/typecheck/strict lint/source gates,86route axe scans plus5towing scans with0violations, anonymous1440/768/375 and functional3-evaluation preview. Commands: `gh run view 41195126428 --repo upgradedev/standby --json headSha,status,conclusion,jobs`; `json.load` of integration final/matrix/towing/capacity receipts. Functional preview records PR merge63c64bce; remote git commit/tree comparison verifies the exact same tree as the head. Do not rewrite its source identifier.
+
+The retained map lifecycle removes repeated presentation teardown; four existing close checks now complete42/38/41/46ms in this run, versus prior timeout evidence retained intact. Root inspected both contact sheets, six390dark routes, light maps, all towing shots and functional normal/expanded/mobile maps. No native/React/semantic/time/map/axe/API gate was weakened. Normal paths have0unexpected errors and54non-React map warning events; incomplete/human judgments remain open.
+
+Read-only `.runtime/prepare-frontend-proposal.py` produced `.runtime/frontend-proposal-db67b6d/plan.json`:22web files, green artifact13040351664, actual target/ETag snapshot and exact rollback backup,0cloud mutations. Independent read-only source review found no apply path/blocker. Bounded label/lifecycle fixes change bytes from older owner-approved1e5efce; proposal explicitly records that prior byte gate fails and exact-source owner approval is PENDING. Old922 proposal remains ineligible. No frontend/backend/Builder/video publication, AI runtime or new paid route build. Owner-approved design/copilot deferral retained. Step6 Real/assumed/open handover and release record updated; root retains only release coordination while waiting for the owner's explicit open-item decision.
+
+
 ## 2026-10-31 — Codex — retain scoped map resource; observe committed input transitions
 
 Integrated workere3df1eb as1aab618 after independent source review. JobDetail keeps only one lazy scoped geometry/map slot across close/tabs; no old job/card fallback,0statuscards/titleclearwhenclosed, invalidselection/run/geography synchronously blocks cache. Positive-size init/resize/fit guards; cleanup remains scoped. Coordinates/camera/padding/data/copy/4tabs unchanged. Local copied strict UI lint29files0errors/0warnings and syntax/diff checks passed; fresh hosted runtime is still required.
