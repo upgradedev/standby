@@ -117,6 +117,20 @@ jobs:
           node --check tests/browser/static-overlay.mjs
           node --check tests/browser/live.mjs
           STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tests/browser/live.mjs
+      - name: One-car towing occupancy and unit-location UI with actual backend
+        env:
+          STANDBY_UI_DIST: apps/console/dist
+          STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
+        run: |
+          node tools/console-preview/towing.mjs --help
+          node --check tools/console-preview/towing.mjs
+          STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tools/console-preview/towing.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-towing-unit-review
+          path: .runtime/towing-preview/
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
