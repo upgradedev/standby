@@ -172,11 +172,15 @@ try {
     check(manifest.dataset.periods.train.end === manifest.dataset.periods.holdout.start, 'cohort-period-boundaries-disagree');
     check(manifest.matrix && Date.parse(manifest.matrix.expiresAt) > Date.now(), 'matrix-not-fresh');
     check(!JSON.stringify(manifest).includes('durationsSeconds') && !JSON.stringify(zones).includes('traffic_report_id'), 'private-fields-in-public-snapshot');
-    await visible(page.getByRole('heading', exact('Every minute starts here.')), 'overview-missing');
-    await visible(page.getByRole('group', {name: /^Reports by publication hour/}), 'publication-chart-missing');
-    check(await page.locator('.hour-chart button').count() === 24, 'hour-chart-not-complete');
+    step = `${viewport.name}:overview-charts`;
+    await visible(page.getByRole('heading', exact('Overview')), 'overview-missing');
+    const publication = page.getByRole('img', {name: /^Publication counts by hour,/});
+    await visible(publication, 'publication-chart-missing');
+    check(await publication.locator('rect.publication-bar').count() === 24, 'hour-chart-not-complete');
     await page.getByText('View hourly data table', {exact: true}).click();
     check(await page.locator('.data-alternative[open] tbody tr').count() === 24, 'hour-chart-accessible-table-incomplete');
+    const hourlyCounts = (await page.locator('.data-alternative[open] tbody tr td:last-child').allTextContents()).map(value=>Number(value.replaceAll(',','')));
+    check(JSON.stringify(hourlyCounts) === JSON.stringify(manifest.dataset.distribution.holdout.hours), 'hour-chart-data-does-not-match-source');
     await page.waitForSelector('.comparison-row.proposal', {timeout: 30_000});
     await visible(page.getByRole('heading', exact('Same fleet. Different positions.')), 'coverage-chart-missing');
     await noHorizontalOverflow(page);
@@ -375,7 +379,7 @@ try {
 } catch (error) {
   // Error messages from browser libraries can quote rendered provider-derived values.
   // Emit the bounded step and our own symbolic assertion only, never DOM/payload dumps.
-  const symbolic = error instanceof Error && /^[a-z][a-z-]+$/.test(error.message) ? error.message : 'browser-action-or-timeout';
+  const symbolic = error instanceof Error && /^[a-z][a-z0-9-]+$/.test(error.message) ? error.message : 'browser-action-or-timeout';
   console.error(`FAIL ${step}: ${symbolic}`);
   process.exitCode = 1;
 } finally {
