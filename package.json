@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build --workspace @standby/console && node scripts/build-api.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json && npm run typecheck --workspace @standby/console",
-    "test": "tsx --test packages/domain/test/*.test.ts services/api/test/*.test.ts apps/console/src/lib/capacityReplay.test.ts apps/console/src/lib/capacity.test.ts apps/console/src/lib/auth.test.ts apps/console/src/lib/scope.test.ts",
+    "test": "tsx --test packages/domain/test/*.test.ts services/api/test/*.test.ts apps/console/src/lib/capacityReplay.test.ts apps/console/src/lib/capacity.test.ts apps/console/src/lib/auth.test.ts apps/console/src/lib/scope.test.ts apps/console/src/lib/capacityUnitPhase.test.ts",
     "check:secrets": "python scripts/check-secrets.py"
   },
   "dependencies": {
