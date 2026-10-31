@@ -1,5 +1,12 @@
 # History
 
+## 2026-10-31T17:13:26.577083+00:00 - Codex - owner approved exact pitch plan; scene production prepared
+
+Owner explicitly approved the revised Concept A exact165s/nine-shot English plan including S7what-if/fallback. Archived the approved original planning bytes and sealed approval hashes in media/standby-pitch-v2/research/owner-plan-approval.json. Step2 production brief uses existing10_assets.md to honor the no-new-Markdown rule; timeline/narration preserve all253approved words. Four deterministic scenes and LIVE/count overlays are complete with source-only checks; actual hosted rendering is next. No capture, paid voice or public publication occurred.
+
+[PRIMARY] Copied skill scripts ran --help first. check_timing.py --narration narration.json --timeline timeline.json reports9FIT(estimate); no measured audio timing exists. package_project.py sealed scene-only r1ZIP173777bytes SHA256d436069c8543d6a7cd9cf9681fb956fd9f21d9630cec4f116c971deba0e2fef9; no voice/capture/credentials. New generic hosted pipeline consumes an exact own-repository draft asset outside the checkout. Independent review fixed blocking download timeout and strict diagnostic classification; .runtime/pitch-strict-controls.json proves the actual completed28-problem refusal and rejects missingfont/lostnarration/traceback alternatives. Syntax/diff checks passed. Live GET/capacity remains200 with approved index SHAa65500b1. Root retains pipeline ownership; scene workers release their file claims. Next owner gate remains concrete specific takes after scene review.
+
+
 ## 2026-10-31T15:57:43.684533+00:00 - Codex - rebuilt pitch Step1 around deployed mixed-fleet/towing proof
 
 Owner said continue after the livepreview handoff. Root preserved the human keyboard/role/native-popup/incomplete-axe items as PENDING and rebuilt the reviewable video plan rather than inferring unseen text approval. Existing planning/generator were archived in integration .runtime/pitch-plan-before-capacity.zip SHA256284ed2168dad918a9ed9b7f841b2b045ceee621ff01bad39e6855f6fea25e80b. Current media/standby-pitch-v2 plan-data.json drives the existing build_plan.py/30_final_plan.md, concepts, current asset inventory and static review HTML. No new Markdown file or Step2 production asset was added.

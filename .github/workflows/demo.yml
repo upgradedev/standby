@@ -2,6 +2,12 @@ name: Standby demo production
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Legacy demo or sealed pitch scene review without app/voice access
+        required: false
+        default: legacy
+        type: choice
+        options: [legacy, pitch-scenes]
       url:
         description: Verified public AWS application
         required: true
@@ -12,7 +18,18 @@ on:
         type: string
       voice_sha256:
         description: SHA256 of the bounded original narration ZIP
-        required: true
+        required: false
+        default: ''
+        type: string
+      project_asset_id:
+        description: Own-repository draft asset ID for sealed scene-only workspace
+        required: false
+        default: ''
+        type: string
+      project_sha256:
+        description: Exact SHA256 of sealed scene-only project ZIP
+        required: false
+        default: ''
         type: string
       reuse_run_id:
         description: Optional previous demo run whose captured beats should be reused
@@ -28,11 +45,40 @@ permissions:
   contents: read
   actions: read
 jobs:
+  request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate mode and its bounded input contract
+        env:
+          MODE: ${{ inputs.mode || 'legacy' }}
+          URL: ${{ inputs.url }}
+          RELEASE: ${{ inputs.release }}
+          VOICE_SHA256: ${{ inputs.voice_sha256 }}
+          PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
+          PROJECT_SHA256: ${{ inputs.project_sha256 }}
+        run: |
+          python - <<'PY'
+          import os,re
+          mode=os.environ['MODE']
+          assert mode in ['legacy','pitch-scenes'], 'Unknown mode must fail closed'
+          assert os.environ['URL'].rstrip('/')=='https://d34x1513u5u1qs.cloudfront.net'
+          assert re.fullmatch('[a-f0-9]{40}',os.environ['RELEASE'])
+          if mode=='legacy':
+              assert re.fullmatch('[a-f0-9]{64}',os.environ['VOICE_SHA256'])
+          else:
+              assert re.fullmatch('[1-9][0-9]{0,19}',os.environ['PROJECT_ASSET_ID'])
+              assert re.fullmatch('[a-f0-9]{64}',os.environ['PROJECT_SHA256'])
+          print('Validated mode-specific request; no app or voice call.')
+          PY
   record:
+    needs: request
+    if: ${{ inputs.mode == '' || inputs.mode == 'legacy' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -103,3 +149,43 @@ jobs:
             .runtime/demo/captions.srt
             .runtime/demo/verification.json
             .runtime/demo/project.json
+  pitch_scenes:
+    needs: request
+    if: ${{ inputs.mode == 'pitch-scenes' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned media dependencies in hosted CI only
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Download only the sealed scene project from this repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
+          PROJECT_SHA256: ${{ inputs.project_sha256 }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          python tools/pitch/download-project.py --help
+          python tools/pitch/download-project.py --asset-id "$PROJECT_ASSET_ID" --sha256 "$PROJECT_SHA256" --release "$RELEASE" --out "$RUNNER_TEMP/standby-pitch"
+      - name: Review deterministic scenes without app, voice or external browser requests
+        env:
+          PLAYWRIGHT_MODULE: ${{ github.workspace }}/node_modules/playwright
+        run: |
+          node tools/pitch/scene-review.mjs --help
+          node tools/pitch/scene-review.mjs --project "$RUNNER_TEMP/standby-pitch"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: standby-pitch-scene-review
+          retention-days: 21
+          path: ${{ runner.temp }}/standby-pitch/out/scene-review/
