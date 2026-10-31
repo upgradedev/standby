@@ -328,3 +328,17 @@ Owner explicitly approved the final UI and chose units/towing first; copilot is 
 Owner Step6 decisions on these open release items remain pending. Public frontend assets/edge route are not deployed; no video/Builder publication is authorized by the UI approval.
 
 Step6 preview proposal is prepared as a read-only plan in integration `.runtime/frontend-preview-922d8f3/plan.json`:22web files byte-identical to approved1e5efce, exact prior index/function backups and current target/config ETags. Proposed rollout scope is web assets plus only /capacity viewer rewrite, with rollback; backend/config/Lambdas/IAM/Cognito and publication stay outside it. Source922 CI failed, so apply is prohibited until rebound to a fully green exact source and refreshed guards. Owner Step6 decision is still required to make a temporary browser preview available for the human release checks; no preview deployment occurred.
+
+Step6 correction note: clean-run QA found a real top-edge clipped unit-home label. The2346306 fix changes only its pixel label box, retaining exact geographic points, camera/padding and IA. Fresh corrected images and a fully green exact-source run must accompany the revised preview proposal; the922d8f3 plan is obsolete for apply. Existing design approval remains recorded, with the corrected map included in the next owner release-item review.
+
+Actual endpoint inventory (API prefix `/api/v1`):
+
+| Surface | Real read/write paths | Scope |
+| --- | --- | --- |
+| Bootstrap/readiness | `GET /config.json`; `GET /api/v1/health` in QA; `GET /api/v1/public/manifest` and `/zones` | Actual source/config; readiness has HTTP/status/release checks |
+| Coverage | `POST /api/v1/public/evaluations` | Stateless hypothetical placement over the prepared directional Car snapshot |
+| Capacity lab | `POST /api/v1/public/capacity-evaluations` | Actual bounded simulation; arrivals/types/service/roster are explicit assumptions, not operational incidents |
+| Membership/plans | `GET /api/v1/workspaces`; GET/POST `/api/v1/workspaces/:w/plans`; GET `/:plan`; POST `/:plan/evaluate` and `/:plan/review` | Existing protected placement-plan workflow, not live dispatch or saved Capacity runs |
+| Workspace settings | GET/PATCH `/api/v1/workspaces/:w/settings` | Admin/CAS write with same-scope server refetch confirmation; historical actual-role proof remains source2bbe2d5 |
+
+No `data/demo-data.ts` or `DEMO_MODE` runtime exists in this Route A console (`rg` on apps/console/src). There is no demo fallback to switch off; simulation inputs remain permanently labeled assumptions.

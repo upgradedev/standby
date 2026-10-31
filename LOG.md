@@ -1,5 +1,13 @@
 # History
 
+## 2026-10-31 — Codex — fix actual home-label clipping and await React drawer teardown
+
+[PRIMARY] Clean-run towing QA at9f15f33 / https://github.com/upgradedev/standby/actions/runs/41191666673 failed unit-home-label-clipped before reaching repeated closes; matrix86/fullanonymous/71tests passed. Its actual image shows the label cut at the top while the exact site dot remains in-frame. The required console_qa aggregator correctly failed; local exact-shell controls independently confirmed1positive and15negative dependency pairs. Receipts remain intact.
+
+Integrated worker73e8aa7 as2346306: zero-size geographic anchor stays at site.position; only the actual visible child label is placed above/below/clamped8px inside the frame with control avoidance. Camera/coordinates/fit padding are unchanged. Event/observer/rAF cleanup was independently reviewed. Strict UI lint29files0findings and diff/syntax checks passed locally; real viewport/pixel/axe CI must still pass.
+
+Repeated-close observer now also checks React committed selectedId=null via its unselected title and absent detail card before the next replay scrub. Native close and URL changes alone need not prove that render; this source-supported race remains a hypothesis until runtime. Same25s/native-hidden/URL/map/axe/API limits are retained. Updated Step6 endpoint inventory/assumption scope. The old922read-only plan cannot apply after this web-bundle change; prepare a new green candidate and corrected capture for the owner Step6 decision. No cloud write, video, publication or AI runtime.
+
 ## 2026-10-31 — Codex — isolate sole towing QA case; prepare read-only preview plan
 
 [PRIMARY]922d8f3 run https://github.com/upgradedev/standby/actions/runs/41190918484 passed71tests/build/matrix86/fullanonymous; towing failed close-hidden after unloading. Failure receipt/images retained. Isolated the same sole towing case on a fresh hosted runner while existing console_qa becomes an always-running fail-closed aggregator requiring both route/anonymous and towing jobs to succeed. No retry, duplicate evaluation, threshold/time-limit change or app modification. Resource/GPU pressure remains an unproven hypothesis; isolated runtime must still pass.

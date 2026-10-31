@@ -46,6 +46,7 @@ async function openJob(page,id){
 async function closeJob(page,drawer){
   check(new URL(page.url()).searchParams.has('jobSelected'),'close-control-has-no-selection');
   check(await page.locator('dialog.capacity-job-drawer[open]').count()===1,'close-control-is-not-open');
+  check(await page.locator('dialog.capacity-job-drawer').getByTestId('capacity-unit-status').count()===1,'close-control-has-no-detail');
   // Arm the history observer before Escape; URL teardown and native closure are
   // separate requirements. Preserve both checks and their original 25s bounds.
   step='close-url';await Promise.all([
@@ -54,7 +55,11 @@ async function closeJob(page,drawer){
   ]);
   step='close-hidden';await page.waitForFunction(()=>{
     const dialog=document.querySelector('dialog.capacity-job-drawer');
-    return !!dialog&&!dialog.open&&dialog.getClientRects().length===0;
+    // Native Escape and History can settle before React's selectedId=null
+    // render. The next scrub must use the committed, unselected view params.
+    return !!dialog&&!dialog.open&&dialog.getClientRects().length===0
+      && dialog.querySelector('.modal-heading h2')?.textContent?.trim()==='Modeled job'
+      && !dialog.querySelector('[data-testid="capacity-unit-status"]');
   },undefined,{polling:100,timeout:25_000});
   check(!await drawer.isVisible(),'closed-drawer-remains-visible');
 }
@@ -175,7 +180,9 @@ try{
       selectedInUrl:new URL(location.href).searchParams.has('jobSelected'),
       nativeDrawer:(()=>{const element=document.querySelector('dialog.capacity-job-drawer');return element?{
         open:element.open,rectangles:element.getClientRects().length,display:getComputedStyle(element).display,
-        visibility:getComputedStyle(element).visibility}:null;})(),
+        visibility:getComputedStyle(element).visibility,
+        reactSelectionCleared:element.querySelector('.modal-heading h2')?.textContent?.trim()==='Modeled job',
+        detailCards:element.querySelectorAll('[data-testid="capacity-unit-status"]').length}:null;})(),
       phase:document.querySelector('[data-testid="capacity-unit-phase"]')?.getAttribute('data-phase')??null,
       payload:document.querySelector('[data-testid="capacity-unit-payload"]')?.getAttribute('data-payload')??null,
       openDialog:!!document.querySelector('dialog[open]')})).catch(()=>null);
