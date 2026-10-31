@@ -5,10 +5,12 @@
  */
 import { chromium } from 'playwright';
 import {assertRenderedMap} from '../../tools/demo/map-render-proof.mjs';
+import {prepareCandidateUI} from './static-overlay.mjs';
 
 const base = process.env.STANDBY_LIVE_URL?.replace(/\/$/, '');
 if (!base || new URL(base).protocol !== 'https:') throw new Error('STANDBY_LIVE_URL must be an HTTPS deployment.');
 const expectedRelease = process.env.STANDBY_EXPECTED_RELEASE;
+const candidateSource = process.env.STANDBY_UI_SOURCE ?? process.env.GITHUB_SHA;
 let step = 'browser-launch';
 const check = (condition, code) => { if (!condition) throw new Error(code); };
 const exact = (name) => ({ name, exact: true });
@@ -130,10 +132,12 @@ async function waitEvaluation(page, action, expectedInput) {
 }
 
 try {
+  const installUI = await prepareCandidateUI(base);
   for (const viewport of [{name: 'desktop', width: 1440}, {name: 'tablet', width: 768}, {name: 'mobile', width: 375}]) {
     step = `${viewport.name}:http-and-provenance`;
     const context = await browser.newContext({viewport: {width: viewport.width, height: 950}, reducedMotion: 'reduce', serviceWorkers: 'block'});
     const page = await context.newPage();
+    const overlay = await installUI(context, page);
     page.setDefaultTimeout(15_000);
     const pageErrors = [];
     let capacityRequests = 0;
@@ -145,7 +149,9 @@ try {
       if (route && received.status() >= 400) console.log(`HTTP browser-api ${route}=${received.status()}`);
     });
     const response = await page.goto(`${base}/overview`, {waitUntil: 'domcontentloaded', timeout: 45_000});
+    overlay.assertHealthy();
     check(response?.status() === 200, 'live-document-not-200');
+    if (process.env.STANDBY_UI_DIST) check(response.headers()['x-standby-qa-source'] === candidateSource, 'candidate-document-not-delivered');
     const configResponse = await context.request.get(`${base}/config.json`);
     check(configResponse.status() === 200, 'config-not-200');
     const config = await configResponse.json();
@@ -360,6 +366,7 @@ try {
     await page.locator('.api-banner').getByRole('button', exact('Retry')).click();
     await visible(page.getByRole('heading', exact('Settings')), 'outage-retry-did-not-recover');
     check(await page.locator('.api-banner').count() === 0, 'outage-banner-remains-after-recovery');
+    overlay.assertHealthy();
     check(pageErrors.length === 0, 'uncaught-browser-runtime-error');
     await context.close();
     console.log(`PASS anonymous core journey: ${viewport.name}`);

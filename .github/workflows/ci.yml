@@ -108,6 +108,15 @@ jobs:
           node tools/console-preview/release.mjs --help
           node --check tools/console-preview/release.mjs
           node tools/console-preview/release.mjs --source "$(git rev-parse HEAD)"
+      - name: Full anonymous acceptance with candidate UI and live public backend
+        env:
+          STANDBY_LIVE_URL: https://d34x1513u5u1qs.cloudfront.net
+          STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
+          STANDBY_UI_DIST: apps/console/dist
+        run: |
+          node --check tests/browser/static-overlay.mjs
+          node --check tests/browser/live.mjs
+          STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tests/browser/live.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
