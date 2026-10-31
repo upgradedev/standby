@@ -1,0 +1,236 @@
+"""Materialize the reviewed public-source notes; no crawling or full-text mirroring."""
+from pathlib import Path
+import json
+from retrieve import digest
+
+ROOT=Path(__file__).resolve().parent
+rows=[]
+def add(id,title,url,publisher,date,kind,access,geo,locator,evidence,limitations,application,tags,transfer='direct',doi=None):
+    r=dict(id=id,title=title,url=url,publisher=publisher,publishedOn=date,kind=kind,
+           accessLevel=access,geography=geo,locator=locator,evidence=evidence,
+           limitations=limitations,application=application,tags=tags.split('|'),
+           transfer=transfer,doi=doi,accessedOn='2026-10-30',visibility='PUBLIC',
+           featureStatus='RESEARCH_ONLY',evidenceLevel='PRIMARY_DOCUMENT',
+           noteFormat='Original compact paraphrase; no full-text copy',
+           hashScope='This curated metadata/paraphrase record, not the remote document')
+    r['recordSha256']=digest(r)
+    rows.append(r)
+
+add('M01','Finding the Right Truck: Swoop Intelligent Dispatch',
+ 'https://blog.agero.com/who-services-matters-optimizing-dispatch-through-intelligent-truck-location-and-job-availability',
+ 'Agero, Sarah Magluyan','2026-05-18','market','Full public product article','US',
+ 'Beyond Proximity; truck-level visibility; Predictive ETA',
+ 'Swoop documents equipment-aware selection, truck availability and job queues. Arrival prediction combines location, job status and traffic with cost/quality objectives.',
+ 'First-party capability description, not an independent benchmark. Predictive arrival is distinct from forecasting future job demand.',
+ 'Proposed: treat capability, fresh location and current occupation as eligibility inputs before scoring proximity.',
+ 'market|dispatch|fleet|capability|heterogeneous|queue|eta|freshness|Swoop|Agero')
+add('M02','Insights Dashboard Info Hub','https://info.agero.com/insights-dashboard-hub',
+ 'Agero',None,'market','Full public help page','US','Dashboard basics; Volume Simulator; Territory Map',
+ 'Territory maps show historical opportunities. The volume simulator changes completion/NPS/cost to estimate past job offers. The freshness FAQ specifies daily updates.',
+ 'This is not documented fleet-capacity simulation or pre-shift unit staging. Historical offer estimates do not guarantee future demand.',
+ 'Proposed: label view purpose, data-as-of and denominator; differentiate our capacity experiment precisely.',
+ 'market|territory|historical|simulator|volume|freshness|Swoop|Agero')
+add('M03','Allianz Partners India Announces Partnership with CI Metrics to Enhance Predictive Weather-Based Automotive Assistance Solutions',
+ 'https://www.allianz-partners.com/en_IN/in-the-news/press-releases/Allianz-Partners-India-Announces-Partnership-with-CI-Metrics-to-Enhance-Predictive-Weather-Based-Automotive-Assistance-Solutions.html',
+ 'Allianz Partners India','2024-10-21','market','Full press release','India','Announcement and intended benefits',
+ 'The announced partnership aims to use weather predictions to anticipate roadside demand and plan resources.',
+ 'Forward-looking company announcement; no inspected realized accuracy or wait reduction. Geographic scope is India.',
+ 'Proposed: evaluate weather covariates against a local seasonal baseline and show uncertainty.',
+ 'market|weather|forecast|demand|resource|Allianz')
+add('M04','Πρόγραμμα Οδικής Βοήθειας','https://www.interamerican.gr/idiotes/proionta-ypiresies/oxhmata/asfaleia-odikhs-bohtheias/',
+ 'Interamerican',None,'market','Full public product page','Greece','Fleet renewal; electric mobility; automatic assignment',
+ 'The operator describes motorcycles, recovery vehicles/platforms and specialized assistance, plus automatic assignment of an appropriate service vehicle.',
+ 'Public company description supplies neither allocation algorithm nor observed service-time distributions or verified improvement.',
+ 'Proposed: model vehicle capability and job requirements explicitly; a motorcycle is not interchangeable with a flatbed.',
+ 'market|Greece|motorcycle|flatbed|towing|fleet|heterogeneous|capability')
+add('M05','Our Patrols','https://www.rac.co.uk/business/breakdown/our-patrols',
+ 'RAC',None,'market','Full public product page','UK','Tyre and Fuel Patrols',
+ 'RAC describes specialist tyre patrols positioned in high-breakdown-volume areas and a separate fuel-patrol service.',
+ 'Describes operating practice, not an inspected optimization model, positioning benchmark or transferable fleet-size rule.',
+ 'Proposed: plan demand and available capacity by service capability, not only total units.',
+ 'market|tyre|fuel|capability|fleet|heterogeneous|placement|demand')
+add('M06','Towbook Element: Driver Activity Report','https://towbook.ghost.io/towbook-element-driver-activity-report/',
+ 'Towbook, Anthony Garand','2023-10-27','market','Full feature guide','US','Job-status timestamps; missed updates; Excel export',
+ 'The driver activity report exposes status timestamps and time spent on calls, flags missing updates and supports spreadsheet summaries.',
+ 'A report feature does not guarantee a particular operator has complete, accurate records or an accessible API.',
+ 'Proposed: obtain authorized pseudonymous event exports and inspect missingness before estimating busy-time distributions.',
+ 'market|duration|service|timestamps|export|quality|busy|Towbook')
+add('M07','Dispatch Dashboard','https://omadimobilemanagement.zohodesk.com/portal/en/kb/articles/dispatch-das',
+ 'Omadi Mobile Management',None,'market','Full public knowledge-base page','US','Unassigned, Primary and Map columns',
+ 'The console combines unassigned jobs, drivers/trucks and assigned work with a map. Location freshness depends on device or integrated truck GPS updates.',
+ 'This documents dispatch UI, not demand forecasting or a validated standby-position optimizer.',
+ 'Proposed: link queues, units, detail and map; show stale-location states beside planning inputs.',
+ 'market|console|queue|map|driver|truck|freshness|dispatch|Omadi')
+add('M08','A New Era for Roadside: Why Agero and Urgently are Better Together',
+ 'https://blog.agero.com/why-agero-and-urgently-are-better-together',
+ 'Agero, Dave Ferrick and Matt Booth','2026-04-28','market','Full acquisition announcement','US','Completed acquisition and platform continuity',
+ 'Agero announced completed acquisition of Urgently, with existing platforms continuing unchanged at announcement.',
+ 'Does not establish subsequent integration completeness or that all product modules are the same.',
+ 'Market analysis: do not count these as independent corporate competitors.',
+ 'market|ownership|Agero|Urgently|acquisition')
+add('M09','Products: Exceptional Service Through Automation','https://www.geturgently.com/products',
+ 'Urgently',None,'market','Full public product page','US','Provider ranking; dispatch analysis; case view',
+ 'The vendor describes provider ranking, weather-related escalation, provider-density analysis and mapped case timelines.',
+ 'Marketing capability descriptions are not independently measured prediction/optimization performance. Related to Agero after its acquisition.',
+ 'Proposed: keep predicted arrival, demand prediction, case risk and unit suitability separate.',
+ 'market|dispatch|weather|eta|case|timeline|Urgently|Agero')
+
+add('L01','Improving Safety Service Patrol Performance',
+ 'https://rosap.ntl.bts.gov/view/dot/68898/dot_68898_DS1.pdf',
+ 'Virginia Transportation Research Council; Cetin et al.','2023-08','study',
+ 'Full report available; relevant methods/validation sections inspected','Virginia, US',
+ 'VTRC24-R5, printed pp3-8,23-35: SSP-OPT, timestamps, duration models and validation',
+ 'SSP-OPT combines incident-frequency and service-duration models with discrete-event simulation to compare patrol configurations. Durations depend on incident type, period and season.',
+ 'Corridor-specific calibration. Incident-level first-arrival/last-departure durations are not automatically per-unit busy intervals. Coefficients cannot be imported as Austin repair times.',
+ 'Proposed: seedable event simulation and separate duration profiles; validate traces and compare configurations against observations.',
+ 'study|roadside|patrol|simulation|discrete event|duration|service|night|shifts|season|validation|queue')
+add('L02','HYBRID PATROL–STAGING OPTIMIZATION FOR FREEWAY SERVICE PATROLS UNDER COST CONTROL: A DETERMINISTIC MILP WITH DYNAMIC SEGMENT ADJUSTMENT & ENVIRONMENTAL CO-BENEFIT',
+ 'https://digitalcommons.fau.edu/etd_general/416/',
+ 'Mauricio Micolta, Florida Atlantic University','2026','study',
+ 'Repository metadata and full abstract only; PDF access403','Florida, US','Repository abstract, model scope',
+ 'The dissertation proposes joint patrol/staging allocation across corridor segments, time and direction under cost and response constraints.',
+ 'Abstract-only review of a deterministic corridor study. Published case outcomes are not Standby results or proof of general staffing adequacy.',
+ 'Proposed later experiment: compare staged, patrol and hybrid policies with direction/turnaround constraints.',
+ 'study|roadside|patrol|staging|hybrid|cost|direction|shifts|relocation')
+add('L03','Road Rescue Demand Prediction for the Improvement of Traffic System Resilience',
+ 'https://onlinelibrary.wiley.com/doi/10.1155/2023/6648740',
+ 'Zhenzhen Yang','2023-05-05','study','Full public article inspected','Beijing, China',
+ 'Sections3,4.2,5.1: weather/calendar factors, grouped regression and split',
+ 'A roadside-demand case study examines calendar and weather covariates, including lagged precipitation. Local holiday patterns include demand reductions.',
+ 'Small strata and a test split partly interleaved with later training dates limit prospective inference. No universal Christmas uplift or transferable coefficient.',
+ 'Proposed: locally test holiday/weather features with past-only validation and pooled sparse buckets.',
+ 'study|roadside|weather|rainfall|temperature|holidays|calendar|forecast|demand|sparse|validation',
+ doi='10.1155/2023/6648740')
+add('L04','Freeway service patrol deployment planning for incident management and congestion mitigation',
+ 'https://www.sciencedirect.com/science/article/pii/S0968090X10000987',
+ 'Yingyan Lou, Yafeng Yin, Siriphong Lawphongpanich','2011-04','study',
+ 'Publisher abstract and article preview','Freeway network case study','Abstract; deterministic and stochastic formulations',
+ 'Models integrate patrol-beat design and fleet allocation, with deterministic and scenario-based stochastic incident settings.',
+ 'Preview-level review; patrol detection/clearance differs from stationary urban roadside dispatch. No performance figure transfers to Standby.',
+ 'Proposed: expose separate operating policies and stress scenarios instead of optimizing only spatial coverage.',
+ 'study|roadside|patrol|stochastic|fleet|placement|scenario|concurrency',doi='10.1016/j.trc.2010.05.014')
+add('L05','Analysis of freeway service patrol with discrete event-based simulation',
+ 'https://www.sciencedirect.com/science/article/abs/pii/S1569190X14000501',
+ 'Wu, Shen, Ji and Jin','2014-09','study',
+ 'Publisher abstract only','I-95, South Florida, US','Abstract: patrol process and application',
+ 'The simulation covers districting, incident generation, vehicle dispatch/routing and incident clearance when comparing patrol alternatives.',
+ 'Abstract-level review; highway patrol is not an insured roadside fleet. Model calibration and benefit estimates require full operational evidence.',
+ 'Proposed: represent job arrival, assignment, travel, service and release as explicit events.',
+ 'study|roadside|simulation|discrete event|queue|dispatch|routing|clearance',doi='10.1016/j.simpat.2014.03.012')
+add('L06','The Maximal Expected Covering Location Problem: Revisited',
+ 'https://pubsonline.informs.org/doi/abs/10.1287/trsc.23.4.277?journalCode=trsc',
+ 'Rajan Batta, June M. Dolan, Nirup N. Krishnamurthy','1989-11-01','study',
+ 'Publisher abstract only','General emergency-service model','Abstract: MEXCLP assumptions and hypercube relaxation',
+ 'MEXCLP busy-availability modelling assumes independent servers, equal busy probabilities and location-invariant busy probabilities; the paper relaxes these with a queueing approximation.',
+ 'The relaxation still has Poisson-arrival/exponential-service assumptions. An expected-coverage score is not a staffing guarantee for heterogeneous concurrent jobs.',
+ 'Proposed: retain expected coverage as a bounded analytical comparison and evaluate capacity separately with simulation.',
+ 'study|MEXCLP|hypercube|busy|capacity|staffing|queue|independence|assumptions',
+ transfer='analogue',doi='10.1287/trsc.23.4.277')
+add('L07','Coverage versus response time objectives in ambulance location',
+ 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8254255/',
+ 'Ľudmila Jánošíková, Peter Jankovič, Marek Kvet, Frederika Zajacová','2021-07-02','study',
+ 'Full primary article; method/simulation/validation inspected','Slovakia, EMS',
+ 'Computer simulation model; Results; Conclusions',
+ 'Compares location objectives using detailed simulation with time-varying calls, crew-dependent service and complete trip phases; validates traces, specialist face validity and sensitivity.',
+ 'EMS analogue only. Medical thresholds, service distributions and reported improvements are not roadside facts. Coverage and average response can rank plans differently.',
+ 'Proposed: compare location policies using full-cycle simulation, tail response, workload and geographic gaps.',
+ 'study|simulation|validation|heterogeneous|duration|busy|concurrency|coverage|response|objective',
+ transfer='analogue',doi='10.1186/s12942-021-00285-x')
+add('L08','An optimization based approach for deployment of roadway incident response vehicles with reliability constraints',
+ 'https://hub.hku.hk/handle/10722/86057',
+ 'Raktim Pal and Indranil Bose','2009','study','Author institution metadata and abstract only','Roadway response network',
+ 'HKU abstract: depot/vehicle allocation, costs and major/minor incidents',
+ 'A reliability-based mixed-integer model jointly considers response-depot locations, vehicle allocations and operating/fixed costs under major/minor incident scenarios.',
+ 'No full text in the repository. Numerical example/sensitivity, not proof of operational performance or measured Austin reliability.',
+ 'Proposed: compare staged depot policies and fleet/cost constraints while leaving unsupported parameters as assumptions.',
+ 'study|roadside|staging|depots|placement|reliability|cost|fleet',doi='10.1016/j.ejor.2008.09.010')
+add('L09','The maximal covering location problem',
+ 'https://people.geog.ucsb.edu/~forest/G294download/MAX_COVER_RLC_CSR.pdf',
+ 'Richard Church and Charles ReVelle','1974','study','Full original paper; formulation and heuristics inspected','General facility-location model',
+ 'Printed pp102-106: fixed-facility coverage, mandatory closeness, greedy/substitution',
+ 'MCLP maximizes demand reached within a threshold for a fixed facility count. Extensions constrain the most distant demand; greedy/substitution heuristics need not be globally optimal.',
+ 'Deterministic spatial proximity excludes occupied units, queues, service durations and staffing adequacy. A finite-site solution is not a universal operational optimum.',
+ 'Proposed: preserve an interpretable coverage baseline and show fleet/threshold/equity tradeoffs.',
+ 'study|MCLP|location|coverage|threshold|fleet|equity|baseline|placement',transfer='analogue',doi='10.1111/j.1435-5597.1974.tb00902.x')
+add('L10','Ambulance location and relocation problems with time-dependent travel times',
+ 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2982752/',
+ 'Verena Schmid and Karl F Doerner','2010','study','Full primary article reviewed by methods researcher','Vienna, Austria, EMS',
+ 'Time-dependent location/relocation model and case description',
+ 'A multi-period location model represents time-varying travel/coverage and includes relocation penalties when comparing deployment plans.',
+ 'EMS coverage analogue, not a breakdown queue model. Ambulance access/speed, census proxies and service standards do not transfer; no figures/code reused.',
+ 'Proposed: use coarse shift periods and actual relocation time/cost, with movement limits to avoid unstable back-and-forth plans.',
+ 'study|relocation|placement|time|shifts|travel|penalty|cost|patrol',transfer='analogue',doi='10.1016/j.ejor.2010.06.033')
+
+add('D01','Real-Time Traffic Incident Reports: metadata',
+ 'https://data.austintexas.gov/api/views/dx9v-zd7x.json',
+ 'City of Austin Transportation and Public Works',None,'data',
+ 'Official schema/metadata only; zero traffic rows fetched','Austin, Texas, US',
+ 'Columns published_date, traffic_report_status_date_time, issue_reported, address and agency',
+ 'The schema contains report publication/update times, reported issue and location/address. It lacks insured/driver, postcode, dispatch, arrival, service and available-again events.',
+ 'Archived minus publication is not repair time. Report counts are not a complete operator-call feed. Dataset licenseId is null; preserve existing City terms/attribution.',
+ 'Proposed: acquire authorized operational event logs or show explicit simulated assumptions for capacity and type-specific durations.',
+ 'data|Austin|schema|duration|service|timestamps|missing|insured|driver|postcode|publication|ground truth')
+add('D02','Performance Measures to Improve TIM',
+ 'https://ops.fhwa.dot.gov/tim/preparedness/tim/performance_measures.htm',
+ 'Federal Highway Administration',None,'data','Full official guidance','US',
+ 'Roadway clearance, incident clearance and eight incident timeline events',
+ 'TIM distinguishes awareness, response arrival, lanes-open and last-responder departure. Roadway clearance and incident clearance are different intervals.',
+ 'Guidance defines measures; it does not provide insurance service-duration data or unit-specific available-again events.',
+ 'Proposed: split queue, approach, on-scene service, clearance, towing/drop-off and resource release.',
+ 'data|timestamps|duration|clearance|arrival|service|busy|definitions')
+add('D03','Global Historical Climatology Network hourly (GHCNh)',
+ 'https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly',
+ 'NOAA NCEI',None,'data','Official product and documentation','Global station observations',
+ 'Product; documentationv1.1.0 dated2026-03-10; metadataC01688',
+ 'GHCNh replaces legacy ISD and provides hourly station weather with source/quality flags, including wind, temperature, precipitation and visibility. Observation times are UTC.',
+ 'Station coverage varies. Station weather is a spatial proxy; historical observations are not forecasts available before a shift. Recheck chosen subset terms at import.',
+ 'Proposed: bounded Austin weather join with quality, station-distance and decision-time provenance.',
+ 'data|weather|wind|rainfall|temperature|visibility|UTC|quality|NOAA|GHCNh')
+add('D04','Federal Holidays','https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/',
+ 'U.S. Office of Personnel Management',None,'data','Official annual calendar tables','US federal employee jurisdiction',
+ 'Annual tables and observed/in-lieu jurisdiction notes',
+ 'Provides civil holiday dates and observance rules. Federal calendars have jurisdiction-specific exceptions.',
+ 'Not a complete Texas/business/event calendar. A holiday date supplies no demand multiplier; DC-area inauguration observance does not apply generically to Austin.',
+ 'Proposed: version actual/observed civil dates by jurisdiction, joining to America/Chicago dates.',
+ 'data|holidays|calendar|Christmas|dates|jurisdiction|Austin')
+add('D05','Forecasting: Principles and Practice, third edition, section5.10',
+ 'https://otexts.com/fpp3/toolbox.html#time-series-cross-validation',
+ 'Rob J Hyndman and George Athanasopoulos, OTexts','2021','method',
+ 'Full author/publisher textbook section','General forecasting methodology','Time series cross-validation',
+ 'Rolling-origin evaluation fits only preceding observations and evaluates subsequent outcomes at the intended forecast horizon.',
+ 'Methodological guidance supplies no forecast accuracy for Austin. Previously inspected holdout data are not a fresh untouched test for retuned models.',
+ 'Proposed: seasonal-naive baseline, training-only feature fitting and prospective/rolling evaluation.',
+ 'method|forecast|validation|rolling origin|leakage|holdout|baseline|uncertainty')
+add('D06','Query a knowledge base and generate responses based off the retrieved data',
+ 'https://docs.aws.amazon.com/bedrock/latest/userguide/kb-test-retrieve-generate.html',
+ 'AWS',None,'platform','Full official API/user documentation','AWS service documentation',
+ 'RetrieveAndGenerate; source references; runtime guardrail caveat',
+ 'Bedrock Knowledge Bases can return generated answers with retrieved source references and metadata. Retrieved reference content itself is outside the described guardrail protection.',
+ 'A citation or relevance score is not proof of truth. No managed knowledge base or LLM integration was deployed by this research.',
+ 'Proposed: keep public evidence retrieval/explanation separate from deterministic numeric results and authenticated operational writes.',
+ 'platform|RAG|retrieval|citations|evidence|metadata|Bedrock|LLM|guardrails')
+add('D07','Detection of Outliers','https://itl.nist.gov/div898/handbook/eda/section3/eda35h.htm',
+ 'NIST/SEMATECH e-Handbook',None,'method','Full official statistical reference','General statistics',
+ 'Outlier labeling, robust summaries and masking',
+ 'Robust median/MAD methods can help flag unusual observations; an unusual value is not automatically a recording error.',
+ 'A general heuristic is not a calibrated roadside count detector. Sparse buckets and zero MAD require explicit fallback and support checks.',
+ 'Proposed: separate potential demand anomalies from reporting outages and missing data; measure review burden before claiming detector accuracy.',
+ 'method|anomaly|outlier|median|MAD|baseline|sparse|quality|missing')
+
+(ROOT/'sources.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False)+'\n' for r in rows),encoding='utf-8')
+questions=[
+ 'Ποιες μελέτες βοηθούν με ταυτόχρονα incidents ουρές και επάρκεια units;',
+ 'Υπάρχουν πραγματικοί χρόνοι εξυπηρέτησης battery tyre στο Austin;',
+ 'Τη νύχτα και στις αργίες χρειάζονται λιγότερες μονάδες;',
+ 'Μηχανές και πλατφόρμες: πώς μοντελοποιούμε δυνατότητες στόλου;',
+ 'Καιρός βροχή άνεμος και ημερολόγιο: ποια δεδομένα και τι validation;',
+ 'Περιπολία ή αναμονή: ποιες προσεγγίσεις χωροθέτησης υπάρχουν;',
+ 'Τι προσφέρουν οι ανταγωνιστές Swoop Agero;',
+ 'Anomaly detection σε sparse δεδομένα και reporting gaps;',
+ 'Πού βοηθά το RAG retrieval με citations και πού το LLM;',
+ 'Roadside discrete event simulation service duration concurrent incidents',
+ 'Forecast rolling origin validation leakage seasonal baseline',
+ 'κβαντικη τηλεμεταφορα στον Αρη',
+]
+(ROOT/'questions.json').write_text(json.dumps(questions,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+print(json.dumps({'sources':len(rows),'date':'2026-10-30','mode':'public compact evidence notes'},ensure_ascii=False))

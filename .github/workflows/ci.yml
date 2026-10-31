@@ -4,10 +4,20 @@ on:
     branches-ignore: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      authenticated:
+        description: Exercise receipt-bound synthetic operator roles
+        type: boolean
+        default: false
+      service_release:
+        description: Exact live API release for the optional operator check
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
   validate:
+    if: github.event_name != 'workflow_dispatch' || !inputs.authenticated
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -24,6 +34,8 @@ jobs:
           npm run check:secrets
           npm run typecheck
           npm test
+          python docs/research/standby-evidence/retrieve.py --validate
+          python docs/research/standby-evidence/verify_retrieval.py
           python -m unittest discover -s tools/data -p 'test_*.py'
           python -m unittest discover -s tools -p 'test_build_matrix.py'
           python -m unittest discover -s tools/demo -p 'test_*.py'
@@ -31,6 +43,32 @@ jobs:
           node --test tests/browser/map-render-proof.test.mjs
       - name: Build application and isolated Lambda bundles
         run: npm run build
+      - name: Install preview browser in hosted CI only
+        run: npx playwright install --with-deps chromium
+      - name: Shell and overview owner-review preview
+        run: |
+          node tools/console-preview/shoot.mjs --help
+          node tools/console-preview/lint_ui.mjs --help
+          node tools/console-preview/preview.mjs --help
+          node tools/console-preview/preview.mjs --source "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-console-preview
+          path: .runtime/console-preview/
+          retention-days: 3
+      - name: Functional Capacity preview with actual live API and AWS map
+        run: |
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+          node tools/console-preview/capacity.mjs --help
+          node --check tools/console-preview/capacity.mjs
+          node tools/console-preview/capacity.mjs --source "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-capacity-preview
+          path: .runtime/capacity-preview/
+          retention-days: 3
       - name: Package original software only
         run: |
           mkdir release
@@ -42,3 +80,129 @@ jobs:
           name: standby-release
           path: release/
           retention-days: 3
+  console_routes_qa:
+    if: github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.authenticated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned QA dependencies in hosted CI only
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts axe-core@4.11.0
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Build and strict console source lint
+        id: console_build
+        run: |
+          npm run build
+          node tools/console-preview/lint_ui.mjs --help
+          node tools/console-preview/lint_ui.mjs --src apps/console/src --strict
+      - name: All-route release matrix with mandatory axe and live map proof
+        run: |
+          node tools/console-preview/shoot.mjs --help
+          node tools/console-preview/release.mjs --help
+          node --check tools/console-preview/release.mjs
+          node tools/console-preview/release.mjs --source "$(git rev-parse HEAD)"
+      - name: Full anonymous acceptance with candidate UI and live public backend
+        env:
+          STANDBY_LIVE_URL: https://d34x1513u5u1qs.cloudfront.net
+          STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
+          STANDBY_UI_DIST: apps/console/dist
+        run: |
+          node --check tests/browser/static-overlay.mjs
+          node --check tests/browser/live.mjs
+          STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tests/browser/live.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-console-release-qa-review
+          path: |
+            .runtime/console-release-qa/*.json
+            .runtime/console-release-qa/*.html
+            .runtime/console-release-qa/contact-sheet*.png
+            .runtime/console-release-qa/skill-overview/report.*
+            .runtime/console-release-qa/skill-overview/contact-sheet*.png
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-console-release-qa-shots
+          path: .runtime/console-release-qa/shots/
+          retention-days: 3
+  towing_qa:
+    if: github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.authenticated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned QA dependencies in hosted CI only
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts axe-core@4.11.0
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Build the exact candidate UI
+        run: npm run build
+      - name: One-car towing occupancy and unit-location UI with actual backend
+        env:
+          STANDBY_UI_DIST: apps/console/dist
+          STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
+        run: |
+          node tools/console-preview/towing.mjs --help
+          node --check tools/console-preview/towing.mjs
+          STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tools/console-preview/towing.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-towing-unit-review
+          path: .runtime/towing-preview/
+          retention-days: 3
+  console_qa:
+    needs: [console_routes_qa, towing_qa]
+    if: ${{ always() && github.event_name != 'push' && (github.event_name != 'workflow_dispatch' || !inputs.authenticated) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both independent console gates
+        env:
+          ROUTES_RESULT: ${{ needs.console_routes_qa.result }}
+          TOWING_RESULT: ${{ needs.towing_qa.result }}
+        run: |
+          test "$ROUTES_RESULT" = success
+          test "$TOWING_RESULT" = success
+  operator_qa:
+    if: github.event_name == 'workflow_dispatch' && inputs.authenticated
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the reviewed candidate UI in hosted CI
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Actual Cognito and workspace role acceptance with candidate UI
+        env:
+          STANDBY_LIVE_URL: https://d34x1513u5u1qs.cloudfront.net
+          STANDBY_EXPECTED_RELEASE: ${{ inputs.service_release }}
+          STANDBY_UI_DIST: apps/console/dist
+          STANDBY_UI_SOURCE: ${{ github.sha }}
+          STANDBY_TEST_IDENTITIES: ${{ secrets.STANDBY_TEST_IDENTITIES }}
+        run: |
+          node -e "if(!/^[a-f0-9]{40}$/.test(process.env.STANDBY_EXPECTED_RELEASE||''))throw new Error('Exact service release required')"
+          node --check tests/browser/static-overlay.mjs
+          node --check tests/browser/authenticated.mjs
+          node tests/browser/authenticated.mjs

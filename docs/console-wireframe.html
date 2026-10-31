@@ -1,0 +1,1925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console wireframe</title>
+<link rel="icon" href="data:,">
+<!--
+  Console wireframe (low fidelity)
+
+  Purpose: agree the information architecture with the user before any code.
+  It shows which areas exist, what each page holds, who sees what, and the
+  standard name of each part. It is not a visual design.
+
+  How to use: edit the JSON in the next script tag, save, and reload the file.
+  It needs no network and no build step. Open it straight from disk.
+
+  Config fields
+    appName          Name shown in the top bar.
+    statuses         The status lists, one per entity: { "<entity>": ["New", ...], ... }.
+                     A plain array is one list for every table. Tables, filters and
+                     badges read these lists; never show one entity's statuses on another.
+    roles[]          { id, label, permissions: ["area.read", "area.action", ...] }.
+                     "*" grants everything. Use .read for seeing an area, as the starter does.
+    nav[]            { id, label, icon, badge?, permission? }. id is also the key in pages,
+                     and later the URL path and the nav-<id> test id, so name it after
+                     the noun in the label ("orders", not "records").
+                     icon is an icon name (for example from lucide); the wireframe
+                     shows a placeholder box with the name as a tooltip.
+    pages.<navId>    { title, actions?: [action], sections: [section] }
+    section types
+      kpis           { items: [{ label, value, note, link?, filter? }] }
+                     link: nav id to drill into. filter: the filter it sets there, for
+                     example { "Status": "New" }; the label should equal that value.
+      chart          { title, bars }
+      filters        { fields: ["Search", "Status", ...] }
+      table          { title?, columns: [...], rows, drawer?: "<drawer id>",
+                       statuses?: "<entity>", paging?: "offset" or "cursor", total? }
+                     statuses: the list the Status column uses (default: the first).
+                     paging "cursor" shows "Page 1" and Next with no total, because a
+                     cursor-paged list cannot count; "offset" shows "1-10 of <total>".
+      queue          { tabs: [{ label, count }], itemLabel, items, actions: [action] }
+      form           { title, fields: [{ label, type, required?, hint?, options? }], submit: action }
+      note           { text }
+      Any section can carry "permission" to hide it from roles without it.
+    drawers.<id>     { title, tabs: [...], actions: [action] }
+    action           { label, permission?, confirm?: true or "question text", reason?: true, danger? }
+                     reason: the confirm dialog asks for a required reason.
+                     A role that sees the section but lacks the action's permission
+                     sees the action disabled, with the roles that may use it. The
+                     "Who sees what" panel lists areas and actions.
+-->
+<script type="application/json" id="wireframe-config">
+{
+  "appName": "Standby · IA review",
+  "statuses": {
+    "history": [
+      "Historical aggregate (illustrative)"
+    ],
+    "unit": [
+      "Available (illustrative)",
+      "Off shift (illustrative)",
+      "Unavailable (illustrative)"
+    ],
+    "modeledJob": [
+      "Queued (illustrative)",
+      "En route (illustrative)",
+      "In service (illustrative)",
+      "Completed (illustrative)"
+    ]
+  },
+  "roles": [
+    {
+      "id": "public",
+      "label": "Public scenario user",
+      "permissions": [
+        "overview.read",
+        "incidents.read",
+        "capacity.read",
+        "capacity.edit",
+        "capacity.run",
+        "queues.read",
+        "map.read",
+        "settings.read"
+      ]
+    },
+    {
+      "id": "Analyst",
+      "label": "Analyst",
+      "permissions": [
+        "overview.read",
+        "incidents.read",
+        "capacity.read",
+        "capacity.edit",
+        "capacity.run",
+        "queues.read",
+        "map.read",
+        "settings.read"
+      ]
+    },
+    {
+      "id": "Planner",
+      "label": "Planner",
+      "permissions": [
+        "overview.read",
+        "incidents.read",
+        "capacity.read",
+        "capacity.edit",
+        "capacity.run",
+        "queues.read",
+        "map.read",
+        "settings.read",
+        "plans.save"
+      ]
+    },
+    {
+      "id": "Admin",
+      "label": "Admin",
+      "permissions": [
+        "*"
+      ]
+    }
+  ],
+  "nav": [
+    {
+      "id": "overview",
+      "label": "Overview",
+      "icon": "layout-dashboard",
+      "permission": "overview.read"
+    },
+    {
+      "id": "incidents",
+      "label": "Incident history",
+      "icon": "list",
+      "permission": "incidents.read"
+    },
+    {
+      "id": "capacity",
+      "label": "Capacity lab",
+      "icon": "flask-conical",
+      "permission": "capacity.read"
+    },
+    {
+      "id": "queues",
+      "label": "Planning queues",
+      "icon": "inbox",
+      "badge": "review*",
+      "permission": "queues.read"
+    },
+    {
+      "id": "map",
+      "label": "Coverage map",
+      "icon": "map",
+      "permission": "map.read"
+    },
+    {
+      "id": "settings",
+      "label": "Settings",
+      "icon": "settings",
+      "permission": "settings.read"
+    }
+  ],
+  "pages": {
+    "overview": {
+      "title": "Overview",
+      "sections": [
+        {
+          "type": "note",
+          "text": "IA REVIEW ONLY. All sample rows, badges and shapes are illustrative placeholders. No comparison has run and no performance is measured. Existing historical views remain distinct from scenario results."
+        },
+        {
+          "type": "kpis",
+          "items": [
+            {
+              "label": "Historical reports",
+              "value": "Placeholder",
+              "note": "Observed eligible reports; cohort and denominator",
+              "link": "incidents"
+            },
+            {
+              "label": "Modeled spatial coverage",
+              "value": "Placeholder",
+              "note": "Historical road reach under explicit assumptions",
+              "link": "map"
+            },
+            {
+              "label": "Plans needing review",
+              "value": "Unknown",
+              "note": "Dedicated authorized count; not loaded-page total",
+              "link": "queues"
+            },
+            {
+              "label": "Capacity comparison",
+              "value": "Not run",
+              "note": "Assumption-based scenario, not an SLA",
+              "link": "capacity"
+            }
+          ]
+        },
+        {
+          "type": "chart",
+          "title": "Historical cohort distribution · illustrative shape",
+          "bars": 8
+        },
+        {
+          "type": "chart",
+          "title": "Historical road-approach distribution · illustrative shape",
+          "bars": 8
+        },
+        {
+          "type": "note",
+          "text": "Two existing charts remain. Calendar/weather forecasting and anomaly detection are deferred."
+        }
+      ]
+    },
+    "incidents": {
+      "title": "Incident history",
+      "sections": [
+        {
+          "type": "note",
+          "text": "IA REVIEW ONLY. All sample rows, badges and shapes are illustrative placeholders. No comparison has run and no performance is measured. These rows represent historical demand zones, not insured people or modeled jobs."
+        },
+        {
+          "type": "filters",
+          "fields": [
+            "Zone search",
+            "Cohort",
+            "Coverage"
+          ]
+        },
+        {
+          "type": "table",
+          "title": "Historical demand zones · illustrative rows",
+          "columns": [
+            "Zone",
+            "Cohort",
+            "Training / held-out reports",
+            "Modeled road time",
+            "Coverage",
+            "Provenance"
+          ],
+          "rows": 5,
+          "paging": "offset",
+          "total": "5 illustrative rows",
+          "drawer": "zone",
+          "statuses": "history"
+        },
+        {
+          "type": "note",
+          "text": "Read-only source timestamps are publication/update, not incident occurrence or repair resolution. Approximate representative coordinates appear in Location & map."
+        }
+      ]
+    },
+    "capacity": {
+      "title": "Capacity lab",
+      "actions": [
+        {
+          "label": "Copy baseline to candidate (wireframe)",
+          "permission": "capacity.edit"
+        }
+      ],
+      "sections": [
+        {
+          "type": "note",
+          "text": "ASSUMPTION-BASED SCENARIO. IA REVIEW ONLY. All sample rows, badges and shapes are illustrative placeholders. No comparison has run and no performance is measured. Generated jobs are not Austin incident records. A mixed-fleet simulation is not a staffing guarantee."
+        },
+        {
+          "type": "note",
+          "text": "MODELED POLICY: initially empty queue; fixed incident count conditioned within the horizon. Assign oldest pending compatible/reachable job, nearest directional Car approach then stable unit ID. Blocked jobs do not block units unable to serve them. No demand forecast. For zero generated jobs, percentage metrics are Not applicable (n=0)."
+        },
+        {
+          "type": "kpis",
+          "items": [
+            {
+              "label": "Baseline response p90",
+              "value": "Not run",
+              "note": "Modeled arrival sample and unfinished count shown after run"
+            },
+            {
+              "label": "Candidate response p90",
+              "value": "Not run",
+              "note": "Same arrivals, service draws, seed and horizon"
+            },
+            {
+              "label": "Peak queued jobs",
+              "value": "Not run",
+              "note": "Baseline and candidate, selected replication"
+            },
+            {
+              "label": "Target attainment",
+              "value": "Not run",
+              "note": "Editable scenario target; not an observed SLA"
+            }
+          ]
+        },
+        {
+          "type": "form",
+          "title": "Shared workload and target settings · Assumed",
+          "fields": [
+            {
+              "label": "Horizon (minutes)",
+              "type": "number",
+              "hint": "Editable assumption. Range 1..1440.",
+              "value": 480
+            },
+            {
+              "label": "Modeled incident count",
+              "type": "number",
+              "hint": "Synthetic workload. Range 0..200.",
+              "value": 24
+            },
+            {
+              "label": "Replications",
+              "type": "number",
+              "hint": "Paired common random streams. Range 1..20.",
+              "value": 10
+            },
+            {
+              "label": "Seed",
+              "type": "number",
+              "hint": "Validated integer; reproducible inputs.",
+              "value": 42
+            },
+            {
+              "label": "Response target (minutes)",
+              "type": "number",
+              "hint": "Editable scenario target, not a customer SLA.",
+              "value": 30
+            },
+            {
+              "label": "Arrival pattern",
+              "type": "select",
+              "hint": "",
+              "options": [
+                "Uniform weights (Assumed)",
+                "Custom weights (Assumed)"
+              ]
+            },
+            {
+              "label": "Arrival weights: 8 equal time bins",
+              "type": "text",
+              "hint": "Relative weights, not observed hourly or holiday demand.",
+              "value": "1,1,1,1,1,1,1,1"
+            }
+          ],
+          "submit": {
+            "label": "Keep scenario draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "note",
+          "text": "BASELINE ROSTER · ASSUMED: motorcycle battery/tyre; service van battery/tyre/breakdown; flatbed breakdown/collision. All default duty intervals 0..480 minutes. Each home site and availability remains editable. 1..12 units per roster."
+        },
+        {
+          "type": "table",
+          "title": "Baseline roster · illustrative rows",
+          "columns": [
+            "Unit",
+            "Kind",
+            "Capabilities",
+            "Home site",
+            "Availability status",
+            "Duty start / end"
+          ],
+          "rows": 3,
+          "paging": "offset",
+          "total": "3 illustrative rows",
+          "drawer": "unit",
+          "statuses": "unit"
+        },
+        {
+          "type": "note",
+          "text": "CANDIDATE ROSTER: starts as an editable baseline copy. Copy baseline / add / edit / remove operate on scenario inputs only. They never send instructions to a real unit."
+        },
+        {
+          "type": "table",
+          "title": "Candidate roster · illustrative rows",
+          "columns": [
+            "Unit",
+            "Kind",
+            "Capabilities",
+            "Home site",
+            "Availability status",
+            "Duty start / end"
+          ],
+          "rows": 3,
+          "paging": "offset",
+          "total": "3 illustrative rows",
+          "drawer": "unit",
+          "statuses": "unit"
+        },
+        {
+          "type": "form",
+          "title": "Scenario unit editor · select baseline or candidate",
+          "fields": [
+            {
+              "label": "Roster",
+              "type": "select",
+              "hint": "",
+              "options": [
+                "Candidate",
+                "Baseline"
+              ]
+            },
+            {
+              "label": "Unit kind",
+              "type": "select",
+              "hint": "",
+              "options": [
+                "Motorcycle",
+                "Service van",
+                "Flatbed"
+              ]
+            },
+            {
+              "label": "Capabilities",
+              "type": "text",
+              "hint": "Explicit hard eligibility; editable list.",
+              "value": "battery, tyre"
+            },
+            {
+              "label": "Home site",
+              "type": "select",
+              "hint": "",
+              "options": [
+                "Select an existing verified standby site"
+              ]
+            },
+            {
+              "label": "Available",
+              "type": "checkbox",
+              "hint": "",
+              "value": true
+            },
+            {
+              "label": "Duty start (minutes)",
+              "type": "number",
+              "hint": "Assumed interval relative to scenario start.",
+              "value": 0
+            },
+            {
+              "label": "Duty end (minutes)",
+              "type": "number",
+              "hint": "Must fit the chosen horizon.",
+              "value": 480
+            }
+          ],
+          "submit": {
+            "label": "Apply unit draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "form",
+          "title": "Shared cycle assumptions · Assumed",
+          "fields": [
+            {
+              "label": "Preparation (minutes)",
+              "type": "number",
+              "hint": "Added before outbound approach.",
+              "value": 3
+            },
+            {
+              "label": "Recovery until available (minutes)",
+              "type": "number",
+              "hint": "Fixed-home renewal allowance, not a computed return route.",
+              "value": 15
+            },
+            {
+              "label": "Travel multiplier",
+              "type": "number",
+              "hint": "Positive sensitivity factor; no live traffic.",
+              "value": 1
+            }
+          ],
+          "submit": {
+            "label": "Keep scenario draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "note",
+          "text": "SERVICE PROFILES · ASSUMED. Triangular min <= mode <= max, all minutes. Type shares sum to 1. Defaults are editable configuration conveniences, not empirical service-time estimates."
+        },
+        {
+          "type": "form",
+          "title": "Battery service profile · Assumed",
+          "fields": [
+            {
+              "label": "Type share",
+              "type": "number",
+              "hint": "Synthetic type mix.",
+              "value": 0.35
+            },
+            {
+              "label": "Onsite minimum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 10
+            },
+            {
+              "label": "Onsite mode",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 20
+            },
+            {
+              "label": "Onsite maximum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 40
+            },
+            {
+              "label": "Flatbed transport",
+              "type": "number",
+              "hint": "Additional assumed minutes; not a routing result.",
+              "value": 0
+            },
+            {
+              "label": "Flatbed dropoff",
+              "type": "number",
+              "hint": "Additional assumed minutes, only when flatbed serves.",
+              "value": 0
+            }
+          ],
+          "submit": {
+            "label": "Keep scenario draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "form",
+          "title": "Tyre service profile · Assumed",
+          "fields": [
+            {
+              "label": "Type share",
+              "type": "number",
+              "hint": "Synthetic type mix.",
+              "value": 0.25
+            },
+            {
+              "label": "Onsite minimum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 15
+            },
+            {
+              "label": "Onsite mode",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 30
+            },
+            {
+              "label": "Onsite maximum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 60
+            },
+            {
+              "label": "Flatbed transport",
+              "type": "number",
+              "hint": "Additional assumed minutes; not a routing result.",
+              "value": 0
+            },
+            {
+              "label": "Flatbed dropoff",
+              "type": "number",
+              "hint": "Additional assumed minutes, only when flatbed serves.",
+              "value": 0
+            }
+          ],
+          "submit": {
+            "label": "Keep scenario draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "form",
+          "title": "Breakdown service profile · Assumed",
+          "fields": [
+            {
+              "label": "Type share",
+              "type": "number",
+              "hint": "Synthetic type mix.",
+              "value": 0.3
+            },
+            {
+              "label": "Onsite minimum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 20
+            },
+            {
+              "label": "Onsite mode",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 45
+            },
+            {
+              "label": "Onsite maximum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 90
+            },
+            {
+              "label": "Flatbed transport",
+              "type": "number",
+              "hint": "Additional assumed minutes; not a routing result.",
+              "value": 20
+            },
+            {
+              "label": "Flatbed dropoff",
+              "type": "number",
+              "hint": "Additional assumed minutes, only when flatbed serves.",
+              "value": 10
+            }
+          ],
+          "submit": {
+            "label": "Keep scenario draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "form",
+          "title": "Collision service profile · Assumed",
+          "fields": [
+            {
+              "label": "Type share",
+              "type": "number",
+              "hint": "Synthetic type mix.",
+              "value": 0.1
+            },
+            {
+              "label": "Onsite minimum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 30
+            },
+            {
+              "label": "Onsite mode",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 60
+            },
+            {
+              "label": "Onsite maximum",
+              "type": "number",
+              "hint": "Triangular duration, minutes.",
+              "value": 120
+            },
+            {
+              "label": "Flatbed transport",
+              "type": "number",
+              "hint": "Additional assumed minutes; not a routing result.",
+              "value": 30
+            },
+            {
+              "label": "Flatbed dropoff",
+              "type": "number",
+              "hint": "Additional assumed minutes, only when flatbed serves.",
+              "value": 15
+            }
+          ],
+          "submit": {
+            "label": "Keep scenario draft (wireframe)",
+            "permission": "capacity.edit"
+          }
+        },
+        {
+          "type": "note",
+          "text": "ROUTING LIMITATION: prepared site-to-zone Car road times only. Fixed-home renewal after explicit transport/dropoff/recovery; no reverse route, moving unit position, truck-feasibility proof or dispatch while returning."
+        },
+        {
+          "type": "form",
+          "title": "Paired experiment · no result until valid completed response",
+          "fields": [],
+          "submit": {
+            "label": "Run paired comparison (wireframe only)",
+            "permission": "capacity.run"
+          }
+        },
+        {
+          "type": "table",
+          "title": "Paired comparison regions · placeholders, not output",
+          "columns": [
+            "Metric",
+            "Baseline",
+            "Candidate",
+            "Paired difference",
+            "n / replications",
+            "Limitations"
+          ],
+          "rows": 4,
+          "paging": "offset",
+          "total": "4 illustrative rows"
+        },
+        {
+          "type": "timeline",
+          "title": "Queue and available-capability time bars",
+          "text": "ILLUSTRATIVE SHAPES ONLY. Scrub an already-computed run. Arrival bins, queue and unit availability share the same selected minute; no live feed."
+        },
+        {
+          "type": "filters",
+          "fields": [
+            "Replication",
+            "Modeled job search",
+            "Type",
+            "Status",
+            "Unit",
+            "Selected minute"
+          ]
+        },
+        {
+          "type": "table",
+          "title": "Modeled jobs · illustrative rows",
+          "columns": [
+            "Job",
+            "Type",
+            "Status",
+            "Approximate zone / coords",
+            "Arrival minute",
+            "Assigned unit",
+            "Queue wait",
+            "Response"
+          ],
+          "rows": 4,
+          "paging": "offset",
+          "total": "4 illustrative rows",
+          "drawer": "modeled-job",
+          "statuses": "modeledJob"
+        },
+        {
+          "type": "map",
+          "title": "Selected modeled job · full map region",
+          "text": "SCHEMATIC MAP PLACEHOLDER. A real map will show the selected zone representative and its coordinates after wireframe approval. This is approximate derived location, not a customer street address."
+        },
+        {
+          "type": "note",
+          "text": "Data states: Not run / invalid inputs / running / failed / stale / unavailable. Changing inputs marks the previous result stale. Unserved and unfinished jobs remain visible in the denominators. Calendar forecasts, anomalies, private insured data and live dispatch are deferred."
+        }
+      ]
+    },
+    "queues": {
+      "title": "Planning queues",
+      "sections": [
+        {
+          "type": "note",
+          "text": "IA REVIEW ONLY. All sample rows, badges and shapes are illustrative placeholders. No comparison has run and no performance is measured. The review* badge illustrates an actionable plan-review indicator, not a measured count. This page holds saved spatial plans; modeled waiting jobs stay inside Capacity lab."
+        },
+        {
+          "type": "queue",
+          "itemLabel": "Illustrative plan",
+          "items": 2,
+          "tabs": [
+            {
+              "label": "Needs review",
+              "count": "—"
+            },
+            {
+              "label": "Reviewed",
+              "count": "—"
+            },
+            {
+              "label": "Failed",
+              "count": "—"
+            }
+          ],
+          "actions": [
+            {
+              "label": "Review plan (wireframe)",
+              "permission": "plans.review",
+              "confirm": "Review this illustrative plan and its exact result version? No real plan is changed."
+            }
+          ]
+        }
+      ]
+    },
+    "map": {
+      "title": "Coverage map",
+      "sections": [
+        {
+          "type": "note",
+          "text": "IA REVIEW ONLY. All sample rows, badges and shapes are illustrative placeholders. No comparison has run and no performance is measured. Existing Depot / Spread / Proposal remains historical spatial coverage, with assumed fleet and a traffic-independent Car matrix."
+        },
+        {
+          "type": "filters",
+          "fields": [
+            "Placement",
+            "Cohort",
+            "Road threshold",
+            "Unavailable unit"
+          ]
+        },
+        {
+          "type": "map",
+          "title": "Historical coverage map region",
+          "text": "SCHEMATIC MAP PLACEHOLDER. Existing real map geometry, roads and provider attribution remain in the product. No forecast, customer or synthetic road geometry is shown here."
+        },
+        {
+          "type": "table",
+          "title": "Selected zone summary · illustrative rows",
+          "columns": [
+            "Zone",
+            "Coverage result",
+            "Road approach",
+            "Historical reports",
+            "Source"
+          ],
+          "rows": 3,
+          "paging": "offset",
+          "total": "3 illustrative rows",
+          "drawer": "zone",
+          "statuses": "history"
+        }
+      ]
+    },
+    "settings": {
+      "title": "Settings",
+      "sections": [
+        {
+          "type": "note",
+          "text": "IA REVIEW ONLY. All sample rows, badges and shapes are illustrative placeholders. No comparison has run and no performance is measured. Personal preferences are available to every role. Shared workspace settings remain separately authorized."
+        },
+        {
+          "type": "form",
+          "title": "Personal preferences",
+          "fields": [
+            {
+              "label": "Time display",
+              "type": "select",
+              "hint": "",
+              "options": [
+                "America/Chicago",
+                "UTC"
+              ]
+            },
+            {
+              "label": "Theme",
+              "type": "select",
+              "hint": "",
+              "options": [
+                "Dark",
+                "Light",
+                "System"
+              ]
+            },
+            {
+              "label": "Keyboard shortcuts enabled",
+              "type": "checkbox",
+              "hint": "",
+              "value": true
+            }
+          ],
+          "submit": {
+            "label": "Save preference preview (wireframe)",
+            "permission": "settings.read"
+          }
+        },
+        {
+          "type": "note",
+          "permission": "settings.manage",
+          "text": "Admin region: existing workspace configuration / access / provenance. New live telemetry, insured/customer integrations, paid routing and product RAG are not connected in this MVP."
+        }
+      ]
+    }
+  },
+  "drawers": {
+    "zone": {
+      "title": "Historical zone",
+      "tabs": [
+        "Summary",
+        "Location & map",
+        "Provenance"
+      ],
+      "actions": [
+        {
+          "label": "Review expanded map region (wireframe)"
+        }
+      ]
+    },
+    "unit": {
+      "title": "Scenario unit · Assumed",
+      "tabs": [
+        "Summary",
+        "Capabilities",
+        "Duty & availability"
+      ],
+      "actions": [
+        {
+          "label": "Edit unit draft (wireframe)",
+          "permission": "capacity.edit"
+        }
+      ]
+    },
+    "modeled-job": {
+      "title": "Modeled job · Simulated",
+      "tabs": [
+        "Summary",
+        "Location & map",
+        "Timeline",
+        "Assumptions & provenance"
+      ],
+      "actions": [
+        {
+          "label": "Review expanded map region (wireframe)"
+        }
+      ]
+    }
+  }
+}
+</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f4f4f5;
+  --panel: #ffffff;
+  --sunken: #fafafa;
+  --line: #d4d4d8;
+  --line-strong: #a1a1aa;
+  --block: #e4e4e7;
+  --block-strong: #d4d4d8;
+  --text: #18181b;
+  --muted: #52525b;
+  --faint: #71717a;
+  --ink: #27272a;
+  --ink-text: #fafafa;
+  --scrim: rgba(24, 24, 27, 0.4);
+  --hl: #52525b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111113;
+    --panel: #1c1c1f;
+    --sunken: #18181b;
+    --line: #3f3f46;
+    --line-strong: #52525b;
+    --block: #2e2e33;
+    --block-strong: #3f3f46;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --faint: #8b8b94;
+    --ink: #e4e4e7;
+    --ink-text: #18181b;
+    --scrim: rgba(0, 0, 0, 0.55);
+    --hl: #d4d4d8;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Wireframe tool chrome (outside the app frame) */
+.wf-toolbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.wf-title { font-weight: 600; margin-right: auto; }
+.wf-title small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.wf-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.wf-seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+.wf-seg button { border: 0; background: transparent; padding: 4px 10px; border-right: 1px solid var(--line); }
+.wf-seg button:last-child { border-right: 0; }
+.wf-seg button[aria-pressed="true"] { background: var(--ink); color: var(--ink-text); }
+.wf-group select { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 6px; padding: 3px 6px; }
+.wf-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; padding: 16px; align-items: start; }
+@media (max-width: 900px) { .wf-layout { grid-template-columns: minmax(0, 1fr); } }
+.wf-stage { min-width: 0; }
+.wf-size { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+.wf-frame { position: relative; overflow: hidden; }
+.wf-scaler { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.wf-side { display: grid; gap: 16px; }
+.wf-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.wf-card h2 { font-size: 14px; margin: 0 0 8px; }
+.wf-card p { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.wf-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wf-legend li { display: grid; grid-template-columns: 24px 1fr; gap: 8px; font-size: 13px; }
+.wf-legend li p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.wf-legend li.off { opacity: 0.6; }
+.wf-legend .hint { font-style: italic; }
+.wf-legend .num, .callout {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ink); color: var(--ink-text); font-size: 11px; font-weight: 700; line-height: 1;
+}
+.wf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.wf-table th, .wf-table td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; }
+.wf-outline { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+.wf-outline li { margin-bottom: 6px; }
+.wf-outline b { color: var(--text); }
+.wf-error { margin: 24px; padding: 16px; border: 2px dashed var(--line-strong); background: var(--panel); }
+
+/* The app frame */
+.app {
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: 256px minmax(0, 1fr); grid-template-rows: 52px minmax(0, 1fr);
+  background: var(--panel); border: 1px solid var(--line-strong); font-size: 13px;
+}
+.app[data-collapsed="true"] { grid-template-columns: 64px minmax(0, 1fr); }
+.app[data-size="sm"] { grid-template-columns: minmax(0, 1fr); }
+[data-callout] { position: relative; }
+.hl { outline: 3px solid var(--hl) !important; outline-offset: -3px; }
+
+.topbar {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;
+  padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--sunken);
+}
+.brand { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-btn { display: none; width: 34px; height: 34px; border: 1px solid var(--line-strong); border-radius: 6px; background: transparent; padding: 8px 7px; }
+.menu-btn .bar { display: block; height: 2px; background: var(--muted); margin: 3px 0; }
+.app[data-size="sm"] .menu-btn { display: block; }
+.search { flex: 1 1 auto; max-width: 420px; margin-left: 12px; }
+.search input { width: 100%; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); padding: 5px 8px; }
+.app[data-size="sm"] .search { margin-left: 0; }
+.top-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--block-strong); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.app[data-size="sm"] .top-hide-sm { display: none; }
+
+.sidebar {
+  grid-row: 2; display: flex; flex-direction: column; gap: 2px; padding: 8px;
+  border-right: 1px solid var(--line); background: var(--sunken); overflow: auto; min-height: 0;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 6px;
+  background: transparent; text-align: left; position: relative;
+}
+.nav-item[aria-current="page"] { background: var(--block-strong); font-weight: 600; }
+.nav-item .badge { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--ink); color: var(--ink-text); font-size: 11px; text-align: center; }
+.ico {
+  flex: none; width: 20px; height: 20px; border: 1.5px solid var(--faint); border-radius: 4px;
+  display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; color: var(--muted);
+}
+.app[data-collapsed="true"] .sidebar { padding: 8px 6px; }
+.app[data-collapsed="true"] .nav-item { justify-content: center; padding: 8px 0; }
+.app[data-collapsed="true"] .nav-label { display: none; }
+.app[data-collapsed="true"] .nav-item .badge { position: absolute; top: 2px; right: 2px; min-width: 8px; height: 8px; padding: 0; font-size: 0; }
+.side-foot { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px; }
+.collapse-btn { width: 100%; border: 1px dashed var(--line-strong); background: transparent; border-radius: 6px; padding: 5px; font-size: 12px; color: var(--muted); }
+.app[data-size="sm"] .sidebar { position: absolute; top: 0; bottom: 0; left: 0; width: 256px; z-index: 30; display: none; box-shadow: 4px 0 16px var(--scrim); }
+.app[data-size="sm"][data-navopen="true"] .sidebar { display: flex; }
+.app[data-size="sm"] .collapse-btn { display: none; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 20; display: none; border: 0; padding: 0; }
+.app[data-navopen="true"] .scrim, .app[data-drawer="true"] .scrim { display: block; }
+
+.main { grid-row: 2; overflow: auto; min-width: 0; min-height: 0; padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 14px; }
+.app[data-size="sm"] .main { padding: 12px 14px 28px; }
+.page-header { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; }
+.page-header h1 { font-size: 20px; margin: 2px 0 0; }
+.crumb { font-size: 12px; color: var(--muted); }
+.page-actions { margin-left: auto; display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line-strong); background: var(--panel); border-radius: 6px; padding: 5px 12px; }
+.btn.primary { background: var(--ink); color: var(--ink-text); border-color: var(--ink); }
+.btn.danger { border-style: dashed; border-width: 2px; }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.act-off { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.act-off small { color: var(--muted); font-size: 11px; }
+.filter.on { color: var(--text); border-style: solid; border-width: 2px; font-weight: 600; }
+.dialog textarea { width: 100%; box-sizing: border-box; font: inherit; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 8px; background: var(--panel); color: var(--text); }
+.banner { border: 2px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; background: var(--sunken); }
+.note { margin: 0; padding: 8px 12px; border-left: 4px solid var(--line-strong); background: var(--sunken); color: var(--muted); }
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.card-head { padding: 10px 12px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.app[data-size="md"] .kpis, .app[data-size="sm"] .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpi { display: block; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 10px 12px; }
+.kpi .kpi-label { color: var(--muted); font-size: 12px; }
+.kpi .kpi-value { font-size: 22px; font-weight: 700; margin: 2px 0; }
+.kpi .kpi-note { color: var(--faint); font-size: 11px; }
+.chart { display: flex; align-items: end; gap: 6px; height: 140px; padding: 12px; }
+.chart span { flex: 1; background: var(--block-strong); border-radius: 3px 3px 0 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter { border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 10px; min-width: 120px; color: var(--muted); background: var(--panel); }
+.filter.wide { flex: 1 1 200px; }
+.table-wrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; }
+table.data th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data td { padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data tr.clickable { cursor: pointer; }
+table.data tr.clickable:hover td { background: var(--sunken); }
+.sort { color: var(--faint); font-weight: 400; }
+.ph { display: inline-block; height: 9px; border-radius: 4px; background: var(--block-strong); vertical-align: middle; }
+.status { display: inline-block; border: 1px solid var(--line-strong); border-radius: 999px; padding: 1px 8px; font-size: 12px; background: var(--sunken); }
+.mcards { display: none; }
+.app[data-size="sm"] .table-wrap { display: none; }
+.app[data-size="sm"] .mcards { display: grid; gap: 8px; padding: 10px; }
+.mcard { display: grid; gap: 6px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 10px; }
+.mcard-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pagination { display: flex; align-items: center; gap: 8px; padding: 8px 12px; color: var(--muted); font-size: 12px; }
+.pagination .btn { margin-left: 0; padding: 2px 10px; }
+.pagination .pg-count { margin-right: auto; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding: 0 8px; overflow-x: auto; }
+.tab { border: 0; background: transparent; padding: 9px 10px; border-bottom: 2px solid transparent; white-space: nowrap; color: var(--muted); }
+.tab[aria-selected="true"] { border-bottom-color: var(--ink); color: var(--text); font-weight: 600; }
+.count { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 10px; background: var(--block-strong); font-size: 11px; }
+.queue-list { list-style: none; margin: 0; padding: 0; }
+.queue-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.queue-list li:last-child { border-bottom: 0; }
+.queue-list .q-main { flex: 1 1 200px; display: grid; gap: 6px; }
+.queue-list .q-actions { display: flex; gap: 6px; }
+.state { border: 2px dashed var(--line-strong); border-radius: 8px; padding: 18px; text-align: center; color: var(--muted); display: grid; gap: 8px; justify-items: center; }
+.state b { color: var(--text); }
+.skel { display: grid; gap: 8px; padding: 12px; }
+.skel span { height: 12px; border-radius: 4px; background: var(--block); }
+form.form { display: grid; gap: 12px; padding: 12px; max-width: 520px; }
+.field { display: grid; gap: 4px; }
+.field > span { font-weight: 600; font-size: 12px; }
+.field input, .field select { border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 8px; background: var(--panel); }
+.field small { color: var(--faint); font-size: 12px; }
+.field small.err { color: var(--text); font-weight: 600; }
+.field.invalid input { border-width: 2px; border-style: dashed; }
+.check { display: flex; gap: 8px; align-items: center; }
+.form-foot { display: flex; gap: 8px; align-items: center; }
+.drawer {
+  position: absolute; top: 52px; right: 0; bottom: 0; width: 420px; z-index: 25;
+  display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--line-strong);
+  box-shadow: -6px 0 18px var(--scrim);
+}
+.app[data-size="sm"] .drawer { top: 0; left: 0; width: auto; }
+.drawer-head { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
+.drawer-head .grow { flex: 1; }
+.drawer-body { flex: 1; overflow: auto; padding: 14px 12px; display: grid; gap: 10px; align-content: start; }
+.drawer-foot { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px; align-items: center; color: var(--muted); font-size: 12px; }
+.backdrop { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim); padding: 16px; }
+.dialog { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px; padding: 16px; width: min(380px, 100%); display: grid; gap: 10px; }
+.dialog h2 { margin: 0; font-size: 16px; }
+.dialog p { margin: 0; color: var(--muted); }
+.dialog-foot { display: flex; justify-content: end; gap: 8px; }
+.toast { position: absolute; right: 16px; bottom: 16px; z-index: 50; background: var(--ink); color: var(--ink-text); border-radius: 8px; padding: 10px 14px; max-width: 320px; }
+.app[data-size="sm"] .toast { left: 16px; right: 16px; max-width: none; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Callout badges sit in gutters so they do not cover labels. Parts inside the
+   page get theirs in the left padding of the content area; parts on the frame
+   edge get a small reserved space while callouts are on. */
+.callout { position: absolute; top: -4px; left: -19px; width: 18px; height: 18px; font-size: 10px; z-index: 5; box-shadow: 0 0 0 2px var(--panel); pointer-events: none; }
+.app[data-callouts="on"] .topbar { padding-left: 34px; }
+.topbar > .callout { top: 50%; left: 8px; transform: translateY(-50%); }
+.menu-btn > .callout { top: -6px; left: auto; right: -10px; }
+.search > .callout { top: 50%; left: auto; right: 6px; transform: translateY(-50%); }
+.app[data-callouts="on"] .sidebar { padding-top: 30px; }
+.sidebar > .callout { top: 6px; left: 8px; }
+.tabs > .callout { top: 50%; left: auto; right: 4px; transform: translateY(-50%); }
+.app[data-callouts="on"] .drawer-head { padding-left: 34px; }
+.drawer > .callout { top: 20px; left: 8px; }
+.app[data-callouts="on"] .toast { padding-left: 34px; }
+.toast > .callout { top: 50%; left: 8px; transform: translateY(-50%); box-shadow: 0 0 0 2px var(--ink); }
+.app[data-callouts="on"][data-size="sm"] .main { padding-left: 24px; }
+.wf-map-placeholder { min-height:220px; display:grid; place-content:center; gap:12px; text-align:center; margin:12px; padding:20px; border:2px dashed var(--line-strong); background:repeating-linear-gradient(0deg,transparent,transparent 39px,var(--line) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,var(--line) 40px); }
+.wf-map-placeholder span,.wf-map-placeholder small { background:var(--panel); padding:4px; }
+.wf-time-placeholder { padding:14px; } .wf-time-placeholder label { display:grid; gap:8px; } .wf-time-placeholder p { display:grid; grid-template-columns:140px minmax(0,1fr); align-items:center; gap:8px; } .wf-time-placeholder p span { height:18px; border:1px dashed var(--line-strong); background:var(--block); }
+.app[data-size="sm"] .wf-time-placeholder p { grid-template-columns:1fr; }
+</style>
+</head>
+<body>
+<header class="wf-toolbar">
+  <div class="wf-title"><span id="wf-name">Console</span> wireframe<small>STRUCTURE REVIEW ONLY. Assumed defaults are editable. No simulation results, live dispatch or performance measurements.</small></div>
+  <div class="wf-group" role="group" aria-label="Preview width">Width
+    <span class="wf-seg" id="wf-widths">
+      <button type="button" data-width="390" aria-pressed="false">390</button>
+      <button type="button" data-width="768" aria-pressed="false">768</button>
+      <button type="button" data-width="1440" aria-pressed="true">1440</button>
+    </span>
+  </div>
+  <label class="wf-group">Role <select id="wf-role"></select></label>
+  <label class="wf-group">Data <select id="wf-data">
+    <option value="ok">ok</option>
+    <option value="loading">loading</option>
+    <option value="empty">empty</option>
+    <option value="error">error</option>
+    <option value="unavailable">unavailable</option>
+  </select></label>
+  <label class="wf-group"><input type="checkbox" id="wf-callouts" checked> Numbered callouts</label>
+</header>
+<div class="wf-layout">
+  <div class="wf-stage" id="wf-stage">
+    <p class="wf-size" id="wf-size"></p>
+    <div class="wf-frame" id="wf-frame"><div class="wf-scaler" id="wf-scaler"><div class="app" id="app"></div></div></div>
+  </div>
+  <div class="wf-side">
+    <section class="wf-card" aria-labelledby="wf-legend-title">
+      <h2 id="wf-legend-title">Parts and their names</h2>
+      <p>Numbers match the callouts in the frame. Hover a name to outline that part.</p>
+      <ol class="wf-legend" id="wf-legend"></ol>
+    </section>
+    <section class="wf-card" aria-labelledby="wf-access-title">
+      <h2 id="wf-access-title">Who sees what</h2>
+      <div id="wf-access"></div>
+    </section>
+    <section class="wf-card" aria-labelledby="wf-ia-title">
+      <h2 id="wf-ia-title">Information architecture</h2>
+      <ol class="wf-outline" id="wf-ia"></ol>
+    </section>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  var TERMS = [
+    ['topbar', 'Top bar', 'App name, global search, theme toggle and user menu. Always visible.', ''],
+    ['sidebar', 'Sidebar', 'Main navigation, about 256px wide. Items a role cannot use are hidden.', 'Shown at 1440, or open the menu at 390.'],
+    ['rail', 'Rail', 'The sidebar collapsed to icons (about 64px). The choice is remembered.', 'Shown at 768, or press Collapse in the sidebar.'],
+    ['menu-button', 'Menu button', 'Opens the navigation as an off-canvas drawer on phones.', 'Shown under 768px wide.'],
+    ['search', 'Global search', 'Finds records from anywhere. The "/" key focuses it.', ''],
+    ['page-header', 'Page header and breadcrumb', 'Where you are, the page title, and the main page actions.', ''],
+    ['banner', 'Banner', 'A page-wide notice, for example a data source that is not connected.', 'Pick the "unavailable" data state.'],
+    ['kpi', 'KPI card', 'One number, its label and time window, and a link to the list behind it.', 'Open Overview.'],
+    ['chart', 'Chart', 'A small trend chart, always next to the numbers it summarises.', 'Open Overview.'],
+    ['filters', 'Filter bar', 'Search, status and other filters. Their values live in the URL.', 'Open a list page.'],
+    ['table', 'Data table', 'Sortable, paginated list. Clicking a row opens the detail drawer.', 'Open a list page.'],
+    ['status-badge', 'Status badge', 'Shows a status from the one shared status list.', 'Open a list page.'],
+    ['pagination', 'Pagination', 'Page controls and the total count.', 'Open a list page.'],
+    ['drawer', 'Detail drawer', 'Slides over the list to show one record. Escape or Back closes it.', 'Click a table row.'],
+    ['tabs', 'Tabs', 'Switch between views of the same thing, often with counts.', 'Open a drawer or the queue.'],
+    ['queue', 'Work queue', 'Items waiting for a decision, with approve and reject actions.', 'Open the queue page.'],
+    ['form', 'Form', 'Labelled fields, inline validation, one primary action.', 'Open Settings as a role that may see it.'],
+    ['confirm-dialog', 'Confirm dialog', 'Asks before an action that is hard to undo.', 'Press an action marked for confirmation.'],
+    ['toast', 'Toast', 'Short message after an action. It goes away by itself.', 'Confirm an action or save the form.'],
+    ['state', 'Data state', 'Loading skeleton, empty, error, unavailable or sign-in required. Each looks different on purpose.', 'Pick a data state or "No session".']
+  ];
+  var HEIGHTS = { 390: 844, 768: 1024, 1440: 900 };
+  var STATE_TEXT = {
+    loading: ['Loading', 'Skeleton rows keep the layout steady while data loads.'],
+    empty: ['Nothing here yet', 'Say what would appear here and offer the first action.'],
+    error: ['Could not load', 'Say what failed and offer Retry. Keep the rest of the page usable.'],
+    unavailable: ['Source not connected', 'This data comes from a service that is not set up here. Nothing is shown rather than old or made-up data.']
+  };
+
+  var app = document.getElementById('app');
+  var frame = document.getElementById('wf-frame');
+  var scaler = document.getElementById('wf-scaler');
+  var stage = document.getElementById('wf-stage');
+  var sizeLabel = document.getElementById('wf-size');
+  var legend = document.getElementById('wf-legend');
+
+  var config;
+  try {
+    config = normalize(JSON.parse(document.getElementById('wireframe-config').textContent));
+  } catch (err) {
+    var box = document.createElement('div');
+    box.className = 'wf-error';
+    box.textContent = 'The config JSON at the top of this file has an error: ' + (err && err.message ? err.message : String(err));
+    document.body.insertBefore(box, document.body.firstChild);
+    return;
+  }
+
+  var adminRole = config.roles.filter(function (r) { return r.permissions.indexOf('*') >= 0; })[0];
+  var state = {
+    page: (location.hash || '').replace(/^#/, '') || (config.nav[0] && config.nav[0].id) || '',
+    width: 1440,
+    role: (adminRole || config.roles[config.roles.length - 1] || { id: '' }).id,
+    data: 'ok',
+    callouts: true,
+    collapsed: false,
+    navOpen: false,
+    drawer: null,
+    drawerTab: 0,
+    queueTab: 0,
+    dialog: null,
+    toast: '',
+    formErrors: {},
+    filter: null,
+    returnFocus: null,
+    focusNext: null
+  };
+  var toastTimer = 0;
+
+  function normalize(c) {
+    c = c || {};
+    return {
+      appName: String(c.appName || 'Console'),
+      statuses: normalizeStatuses(c.statuses),
+      roles: (Array.isArray(c.roles) && c.roles.length ? c.roles : [{ id: 'admin', label: 'Admin', permissions: ['*'] }]).map(function (r) {
+        return { id: String(r.id), label: String(r.label || r.id), permissions: Array.isArray(r.permissions) ? r.permissions.map(String) : [] };
+      }),
+      nav: (Array.isArray(c.nav) ? c.nav : []).map(function (n) {
+        return { id: String(n.id), label: String(n.label || n.id), icon: String(n.icon || ''), badge: n.badge, permission: n.permission || '' };
+      }),
+      pages: c.pages && typeof c.pages === 'object' ? c.pages : {},
+      drawers: c.drawers && typeof c.drawers === 'object' ? c.drawers : {}
+    };
+  }
+
+  // One list per entity. A plain array becomes the list "default".
+  function normalizeStatuses(value) {
+    var lists = {};
+    if (Array.isArray(value) && value.length) lists['default'] = value.map(String);
+    else if (value && typeof value === 'object') {
+      Object.keys(value).forEach(function (k) {
+        if (Array.isArray(value[k]) && value[k].length) lists[k] = value[k].map(String);
+      });
+    }
+    if (Object.keys(lists).length === 0) lists['default'] = ['Open', 'In progress', 'Done'];
+    return lists;
+  }
+  function statusList(name) {
+    return config.statuses[name] || config.statuses[Object.keys(config.statuses)[0]];
+  }
+  function rolesWith(permission) {
+    return config.roles.filter(function (r) { return can(r, permission); }).map(function (r) { return r.label; });
+  }
+  function filterText(filter) {
+    return filter ? Object.keys(filter).map(function (k) { return k + ': ' + filter[k]; }).join(', ') : '';
+  }
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+  function currentRole() {
+    return config.roles.filter(function (r) { return r.id === state.role; })[0] || null;
+  }
+  function can(role, permission) {
+    if (!role) return false;
+    if (!permission) return true;
+    return role.permissions.indexOf('*') >= 0 || role.permissions.indexOf(permission) >= 0;
+  }
+  function size() {
+    return state.width < 768 ? 'sm' : state.width < 1200 ? 'md' : 'lg';
+  }
+  function navById(id) {
+    return config.nav.filter(function (n) { return n.id === id; })[0] || null;
+  }
+  function drawerDef(ref) {
+    if (!ref) return null;
+    if (typeof ref === 'string') return config.drawers[ref] ? Object.assign({ id: ref }, config.drawers[ref]) : { id: ref, title: ref, tabs: ['Summary'] };
+    return ref;
+  }
+  function idPrefix(label) {
+    return String(label || 'ID').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'ID';
+  }
+  function ph(width) {
+    return '<span class="ph" style="width:' + width + 'px"></span>';
+  }
+
+  // ---------------------------------------------------------------- render
+
+  function render() {
+    whyCount = 0;
+    var role = currentRole();
+    var visibleNav = role ? config.nav.filter(function (n) { return can(role, n.permission); }) : [];
+    if (role && !visibleNav.some(function (n) { return n.id === state.page; })) {
+      state.page = visibleNav[0] ? visibleNav[0].id : '';
+      state.drawer = null;
+    }
+    var sz = size();
+    app.setAttribute('data-size', sz);
+    app.setAttribute('data-collapsed', String(sz !== 'sm' && state.collapsed));
+    app.setAttribute('data-navopen', String(sz === 'sm' && state.navOpen));
+    app.setAttribute('data-drawer', String(Boolean(state.drawer)));
+    app.setAttribute('data-callouts', state.callouts ? 'on' : 'off');
+    app.innerHTML = topbar(role) + sidebar(role, visibleNav, sz) +
+      '<button type="button" class="scrim" data-do="scrim" aria-label="Close" tabindex="-1"></button>' +
+      mainArea(role) + drawerHtml(role) + dialogHtml() + toastHtml();
+    var visible = applyCallouts();
+    renderLegend(visible);
+    fit();
+    if (state.focusNext) {
+      var candidates = app.querySelectorAll(state.focusNext);
+      state.focusNext = null;
+      for (var c = 0; c < candidates.length; c += 1) {
+        if (isVisible(candidates[c])) { candidates[c].focus(); break; }
+      }
+    }
+  }
+
+  function topbar(role) {
+    return '<header class="topbar" data-callout="topbar">' +
+      '<button type="button" class="menu-btn" data-do="menu" aria-label="Open navigation" data-callout="menu-button"><span class="bar"></span><span class="bar"></span><span class="bar"></span></button>' +
+      '<div class="brand">' + esc(config.appName) + '</div>' +
+      (state.page === 'capacity' ? '<span class="badge" aria-label="Assumption-based scenario">Assumption-based scenario</span>' : '') +
+      (role ? '<div class="search" data-callout="search"><input id="wf-search" type="search" placeholder="Search (press /)" aria-label="Search"></div>' : '') +
+      '<div class="top-actions"><button type="button" class="btn top-hide-sm" data-do="theme">Theme</button>' +
+      '<span class="avatar" title="Account menu (a user icon, not initials: see layout-shell.md)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span></div>' +
+      '</header>';
+  }
+
+  function sidebar(role, items, sz) {
+    if (!role) return '<nav class="sidebar" aria-label="Main"></nav>';
+    var term = sz === 'sm' ? 'sidebar' : state.collapsed ? 'rail' : 'sidebar';
+    var html = '<nav class="sidebar" aria-label="Main" data-callout="' + term + '">';
+    items.forEach(function (n) {
+      var current = n.id === state.page;
+      html += '<button type="button" class="nav-item" data-do="nav" data-id="' + esc(n.id) + '" data-testid="nav-' + esc(n.id) + '"' +
+        (current ? ' aria-current="page"' : '') + ' title="' + esc(n.label) + '">' +
+        '<span class="ico" title="icon: ' + esc(n.icon || 'none') + '">' + esc((n.icon || n.label).charAt(0).toUpperCase()) + '</span>' +
+        '<span class="nav-label">' + esc(n.label) + '</span>' +
+        (n.badge != null && n.badge !== '' ? '<span class="badge"><span class="nav-label">' + esc(n.badge) + '</span></span>' : '') +
+        '</button>';
+    });
+    html += '<div class="side-foot"><button type="button" class="collapse-btn" data-do="collapse">' + (state.collapsed ? 'Expand' : 'Collapse') + '</button></div>';
+    return html + '</nav>';
+  }
+
+  function mainArea(role) {
+    if (!role) {
+      return '<main class="main" id="wf-main"><div class="state" data-callout="state"><b>Sign in required</b>' +
+        '<span>No session means no data and no default role. The app fails closed.</span>' +
+        '<button type="button" class="btn primary">Sign in</button></div></main>';
+    }
+    var nav = navById(state.page);
+    var page = config.pages[state.page] || { title: nav ? nav.label : 'Not found', sections: [{ type: 'note', text: 'No page config for "' + state.page + '". Add it under pages in the JSON.' }] };
+    var title = page.title || (nav ? nav.label : state.page);
+    var actions = (page.actions || []).map(function (a) { return actionButton(role, a, 'page'); }).join('');
+    var html = '<main class="main" id="wf-main">' +
+      '<div class="page-header" data-callout="page-header"><div><div class="crumb">' + esc(config.appName) + ' / ' + esc(title) + (state.filter ? ' / ' + esc(filterText(state.filter)) : '') + '</div><h1>' + esc(title) + '</h1></div>' +
+      (actions ? '<div class="page-actions">' + actions + '</div>' : '') + '</div>';
+    var sections = (page.sections || []).filter(function (s) { return can(role, s.permission); });
+    var hasData = sections.some(function (s) { return ['kpis', 'chart', 'table', 'queue'].indexOf(s.type) >= 0; });
+    if (state.data === 'unavailable' && hasData) {
+      html += '<div class="banner" data-callout="banner"><b>Data source not connected.</b> This page shows what it can and marks the rest as unavailable.</div>';
+    }
+    sections.forEach(function (s, i) { html += section(role, s, i); });
+    return html + '</main>';
+  }
+
+  function stateBlock(kind, what) {
+    if (kind === 'loading') {
+      return '<div class="skel" data-callout="state" aria-label="Loading">' + '<span></span><span style="width:85%"></span><span style="width:70%"></span><span style="width:90%"></span>' + '</div>';
+    }
+    var t = STATE_TEXT[kind];
+    return '<div class="state" data-callout="state"><b>' + esc(t[0]) + (what ? ': ' + esc(what) : '') + '</b><span>' + esc(t[1]) + '</span>' +
+      (kind === 'error' ? '<button type="button" class="btn">Retry</button>' : '') +
+      (kind === 'empty' ? '<button type="button" class="btn">Create the first one</button>' : '') + '</div>';
+  }
+
+  function section(role, s, index) {
+    var dataState = state.data;
+    switch (s.type) {
+      case 'kpis':
+        return '<div class="kpis">' + (s.items || []).map(function (k) {
+          var value = dataState === 'ok' ? k.value : dataState === 'loading' ? '' : '-';
+          var note = dataState === 'ok' ? k.note : dataState === 'loading' ? '' : STATE_TEXT[dataState][0];
+          var target = k.link ? navById(k.link) : null;
+          var attrs = k.link
+            ? ' data-do="nav" data-id="' + esc(k.link) + '"' + (k.filter ? ' data-filter="' + esc(JSON.stringify(k.filter)) + '"' : '') +
+              ' title="Opens ' + esc(target ? target.label : k.link) + (k.filter ? ' filtered by ' + esc(filterText(k.filter)) : '') + '"'
+            : '';
+          return '<button type="button" class="kpi" data-callout="kpi"' + attrs + '>' +
+            '<div class="kpi-label">' + esc(k.label) + '</div>' +
+            '<div class="kpi-value">' + (dataState === 'loading' ? ph(70) : esc(value)) + '</div>' +
+            '<div class="kpi-note">' + (dataState === 'loading' ? ph(110) : esc(note || '')) + '</div></button>';
+        }).join('') + '</div>';
+      case 'chart': {
+        var body;
+        if (dataState !== 'ok') body = stateBlock(dataState, s.title);
+        else {
+          var bars = '';
+          for (var b = 0; b < (s.bars || 12); b += 1) bars += '<span style="height:' + (25 + ((b * 37) % 70)) + '%"></span>';
+          body = '<div class="chart" aria-hidden="true">' + bars + '</div>';
+        }
+        return '<section class="card" data-callout="chart"><div class="card-head">' + esc(s.title || 'Chart') + '</div>' + body + '</section>';
+      }
+      case 'filters':
+        return '<div class="filters" data-callout="filters">' + (s.fields || []).map(function (f) {
+          var active = state.filter && state.filter[f] != null;
+          return '<div class="filter' + (/search/i.test(f) ? ' wide' : '') + (active ? ' on' : '') + '">' + esc(f) + (active ? ': ' + esc(state.filter[f]) : '') + (/search/i.test(f) ? '' : ' &#9662;') + '</div>';
+        }).join('') + (state.filter ? '<button type="button" class="btn" data-do="clear-filter">Clear filters</button>' : '') + '</div>';
+      case 'table':
+        return tableHtml(s, index);
+      case 'queue':
+        return queueHtml(role, s);
+      case 'form':
+        return formHtml(role, s, index);
+      case 'map':
+        return '<section class="card"><div class="card-head">' + esc(s.title || 'Map region') + '</div><div class="wf-map-placeholder"><b>Full map region</b><span>Selected modeled location: latitude / longitude</span><small>Approximate zone representative, not an insured address</small></div><p class="note">' + esc(s.text || '') + '</p></section>';
+      case 'timeline':
+        return '<section class="card"><div class="card-head">' + esc(s.title || 'Time bars') + '</div><div class="wf-time-placeholder"><label>Selected minute <input type="range" min="0" max="480" value="0" aria-label="Illustrative selected scenario minute"></label><p>Arrivals <span></span></p><p>Queued jobs <span></span></p><p>Available capabilities <span></span></p></div><p class="note">' + esc(s.text || '') + '</p></section>';
+      case 'note':
+        return '<p class="note">' + esc(s.text || '') + '</p>';
+      default:
+        return '<p class="note">Unknown section type "' + esc(s.type) + '".</p>';
+    }
+  }
+
+  function cell(col, r, statusIndex, list) {
+    if (/status/i.test(col)) {
+      return '<span class="status"' + (statusIndex === 0 ? ' data-callout="status-badge"' : '') + '>' + esc(list[r % list.length]) + '</span>';
+    }
+    return ph(40 + ((r * 13 + col.length * 7) % 60));
+  }
+
+  function tableHtml(s, index) {
+    var cols = s.columns || ['ID', 'Name', 'Status'];
+    var rows = s.rows || 5;
+    var drawer = drawerDef(s.drawer);
+    var head = s.title ? '<div class="card-head">' + esc(s.title) + '</div>' : '';
+    if (state.data !== 'ok') return '<section class="card" data-callout="table">' + head + '<div style="padding:12px">' + stateBlock(state.data, s.title || cols[0]) + '</div></section>';
+    var prefix = idPrefix(cols[0]);
+    var list = statusList(s.statuses);
+    var statusSeen = 0;
+    var trs = '';
+    var cards = '';
+    for (var r = 0; r < rows; r += 1) {
+      var id = prefix + '-' + (1040 + r);
+      var key = index + ':' + r;
+      var open = drawer ? ' class="clickable" tabindex="0" data-do="open-row" data-key="' + key + '" data-rowid="' + id + '"' : '';
+      trs += '<tr' + open + '>' + cols.map(function (c, ci) {
+        if (ci === 0) return '<td><b>' + esc(id) + '</b></td>';
+        var html = cell(c, r, /status/i.test(c) ? statusSeen++ : -1, list);
+        return '<td>' + html + '</td>';
+      }).join('') + '</tr>';
+      var statusCol = cols.filter(function (c) { return /status/i.test(c); })[0];
+      cards += '<' + (drawer ? 'button type="button" data-do="open-row" data-key="' + key + '" data-rowid="' + id + '"' : 'div') + ' class="mcard">' +
+        '<div class="mcard-top"><b>' + esc(id) + '</b>' + (statusCol ? '<span class="status">' + esc(list[r % list.length]) + '</span>' : '') + '</div>' +
+        ph(160) + ph(110) + '</' + (drawer ? 'button' : 'div') + '>';
+    }
+    return '<section class="card" data-callout="table">' + head +
+      '<div class="table-wrap"><table class="data"><thead><tr>' + cols.map(function (c, ci) {
+        return '<th scope="col">' + esc(c) + (ci === 0 ? ' <span class="sort">&#8595;</span>' : '') + '</th>';
+      }).join('') + '</tr></thead><tbody>' + trs + '</tbody></table></div>' +
+      '<div class="mcards">' + cards + '</div>' +
+      (s.paging === 'cursor'
+        ? '<div class="pagination" data-callout="pagination"><span class="pg-count">Page 1 (cursor paging: no total)</span>' +
+          '<button type="button" class="btn" aria-disabled="true">Prev</button><button type="button" class="btn">Next</button></div>'
+        : '<div class="pagination" data-callout="pagination"><span class="pg-count">1-' + rows + ' of ' + esc(s.total != null ? s.total : 240) + '</span>' +
+          '<button type="button" class="btn" aria-disabled="true">Prev</button><button type="button" class="btn">Next</button></div>') + '</section>';
+  }
+
+  function queueHtml(role, s) {
+    var tabs = s.tabs || [{ label: 'Pending', count: 3 }];
+    var tabRow = '<div class="tabs" role="tablist" data-callout="tabs">' + tabs.map(function (t, i) {
+      return '<button type="button" class="tab" role="tab" aria-selected="' + (i === state.queueTab) + '" data-do="queue-tab" data-index="' + i + '">' +
+        esc(t.label) + (t.count != null ? '<span class="count">' + esc(t.count) + '</span>' : '') + '</button>';
+    }).join('') + '</div>';
+    var body;
+    if (state.data !== 'ok') body = '<div style="padding:12px">' + stateBlock(state.data, s.itemLabel) + '</div>';
+    else {
+      var items = '';
+      for (var i = 0; i < (s.items || 3); i += 1) {
+        var acts = state.queueTab === 0 ? (s.actions || []).map(function (a) { return actionButton(role, a, (s.itemLabel || 'Item') + ' #' + (201 + i)); }).join('') : '<span class="status">' + esc(tabs[state.queueTab].label) + '</span>';
+        items += '<li><div class="q-main"><b>' + esc(s.itemLabel || 'Item') + ' #' + (201 + i) + '</b>' + ph(180) + '</div><div class="q-actions">' + acts + '</div></li>';
+      }
+      body = '<ul class="queue-list">' + items + '</ul>';
+    }
+    return '<section class="card" data-callout="queue">' + tabRow + body + '</section>';
+  }
+
+  function formHtml(role, s, index) {
+    var allowed = can(role, s.submit && s.submit.permission);
+    var errors = state.formErrors[index] || {};
+    var fields = (s.fields || []).map(function (f, fi) {
+      var name = 'f' + index + '_' + fi;
+      var dis = allowed ? '' : ' disabled';
+      if (f.type === 'checkbox') return '<label class="check"><input type="checkbox" name="' + name + '"' + (f.value ? ' checked' : '') + dis + '> ' + esc(f.label) + '</label>';
+      var control = f.type === 'select'
+        ? '<select name="' + name + '"' + dis + '>' + (f.options || ['Option']).map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select>'
+        : '<input name="' + name + '" type="' + esc(f.type || 'text') + '"' + (f.value != null ? ' value="' + esc(f.value) + '"' : '') + (f.type === 'number' ? ' step="any"' : '') + (f.required ? ' aria-required="true"' : '') + dis + '>';
+      var msg = errors[fi] ? '<small class="err">' + esc(errors[fi]) + '</small>' : f.hint ? '<small>' + esc(f.hint) + '</small>' : '';
+      return '<label class="field' + (errors[fi] ? ' invalid' : '') + '"><span>' + esc(f.label) + (f.required ? ' *' : '') + '</span>' + control + msg + '</label>';
+    }).join('');
+    var foot = allowed
+      ? '<div class="form-foot"><button type="submit" class="btn primary">' + esc((s.submit && s.submit.label) || 'Save') + '</button><span class="small muted">* required</span></div>'
+      : '<p class="small muted">Read only for this role.</p>';
+    return '<section class="card" data-callout="form"><div class="card-head">' + esc(s.title || 'Form') + '</div>' +
+      '<form class="form" data-form="' + index + '" novalidate>' + fields + foot + '</form></section>';
+  }
+
+  var whyCount = 0;
+  function actionButton(role, a, subject) {
+    if (!can(role, a.permission)) {
+      // Disabled with the reason, never hidden without one: a control that vanishes looks like a bug.
+      var who = rolesWith(a.permission);
+      var whyId = 'wf-why-' + (whyCount += 1);
+      return '<span class="act-off"><button type="button" class="btn' + (a.danger ? ' danger' : '') + '" aria-disabled="true" aria-describedby="' + whyId + '">' + esc(a.label) + '</button>' +
+        '<small id="' + whyId + '">' + (who.length ? 'Needs ' + esc(who.join(' or ')) : 'No role may use this') + '</small></span>';
+    }
+    var confirm = a.confirm === true || (a.reason && !a.confirm) ? a.label + '? This is hard to undo.' : a.confirm || '';
+    return '<button type="button" class="btn' + (a.danger ? ' danger' : '') + '" data-do="action" data-label="' + esc(a.label) + '" data-subject="' + esc(subject) + '" data-confirm="' + esc(confirm) + '"' + (a.reason ? ' data-reason="true"' : '') + '>' + esc(a.label) + '</button>';
+  }
+
+  function drawerHtml(role) {
+    if (!state.drawer) return '';
+    var d = state.drawer.def;
+    var tabs = d.tabs && d.tabs.length ? d.tabs : ['Summary'];
+    var tab = tabs[Math.min(state.drawerTab, tabs.length - 1)];
+    var body = '';
+    if (/location|map/i.test(tab)) {
+      body = '<div class="wf-map-placeholder"><b>Full detail map region</b><span>Selected record coordinates: latitude / longitude</span><small>SCHEMATIC PLACEHOLDER, not a live map</small></div><div class="kv"><span>Location precision</span><b>Approximate zone representative</b></div><p class="note">The product keeps map pan/zoom, provider attribution, Expand map, and a text fallback if the map service fails. No exact customer address is assumed.</p>';
+    } else if (/activity|history|timeline/i.test(tab)) {
+      body = '<p class="note">Not run. This region will show source-labelled arrival, queue, assignment, service, transport/dropoff and available-again events. No timestamps are fabricated in this wireframe.</p>';
+    } else if (/message|comment|note/i.test(tab)) {
+      body = '<div class="kv"><span>Customer</span>' + ph(200) + '</div><div class="kv"><span>Staff</span>' + ph(170) + '</div><div class="filter">Write a reply</div>';
+    } else {
+      body = '<div class="kv"><span>Status</span><span><span class="status">' + esc(statusList(state.drawer.statuses)[0]) + '</span></span></div>' +
+        ['Owner', 'Created', 'Updated', 'Reference'].map(function (k, i) { return '<div class="kv"><span>' + k + '</span>' + ph(120 + i * 25) + '</div>'; }).join('');
+    }
+    var actions = (d.actions || []).map(function (a) { return actionButton(role, a, state.drawer.rowId); }).join('');
+    return '<aside class="drawer" data-callout="drawer" role="dialog" aria-label="' + esc((d.title || 'Detail') + ' ' + state.drawer.rowId) + '">' +
+      '<div class="drawer-head"><div class="grow"><div class="small muted">' + esc(d.title || 'Detail') + '</div><b>' + esc(state.drawer.rowId) + '</b></div>' +
+      '<button type="button" class="btn" data-do="close-drawer" id="wf-drawer-close">Close</button></div>' +
+      '<div class="tabs" role="tablist" data-callout="tabs">' + tabs.map(function (t, i) {
+        return '<button type="button" class="tab" role="tab" aria-selected="' + (t === tab) + '" data-do="drawer-tab" data-index="' + i + '">' + esc(t) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="drawer-body">' + body + '</div>' +
+      (actions ? '<div class="drawer-foot">' + actions + '</div>' : '') + '</aside>';
+  }
+
+  function dialogHtml() {
+    if (!state.dialog) return '';
+    return '<div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="wf-dialog-title" data-callout="confirm-dialog">' +
+      '<h2 id="wf-dialog-title">' + esc(state.dialog.label) + '</h2><p>' + esc(state.dialog.text) + '</p>' +
+      (state.dialog.reason
+        ? '<div class="field' + (state.dialog.error ? ' invalid' : '') + '"><label for="wf-reason"><span>Reason (required, at least 10 characters, stored with the decision)</span></label>' +
+          '<textarea id="wf-reason" rows="3"' + (state.dialog.error ? ' aria-invalid="true" aria-describedby="wf-reason-err"' : '') + '>' + esc(state.dialog.reasonText) + '</textarea>' +
+          (state.dialog.error ? '<small class="err" id="wf-reason-err">' + esc(state.dialog.error) + '</small>' : '') +
+          '<small role="status">' + (state.dialog.armed ? 'Discard the typed reason? Press Escape again to discard it.' : '') + '</small></div>'
+        : '') +
+      '<div class="dialog-foot"><button type="button" class="btn" data-do="dialog-cancel" id="wf-dialog-cancel">Cancel</button>' +
+      '<button type="button" class="btn primary' + (state.dialog.danger ? ' danger' : '') + '" data-do="dialog-ok">' + esc(state.dialog.label) + '</button></div></div></div>';
+  }
+
+  function toastHtml() {
+    return state.toast ? '<div class="toast" role="status" data-callout="toast">' + esc(state.toast) + '</div>' : '';
+  }
+
+  // ---------------------------------------------------------------- callouts, legend, side panels
+
+  function isVisible(el) {
+    return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  }
+
+  function applyCallouts() {
+    var visible = {};
+    TERMS.forEach(function (t, i) {
+      var nodes = app.querySelectorAll('[data-callout="' + t[0] + '"]');
+      for (var n = 0; n < nodes.length; n += 1) {
+        if (!isVisible(nodes[n])) continue;
+        visible[t[0]] = true;
+        if (state.callouts) {
+          var badge = document.createElement('span');
+          badge.className = 'callout';
+          badge.setAttribute('aria-hidden', 'true');
+          badge.textContent = String(i + 1);
+          nodes[n].appendChild(badge);
+        }
+        break;
+      }
+    });
+    return visible;
+  }
+
+  function renderLegend(visible) {
+    legend.innerHTML = TERMS.map(function (t, i) {
+      var on = Boolean(visible[t[0]]);
+      return '<li data-term="' + t[0] + '" class="' + (on ? '' : 'off') + '"><span class="num">' + (i + 1) + '</span><div><b>' + esc(t[1]) + '</b>' +
+        '<p>' + esc(t[2]) + '</p>' + (on ? '' : '<p class="hint">Not in this view. ' + esc(t[3]) + '</p>') + '</div></li>';
+    }).join('');
+  }
+
+  function renderSidePanels() {
+    document.getElementById('wf-name').textContent = config.appName;
+    document.title = config.appName + ' wireframe';
+    var head = '<tr><th scope="col">Area</th>' + config.roles.map(function (r) { return '<th scope="col">' + esc(r.label) + '</th>'; }).join('') + '</tr>';
+    var rows = config.nav.map(function (n) {
+      return '<tr><td>' + esc(n.label) + '</td>' + config.roles.map(function (r) { return '<td>' + (can(r, n.permission) ? 'yes' : 'no') + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    // Actions too: "disabled" means the role sees the area but the action shows disabled with its reason.
+    var actions = [];
+    var seen = {};
+    function addAction(area, areaPermission, a) {
+      if (!a || !a.label || seen[area + '|' + a.label]) return;
+      seen[area + '|' + a.label] = true;
+      actions.push({ name: area + ': ' + a.label, areaPermission: areaPermission, permission: a.permission });
+    }
+    config.nav.forEach(function (n) {
+      var page = config.pages[n.id] || {};
+      (page.actions || []).forEach(function (a) { addAction(n.label, n.permission, a); });
+      (page.sections || []).forEach(function (sec) {
+        (sec.actions || []).forEach(function (a) { addAction(n.label, n.permission, a); });
+        if (sec.submit) addAction(n.label, n.permission, sec.submit);
+        var d = drawerDef(sec.drawer);
+        if (d) (d.actions || []).forEach(function (a) { addAction((d.title || d.id) + ' drawer', n.permission, a); });
+      });
+    });
+    if (actions.length) {
+      rows += '<tr><th scope="rowgroup" colspan="' + (config.roles.length + 1) + '">Actions</th></tr>' + actions.map(function (a) {
+        return '<tr><td>' + esc(a.name) + '</td>' + config.roles.map(function (r) {
+          return '<td>' + (can(r, a.permission) ? 'yes' : can(r, a.areaPermission) ? 'disabled' : 'no') + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+    }
+    document.getElementById('wf-access').innerHTML = '<table class="wf-table"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="small muted" style="margin-top:8px">Hiding is for clarity only. The server must check every permission too.</p>';
+    document.getElementById('wf-ia').innerHTML = config.nav.map(function (n) {
+      var page = config.pages[n.id] || { sections: [] };
+      var parts = (page.sections || []).map(function (s) {
+        if (s.type === 'kpis') return 'KPI cards (' + (s.items || []).map(function (k) {
+          var target = k.link ? navById(k.link) : null;
+          return k.label + (k.link ? ' opens ' + (target ? target.label : k.link) + (k.filter ? ' filtered by ' + filterText(k.filter) : '') : ', display only');
+        }).join('; ') + ')';
+        if (s.type === 'table') {
+          var d = drawerDef(s.drawer);
+          return 'data table (' + (s.columns || []).join(', ') + ')' +
+            (s.statuses ? ', statuses: ' + s.statuses : '') + (s.paging === 'cursor' ? ', cursor paging' : '') +
+            (d ? '; row opens drawer "' + (d.title || d.id) + '" with tabs ' + (d.tabs || []).join(', ') : '');
+        }
+        if (s.type === 'queue') return 'queue with tabs ' + (s.tabs || []).map(function (t) { return t.label; }).join(', ');
+        if (s.type === 'form') return 'form "' + (s.title || '') + '" (' + (s.fields || []).map(function (f) { return f.label; }).join(', ') + ')';
+        if (s.type === 'filters') return 'filter bar (' + (s.fields || []).join(', ') + ')';
+        if (s.type === 'chart') return 'chart "' + (s.title || '') + '"';
+        return s.type;
+      });
+      return '<li><b>' + esc(n.label) + '</b>' + (n.permission ? ' <span class="small">[' + esc(n.permission) + ']</span>' : '') + ': ' + esc(parts.join('; ') || 'no sections yet') + '</li>';
+    }).join('');
+    var roleSelect = document.getElementById('wf-role');
+    roleSelect.innerHTML = config.roles.map(function (r) { return '<option value="' + esc(r.id) + '">' + esc(r.label) + '</option>'; }).join('') +
+      '<option value="">No session</option>';
+    roleSelect.value = state.role;
+  }
+
+  function fit() {
+    var h = HEIGHTS[state.width] || 900;
+    app.style.width = state.width + 'px';
+    app.style.height = h + 'px';
+    var avail = Math.max(200, stage.clientWidth);
+    var scale = Math.min(1, avail / state.width);
+    scaler.style.transform = 'scale(' + scale + ')';
+    frame.style.width = Math.floor(state.width * scale) + 'px';
+    frame.style.height = Math.ceil(h * scale) + 'px';
+    sizeLabel.textContent = state.width + ' x ' + h + ' px' + (scale < 1 ? ', shown at ' + Math.round(scale * 100) + '%' : '') +
+      (size() === 'sm' ? ': phone layout, navigation in an off-canvas drawer' : size() === 'md' ? ': tablet layout, sidebar as a rail' : ': desktop layout');
+  }
+
+  function showToast(text) {
+    state.toast = text;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { state.toast = ''; render(); }, 4000);
+  }
+
+  // ---------------------------------------------------------------- events
+
+  app.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-do]');
+    if (!t || !app.contains(t)) return;
+    var act = t.getAttribute('data-do');
+    if (act === 'nav') {
+      state.page = t.getAttribute('data-id');
+      var drill = t.getAttribute('data-filter');
+      state.filter = drill ? JSON.parse(drill) : null;
+      state.navOpen = false;
+      state.drawer = null;
+      state.queueTab = 0;
+      if (location.hash !== '#' + state.page) location.hash = state.page;
+    } else if (act === 'menu') {
+      state.navOpen = true;
+      state.focusNext = '.nav-item';
+    } else if (act === 'scrim') {
+      if (state.drawer) closeDrawer(); else { state.navOpen = false; state.focusNext = '.menu-btn'; }
+    } else if (act === 'collapse') {
+      state.collapsed = !state.collapsed;
+      state.focusNext = '.collapse-btn';
+    } else if (act === 'open-row') {
+      var key = t.getAttribute('data-key').split(':');
+      var page = config.pages[state.page] || { sections: [] };
+      var role = currentRole();
+      var sections = (page.sections || []).filter(function (s) { return can(role, s.permission); });
+      var sec = sections[Number(key[0])];
+      state.drawer = { def: drawerDef(sec && sec.drawer) || { title: 'Detail', tabs: ['Summary'] }, rowId: t.getAttribute('data-rowid'), key: t.getAttribute('data-key'), statuses: sec && sec.statuses };
+      state.drawerTab = 0;
+      state.returnFocus = '[data-key="' + t.getAttribute('data-key') + '"]';
+      state.focusNext = '#wf-drawer-close';
+    } else if (act === 'close-drawer') {
+      closeDrawer();
+    } else if (act === 'drawer-tab') {
+      state.drawerTab = Number(t.getAttribute('data-index'));
+      state.focusNext = '.drawer [data-do="drawer-tab"][data-index="' + state.drawerTab + '"]';
+    } else if (act === 'queue-tab') {
+      state.queueTab = Number(t.getAttribute('data-index'));
+      state.focusNext = '[data-do="queue-tab"][data-index="' + state.queueTab + '"]';
+    } else if (act === 'action') {
+      var label = t.getAttribute('data-label');
+      var subject = t.getAttribute('data-subject');
+      var confirmText = t.getAttribute('data-confirm');
+      if (confirmText) {
+        var needsReason = t.getAttribute('data-reason') === 'true';
+        state.dialog = { label: label, text: confirmText, subject: subject, danger: t.classList.contains('danger'), reason: needsReason, reasonText: '', error: '', armed: false };
+        state.focusNext = needsReason ? '#wf-reason' : '#wf-dialog-cancel';
+      } else {
+        showToast('Wireframe preview only: ' + label + '. No result or operational change.');
+      }
+    } else if (act === 'dialog-ok') {
+      if (state.dialog.reason && state.dialog.reasonText.trim().length < 10) {
+        state.dialog.error = 'Enter at least 10 characters.';
+        state.focusNext = '#wf-reason';
+      } else {
+        showToast('Wireframe confirmation preview only. No real plan or state changed.');
+        state.dialog = null;
+      }
+    } else if (act === 'clear-filter') {
+      state.filter = null;
+    } else if (act === 'dialog-cancel') {
+      state.dialog = null;
+    } else if (act === 'theme') {
+      showToast('The real app toggles light and dark here.');
+    } else {
+      return;
+    }
+    render();
+  });
+
+  app.addEventListener('submit', function (e) {
+    var form = e.target.closest('form[data-form]');
+    if (!form) return;
+    e.preventDefault();
+    var index = Number(form.getAttribute('data-form'));
+    var page = config.pages[state.page] || { sections: [] };
+    var role = currentRole();
+    var sec = (page.sections || []).filter(function (s) { return can(role, s.permission); })[index];
+    var errors = {};
+    (sec && sec.fields ? sec.fields : []).forEach(function (f, fi) {
+      var input = form.querySelector('[name="f' + index + '_' + fi + '"]');
+      if (f.required && input && String(input.value).trim() === '') errors[fi] = 'Required';
+    });
+    state.formErrors[index] = errors;
+    if (Object.keys(errors).length === 0) showToast('Wireframe inputs only. No scenario result, save or operational change.');
+    render();
+    var firstInvalid = app.querySelector('.field.invalid input');
+    if (firstInvalid) firstInvalid.focus();
+  });
+
+  app.addEventListener('input', function (e) {
+    if (e.target.id === 'wf-reason' && state.dialog) {
+      state.dialog.reasonText = e.target.value;
+      state.dialog.armed = false;
+    }
+  });
+
+  app.addEventListener('keydown', function (e) {
+    var row = e.target.closest && e.target.closest('tr[data-do="open-row"]');
+    if (row && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      row.click();
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (state.dialog) {
+        // Escape never drops a typed reason without asking: the first press asks, the second discards.
+        if (state.dialog.reason && state.dialog.reasonText.trim() && !state.dialog.armed) {
+          state.dialog.armed = true;
+          state.focusNext = '#wf-reason';
+        } else {
+          state.dialog = null;
+        }
+        render();
+      }
+      else if (state.drawer) { closeDrawer(); render(); }
+      else if (state.navOpen) { state.navOpen = false; state.focusNext = '.menu-btn'; render(); }
+      return;
+    }
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var el = document.activeElement;
+      var typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      var search = document.getElementById('wf-search');
+      if (!typing && search) {
+        e.preventDefault();
+        search.focus();
+      }
+    }
+  });
+
+  function closeDrawer() {
+    state.drawer = null;
+    state.focusNext = state.returnFocus;
+  }
+
+  legend.addEventListener('mouseover', function (e) {
+    var li = e.target.closest('li[data-term]');
+    var term = li ? li.getAttribute('data-term') : '';
+    app.querySelectorAll('.hl').forEach(function (n) { n.classList.remove('hl'); });
+    if (term) app.querySelectorAll('[data-callout="' + term + '"]').forEach(function (n) { n.classList.add('hl'); });
+  });
+  legend.addEventListener('mouseleave', function () {
+    app.querySelectorAll('.hl').forEach(function (n) { n.classList.remove('hl'); });
+  });
+
+  document.getElementById('wf-widths').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-width]');
+    if (!b) return;
+    state.width = Number(b.getAttribute('data-width'));
+    state.collapsed = state.width >= 768 && state.width < 1200;
+    state.navOpen = false;
+    document.querySelectorAll('#wf-widths button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    render();
+  });
+  document.getElementById('wf-role').addEventListener('change', function (e) {
+    state.role = e.target.value;
+    state.drawer = null;
+    state.dialog = null;
+    render();
+  });
+  document.getElementById('wf-data').addEventListener('change', function (e) {
+    state.data = e.target.value;
+    state.drawer = null;
+    render();
+  });
+  document.getElementById('wf-callouts').addEventListener('change', function (e) {
+    state.callouts = e.target.checked;
+    render();
+  });
+  window.addEventListener('hashchange', function () {
+    var id = location.hash.replace(/^#/, '');
+    if (id && id !== state.page) { state.page = id; state.drawer = null; state.filter = null; render(); }
+  });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(stage);
+  else window.addEventListener('resize', fit);
+
+  renderSidePanels();
+  render();
+})();
+</script>
+</body>
+</html>

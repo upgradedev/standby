@@ -1,0 +1,109 @@
+/* Site pins retain their geographic coordinates; only their text boxes fit the viewport. */
+.site-marker.unit-site-marker,
+.site-marker.unit-site-marker.selected,
+.site-marker.unit-site-marker.unavailable {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.site-marker.unit-site-marker.focused { outline: none; z-index: 3; }
+.unit-site-marker:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; z-index: 4; }
+.unit-site-pin {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--map-stroke);
+  border-radius: 3px;
+  background: var(--map-neutral);
+  box-shadow: 0 0 0 1px var(--map-accent);
+}
+.selected .unit-site-pin { background: var(--map-site); }
+.unavailable .unit-site-pin { background: var(--map-warning); }
+.focused .unit-site-pin { outline: 2px solid var(--focus); outline-offset: 3px; }
+.unit-site-label {
+  position: absolute;
+  display: grid;
+  gap: 3px;
+  width: 146px;
+  padding: 7px;
+  border: 1px solid var(--border-control);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: 0 2px 6px var(--map-stroke);
+}
+.unit-site-marker[data-resident-count="0"] .unit-site-label { width: 112px; }
+/* Empty planning sites keep their exact pins and accessible names. Show their
+   detail label on intent, so they do not obscure the units operators locate. */
+.unit-site-marker[data-resident-count="0"]:not(.focused):not(:hover):not(:focus-visible) .unit-site-label { visibility: hidden; pointer-events: none; }
+.unit-site-id { font-family: var(--font-mono, monospace); font-size: 12px; }
+.unit-site-count { color: var(--muted); }
+.unit-site-resident { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 5px; border-top: 1px solid var(--border-strong); padding-top: 3px; }
+.unit-site-resident strong { font-family: var(--font-mono, monospace); }
+.unit-site-resident.is-selected-unit strong { text-decoration: underline; text-underline-offset: 3px; }
+.unit-site-marker.focused .unit-site-label,
+.unit-site-marker:focus-visible .unit-site-label { border: 2px solid var(--focus); }
+.unit-site-marker:focus-within { z-index: 4; }
+
+.coverage-planning-layout > .map-panel { display: flex; flex-direction: column; align-self: start; min-width: 0; }
+.coverage-planning-layout .map-panel-top { flex-wrap: wrap; height: auto; min-height: 56px; padding-block: 10px; }
+.coverage-planning-layout .map-canvas-wrap { flex: 0 0 auto; height: 550px; }
+.coverage-map-scope { margin: 0; padding: 12px 16px; color: var(--muted); border-bottom: 1px solid var(--border-strong); font-size: 12px; line-height: 1.6; }
+.coverage-unit-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.coverage-unit-card { display: grid; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-alt); }
+.coverage-unit-card.is-selected-unit { border-color: var(--focus); }
+.coverage-unit-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.coverage-unit-heading > strong { font-family: var(--font-mono, monospace); }
+.coverage-unit-placement { display: grid; gap: 3px; margin: 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.coverage-unit-placement > span:first-child { color: var(--muted); }
+.coverage-unit-placement > strong { font-family: var(--font-mono, monospace); }
+.coverage-locate { min-height: 44px; justify-content: center; white-space: normal; }
+.coverage-draft-availability { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.coverage-draft-availability > span { color: var(--muted); }
+.coverage-availability { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 118px; min-height: 44px; padding: 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.coverage-availability:hover { background: var(--raised); }
+.coverage-availability .availability-dot { flex: 0 0 auto; margin-left: 0; }
+.coverage-availability.is-unavailable { border-color: var(--warning-border); }
+.coverage-site-details { margin-top: 18px; padding: 18px; }
+.coverage-site-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.coverage-site-heading > div { min-width: 0; flex: 1 1 200px; }
+.coverage-site-heading h2 { margin: 10px 0 0; font-size: 16px; overflow-wrap: anywhere; }
+.coverage-site-heading > .button { min-height: 44px; }
+.coverage-site-coordinates,
+.coverage-resident-summary { font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.coverage-site-coordinates { color: var(--muted); }
+.coverage-resident-summary { font-weight: 600; }
+.coverage-residents { display: grid; gap: 10px; list-style: none; margin: 12px 0; padding: 0; }
+.coverage-residents > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border-strong); border-radius: 8px; }
+.coverage-residents > li.is-selected-unit { border-color: var(--focus); }
+.coverage-residents > li > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.coverage-residents > li strong { font-family: var(--font-mono, monospace); overflow-wrap: anywhere; }
+.coverage-residents > li > div > span:last-child { flex-basis: 100%; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.coverage-residents .button { min-height: 44px; white-space: normal; }
+
+@media (max-width: 767px) {
+  .coverage-planning-layout .planning-sidebar { grid-template-columns: minmax(0, 1fr); }
+  .coverage-planning-layout .map-canvas-wrap { height: 450px; }
+}
+
+@media (max-width: 420px) {
+  .coverage-site-details { padding: 14px; }
+  .coverage-site-heading > .button,
+  .coverage-residents .button { width: 100%; justify-content: center; }
+}

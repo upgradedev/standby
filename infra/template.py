@@ -33,7 +33,7 @@ resource('ApiStage','AWS::ApiGatewayV2::Stage',{'ApiId':ref('HttpApi'),'StageNam
     'AccessLogSettings':{'DestinationArn':get('ApiLog','Arn'),'Format':'{"requestId":"$context.requestId","status":"$context.status","routeKey":"$context.routeKey","responseLength":"$context.responseLength"}'},'Tags':{'Project':'standby'}})
 resource('Oac','AWS::CloudFront::OriginAccessControl',{'OriginAccessControlConfig':{'Name':'standby-web-oac','OriginAccessControlOriginType':'s3','SigningBehavior':'always','SigningProtocol':'sigv4'}})
 resource('SpaRewrite','AWS::CloudFront::Function',{'Name':'standby-ui-routes','AutoPublish':True,'FunctionConfig':{'Comment':'Rewrite only known client routes; preserve API and asset errors','Runtime':'cloudfront-js-2.0'},
-    'FunctionCode':"function handler(event){var r=event.request; if(['/','/overview','/incidents','/queues','/map','/settings','/auth/callback'].indexOf(r.uri)>=0){r.uri='/index.html';} return r;}"})
+    'FunctionCode':"function handler(event){var r=event.request; if(['/','/overview','/incidents','/capacity','/queues','/map','/settings','/auth/callback'].indexOf(r.uri)>=0){r.uri='/index.html';} return r;}"})
 resource('ApiRewrite','AWS::CloudFront::Function',{'Name':'standby-api-prefix','AutoPublish':True,'FunctionConfig':{'Comment':'Strip public reverse proxy prefix','Runtime':'cloudfront-js-2.0'},
     'FunctionCode':"function handler(event){var r=event.request;r.uri=r.uri.replace(/^\\/api\\//,'/');return r;}"})
 resource('SecurityHeaders','AWS::CloudFront::ResponseHeadersPolicy',{'ResponseHeadersPolicyConfig':{'Name':'standby-security','SecurityHeadersConfig':{
