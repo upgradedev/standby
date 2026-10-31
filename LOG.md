@@ -1,5 +1,10 @@
 # History
 
+## 2026-10-31T18:13:57.073141+00:00 - Codex - owner approved the specific first take and automated CI method
+
+Owner replied “Εγκρίνω” to the concrete Take1 request. Immutable research/take-1-owner-approval.json binds exact plan SHA256d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb, oneattempt/480seconds/3applicationPOSTattempts, automated driving, noTake2/voice/publication. Root claims generic hosted orchestration/workflow/download metadata; isolated media writers own copied recorder adaptation and Take1 driver. Source checks precede offline recorder success/rejection/cutter fixtures in CI; actual product capture will only follow green instrument plus fresh22file served-hash/config/health/manifest/zone checks. No actual take has run at this entry. Read-only source review fixed exact fixture-rejection classification and duplicate manifest-key counting. Product bytes remain frozen db67b6d/read3802.
+
+
 ## 2026-10-31T17:28:22.679050+00:00 - Codex - final take-plan synchronization review closed
 
 Independent read-only review confirmed the oneCoverage/twoCapacity POST sequence and found one preparation gap: native dialog closure alone does not prove the React/URL teardown. Current live/take-1-plan.json now explicitly requires the existing bounded25s native+URL+heading+zero-detail-card close barrier before scrub/form edits. No action/API budget or movie text changed; no app defect or runtime take is claimed. Current SHA256d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb supersedes the earlier draft hash9f6ec445, whose exact bytes are preserved at live/plan-drafts/take-1-plan-r0.json. Reproduce with Python hashlib on the named files. Review HTML contains the current JSON. Specific Take1 and CI driving mode remain OWNER_APPROVAL_PENDING_NOT_EXECUTED.

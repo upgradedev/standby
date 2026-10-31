@@ -7,7 +7,7 @@ on:
         required: false
         default: legacy
         type: choice
-        options: [legacy, pitch-scenes]
+        options: [legacy, pitch-scenes, pitch-take1, pitch-instrument]
       url:
         description: Verified public AWS application
         required: true
@@ -60,7 +60,7 @@ jobs:
           python - <<'PY'
           import os,re
           mode=os.environ['MODE']
-          assert mode in ['legacy','pitch-scenes'], 'Unknown mode must fail closed'
+          assert mode in ['legacy','pitch-scenes','pitch-take1','pitch-instrument'], 'Unknown mode must fail closed'
           assert os.environ['URL'].rstrip('/')=='https://d34x1513u5u1qs.cloudfront.net'
           assert re.fullmatch('[a-f0-9]{40}',os.environ['RELEASE'])
           if mode=='legacy':
@@ -151,7 +151,7 @@ jobs:
             .runtime/demo/project.json
   pitch_project:
     needs: request
-    if: ${{ inputs.mode == 'pitch-scenes' }}
+    if: ${{ inputs.mode == 'pitch-scenes' || inputs.mode == 'pitch-take1' || inputs.mode == 'pitch-instrument' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -168,9 +168,10 @@ jobs:
           PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
           PROJECT_SHA256: ${{ inputs.project_sha256 }}
           RELEASE: ${{ inputs.release }}
+          PROJECT_MODE: ${{ inputs.mode == 'pitch-scenes' && 'scenes' || 'take1' }}
         run: |
           python tools/pitch/download-project.py --help
-          python tools/pitch/download-project.py --asset-id "$PROJECT_ASSET_ID" --sha256 "$PROJECT_SHA256" --release "$RELEASE" --out "$RUNNER_TEMP/standby-pitch"
+          python tools/pitch/download-project.py --asset-id "$PROJECT_ASSET_ID" --sha256 "$PROJECT_SHA256" --release "$RELEASE" --mode "$PROJECT_MODE" --out "$RUNNER_TEMP/standby-pitch"
       - uses: actions/upload-artifact@v4
         with:
           name: standby-pitch-verified-project
@@ -211,3 +212,44 @@ jobs:
           name: standby-pitch-scene-review
           retention-days: 21
           path: ${{ runner.temp }}/standby-pitch/out/scene-review/
+  pitch_take1:
+    needs: [request, pitch_project]
+    if: ${{ inputs.mode == 'pitch-take1' || inputs.mode == 'pitch-instrument' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: standby-pitch-verified-project
+          path: ${{ runner.temp }}/standby-pitch/
+      - name: Install pinned capture dependencies in hosted CI only
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Offline instrument rehearsal or the single specifically approved take
+        env:
+          PLAYWRIGHT_MODULE: ${{ github.workspace }}/node_modules/playwright
+          CI: 'true'
+          CAPTURE_MODE: ${{ inputs.mode }}
+        run: |
+          python tools/pitch/capture-take.py --help
+          if [ "$CAPTURE_MODE" = pitch-instrument ]; then
+            python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch" --instrument-only
+          else
+            python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: standby-pitch-take1
+          retention-days: 7
+          path: ${{ runner.temp }}/standby-pitch/out/take1/
