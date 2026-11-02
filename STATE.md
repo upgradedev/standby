@@ -1,6 +1,6 @@
 # AWS Weekend Challenge: Map it — current state
 
-Updated 2026-11-02 20:54 UTC. The application remains frozen; this closure changes documentation and video tooling only.
+Updated 2026-11-02 20:57 UTC. The application remains frozen; this closure changes documentation and video tooling only.
 
 ## Mandatory deliverables
 
@@ -8,9 +8,9 @@ Updated 2026-11-02 20:54 UTC. The application remains frozen; this closure chang
 |---|---|
 | Public source | MET: [MIT source](https://github.com/upgradedev/standby) |
 | Working AWS map and real spatial dataset | MET: [anonymous Capacity lab](https://d34x1513u5u1qs.cloudfront.net/capacity); latest delivery-session GET returned HTTP 200 |
-| Written Builder project | SAVED DRAFT — owner must set public video URL and Publish |
+| Written Builder project | PUBLISHED — owner-confirmed; anonymous page verification remains separate |
 | Public video under three minutes | https://youtu.be/5zMug36G_ko |
-| Final challenge publication/submission | PENDING OWNER ACTION; saved draft is not submission |
+| Final challenge publication/submission | OWNER-CONFIRMED PUBLISHED; challenge listing not independently verified |
 
 The official deadline is 2026-11-02 21:00 UTC / 23:00 Europe/Athens. Target: “$100 in AWS credits + AWS Builder Backpack”, one of five equal winner slots. There are no separate runner-up categories. The official About page was re-read during final delivery: four equally weighted criteria (technical innovation, craft, usefulness, storytelling), fifty entries advance to five winners. Registered participants are not submitted-entry counts. [Official requirements](https://builder.aws.com/build/hackathons/e7a301ea-4d84-3b9e-95be-7340a70f7781/weekend-challenge-map-it).
 
