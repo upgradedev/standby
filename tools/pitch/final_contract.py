@@ -30,6 +30,14 @@ QUALIFIED_SCENES = {
     'S8': 'fe916f3472996298ebca4bc07666aed3b6b2ae118730015890c5a3f717c21fbf',
     'S9': '1e7c6c286ab138549c1eb4175048f5768cf77f827d4c5bc229d86003ba58ed85',
 }
+VISUAL_REVISION = 'ILLUSTRATED_FLOW_V2'
+# Only actual, reviewed authored HTML hashes may fill these three slots.
+ILLUSTRATED_SCENES = {
+    'S1': 'c127572a8db971c808cd010cc77c4f8eca97931e7a7fd2461cf45f7a6337c8ca',
+    'S3': '97cd86dde2107c27795373950fd1b14c88a75ffbd380643393aadd9ac92d8834',
+    'S8': '3038791b446b027d9b4466b29abb4856b080933cfc7c30981107a4ecf925dbd3',
+    'S9': QUALIFIED_SCENES['S9'],
+}
 SCRIPTS = {
     'render_scene.mjs': '19ad3497e9e1427aeac27c5ba2a1228922be7baa42056edcfc7fafade95facbc',
     'check_timing.py': '765fe139a8cfc23fe0a40b0227a0750af187428b3694374de55594f68d3b702c',
@@ -58,6 +66,23 @@ def require(value, message):
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def scene_profile(manifest):
+    if 'visualRevision' not in manifest:
+        return QUALIFIED_SCENES
+    require(manifest['mode'] == REVISION_MODE and manifest['visualRevision'] == VISUAL_REVISION,
+            'Unknown or unauthorized visual revision')
+    require(set(ILLUSTRATED_SCENES) == set(QUALIFIED_SCENES)
+            and all(isinstance(value, str) and re.fullmatch(r'[a-f0-9]{64}', value)
+                    for value in ILLUSTRATED_SCENES.values())
+            and ILLUSTRATED_SCENES['S9'] == QUALIFIED_SCENES['S9'], 'Illustrated scene pins are not sealed')
+    return ILLUSTRATED_SCENES
+
+
+def validate_authored_scenes(manifest, bodies):
+    for sid, expected in scene_profile(manifest).items():
+        require(sha(bodies['scenes/' + sid + '.html']) == expected, 'Qualified authored scene changed: ' + sid)
 
 
 def narrative_subset_sha(narration):
@@ -151,8 +176,7 @@ def validate_bodies(bodies):
         require(record['bytes'] == len(bodies[name]) and record['sha256'] == sha(bodies[name]), 'Sealed file changed: ' + name)
     for name, expected in SCRIPTS.items():
         require(sha(bodies['scripts/' + name]) == expected, 'Unreviewed executable: ' + name)
-    for sid, expected in QUALIFIED_SCENES.items():
-        require(sha(bodies['scenes/' + sid + '.html']) == expected, 'Qualified authored scene changed: ' + sid)
+    validate_authored_scenes(manifest, bodies)
     require(sha(bodies['plan-data.json']) == PLAN, 'Original approved text plan changed')
     approval = json.loads(bodies['final-production-approval.json'])
     approval_status = 'OWNER_APPROVED_NARRATIVE_REVISION_1' if revision else 'OWNER_APPROVED_FINAL_RENDER'
