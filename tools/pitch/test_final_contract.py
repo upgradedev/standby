@@ -14,6 +14,35 @@ from check_final_color import check_pixels
 
 
 class ContractControls(unittest.TestCase):
+    def test_original_visual_profiles_keep_original_exact_scene_pins(self):
+        for mode in [contract.MODE, contract.REVISION_MODE]:
+            self.assertEqual(contract.scene_profile({'mode': mode}), contract.QUALIFIED_SCENES)
+
+    def test_illustrated_profile_pins_three_actual_scenes_and_unchanged_closing(self):
+        profile = contract.scene_profile({'mode': contract.REVISION_MODE, 'visualRevision': contract.VISUAL_REVISION})
+        self.assertEqual(set(profile), {'S1', 'S3', 'S8', 'S9'})
+        self.assertEqual(profile['S1'], 'c127572a8db971c808cd010cc77c4f8eca97931e7a7fd2461cf45f7a6337c8ca')
+        self.assertEqual(profile['S9'], contract.QUALIFIED_SCENES['S9'])
+        self.assertNotEqual(profile['S3'], contract.QUALIFIED_SCENES['S3'])
+        self.assertNotEqual(profile['S8'], contract.QUALIFIED_SCENES['S8'])
+
+    def test_changed_illustrated_html_refuses_its_exact_hash_gate(self):
+        manifest = {'mode': contract.REVISION_MODE, 'visualRevision': contract.VISUAL_REVISION}
+        with self.assertRaisesRegex(ValueError, 'Qualified authored scene changed: S1'):
+            contract.validate_authored_scenes(manifest, {'scenes/S1.html': b'unreviewed changed HTML'})
+
+    def test_unknown_or_wrong_mode_visual_revision_refuses(self):
+        for value in [None, '', 'ILLUSTRATED_FLOW_V3', 'unreviewed']:
+            with self.assertRaisesRegex(ValueError, 'visual revision'):
+                contract.scene_profile({'mode': contract.REVISION_MODE, 'visualRevision': value})
+        with self.assertRaisesRegex(ValueError, 'visual revision'):
+            contract.scene_profile({'mode': contract.MODE, 'visualRevision': contract.VISUAL_REVISION})
+
+    def test_unsealed_visual_pins_refuse_without_falling_back_to_original(self):
+        with patch.object(contract, 'ILLUSTRATED_SCENES', {'S1': None, 'S3': None, 'S8': None, 'S9': contract.QUALIFIED_SCENES['S9']}):
+            with self.assertRaisesRegex(ValueError, 'not sealed'):
+                contract.scene_profile({'mode': contract.REVISION_MODE, 'visualRevision': contract.VISUAL_REVISION})
+
     def test_colour_criteria_reject_independent_posterization_and_round_trip_errors(self):
         check_pixels({'meanAbsoluteRgbError': 0, 'maxChannelError': 0, 'darkGreyRedLevels': 46})
         for metrics in [
