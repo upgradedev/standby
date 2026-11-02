@@ -8,7 +8,7 @@ import shlex
 import shutil
 import subprocess
 from fractions import Fraction
-from final_contract import PLAN, WEB, require, sha, validate_directory, checked_render_command
+from final_contract import PLAN, WEB, REVISION_MODE, require, sha, validate_directory, checked_render_command, revision_audio_density
 
 
 def srt_from_ass(text, duration=165):
@@ -79,6 +79,11 @@ def render(project):
         require(set(measured) == {f'S{i}' for i in range(1, 10)} and all(s['fits_window'] is True for s in measured.values()), 'All nine measured audio segments must fit')
         voice = json.loads((project / 'evidence/voice-receipt.json').read_text(encoding='utf-8'))
         require(all(abs(measured[s['id']]['duration'] - s['durationSeconds']) <= .002 for s in voice['segments']), 'Measured master duration changed')
+        if manifest['mode'] == REVISION_MODE:
+            narration = json.loads((project / 'narration.json').read_text(encoding='utf-8'))
+            receipt['narrativeSubsetSha256'] = manifest['narrativeSubsetSha256']
+            receipt['speechDensity'] = revision_audio_density(narration, measured)
+            save()
         run(['python', 'scripts/make_captions.py', '--narration', 'narration.json'], 'captions')
         (out / 'captions.srt').write_text(srt_from_ass((project / 'captions.ass').read_text(encoding='utf-8')), encoding='utf-8')
         timeline = json.loads((project / 'timeline.json').read_text(encoding='utf-8'))

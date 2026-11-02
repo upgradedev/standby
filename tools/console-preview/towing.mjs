@@ -164,10 +164,23 @@ try{
     await axe(page,`${phase}-1440-dark`);
     await shot(page,`towing-${phase}.png`,page.getByTestId('capacity-unit-status'));
     if(phase==='transporting'){
-      const marker=page.getByTestId('capacity-unit-home-marker');await marker.waitFor();
-      check((await marker.innerText()).includes(unit.id),'unit-id-not-on-map');
-      await page.locator('.capacity-map-wrap[data-map-ready="true"]').waitFor();
-      const region=page.getByTestId('capacity-job-map');await region.scrollIntoViewIfNeeded();
+      // The preceding card capture scrolls the map under the sticky drawer
+      // heading. Present the map before observing its asynchronously placed label.
+      const started=performance.now(),deadline=started+25_000;
+      const remaining=()=>{const value=Math.floor(deadline-performance.now());check(value>0,'unit-map-readiness-timeout');return value;};
+      const region=page.getByTestId('capacity-job-map'),marker=page.getByTestId('capacity-unit-home-marker');
+      await region.scrollIntoViewIfNeeded({timeout:remaining()});
+      await region.evaluate(element=>element.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}),undefined,{timeout:remaining()});
+      await page.locator('.capacity-map-wrap[data-map-ready="true"]').waitFor({timeout:remaining()});
+      await marker.waitFor({state:'visible',timeout:remaining()});
+      await page.waitForFunction(expected=>{
+        const element=document.querySelector('[data-testid="capacity-unit-home-marker"]');
+        return element?.closest('.capacity-map-wrap')?.dataset.mapReady==='true'
+          &&getComputedStyle(element).visibility==='visible'&&element.innerText.includes(expected);
+      },unit.id,{timeout:remaining()});
+      check((await marker.innerText({timeout:remaining()})).includes(unit.id),'unit-id-not-on-map');
+      check(performance.now()<=deadline,'unit-map-readiness-timeout');
+      receipt.mapReadiness={expectedUnitId:unit.id,maximumMilliseconds:25_000,elapsedMilliseconds:Math.round(performance.now()-started)};
       const bounds=await marker.evaluate(element=>{const map=element.closest('.capacity-job-map'),a=element.getBoundingClientRect(),b=map?.getBoundingClientRect();return !!b&&a.width>0&&a.height>0&&a.left>=b.left-1&&a.right<=b.right+1&&a.top>=b.top-1&&a.bottom<=b.bottom+1;});
       check(bounds,'unit-home-label-clipped');
       receipt.mapCapture={};const png=await viewportShot(page,region,{record:receipt.mapCapture});
@@ -196,7 +209,7 @@ try{
   receipt.status='fail';receipt.failure={step,code};console.error(`FAIL towing:${step}: ${code}`);process.exitCode=1;
   receipt.failure.instrument={method:error instanceof Error?error.message.match(/^(?:locator|keyboard|page)\.[A-Za-z]+/)?.[0]??null:null,
     category:captureErrorCategory(error),
-    timedOut:captureErrorCategory(error)==='timeout'||error instanceof Error&&error.message==='drawer-close-state-timeout',
+    timedOut:captureErrorCategory(error)==='timeout'||error instanceof Error&&['drawer-close-state-timeout','unit-map-readiness-timeout'].includes(error.message),
     frames:error instanceof Error?[...error.stack?.matchAll(/towing\.mjs:\d+:\d+/g)??[]].slice(0,3).map(match=>match[0]):[]};
   if(page&&!page.isClosed()){
     receipt.failure.ui=await page.evaluate(()=>({cursor:new URL(location.href).searchParams.get('t'),
