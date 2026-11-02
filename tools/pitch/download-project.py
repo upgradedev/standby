@@ -17,7 +17,7 @@ parser.add_argument('--asset-id',required=True)
 parser.add_argument('--sha256',required=True)
 parser.add_argument('--release',required=True)
 parser.add_argument('--out',required=True)
-parser.add_argument('--mode',choices=['scenes','take1','take2'],default='scenes')
+parser.add_argument('--mode',choices=['scenes','take1','take2','take3'],default='scenes')
 args=parser.parse_args()
 assert re.fullmatch(r'[1-9][0-9]{0,19}',args.asset_id)
 assert re.fullmatch(r'[a-f0-9]{64}',args.sha256)
@@ -66,7 +66,7 @@ if args.mode=='scenes':
     allowed.update('scenes/'+name for name in ['S1.html','S3.html','S8.html','S9.html','overlays.html'])
     allowed.update('scripts/'+name for name in ['render_scene.mjs','contact_sheet.py','check_timing.py','compose.py','make_captions.py'])
 else:
-    take_number=1 if args.mode=='take1' else 2
+    take_number=int(args.mode.removeprefix('take'))
     plan_name=f'take-{take_number}-plan.json'
     approval_name=f'take-{take_number}-owner-approval.json'
     allowed={'manifest.json',plan_name,approval_name,'web-manifest.json'}
@@ -99,7 +99,7 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         assert review['source']['webRelease']==args.release and review['live_capture_allowed'] is False and review['network_allowed'] is False
     else:
         plan_hash=hashlib.sha256(bodies[plan_name]).hexdigest()
-        expected_hash={1:'d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',2:'3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94'}[take_number]
+        expected_hash={1:'d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',2:'3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94',3:'33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd'}[take_number]
         assert plan_hash==manifest['takePlanSha256']==expected_hash
         plan=json.loads(bodies[plan_name])
         approval=json.loads(bodies[approval_name])

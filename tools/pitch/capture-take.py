@@ -16,7 +16,7 @@ import urllib.request
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--project', required=True)
 parser.add_argument('--instrument-only', action='store_true')
-parser.add_argument('--take', choices=['1', '2'], default='1')
+parser.add_argument('--take', choices=['1', '2', '3'], default='1')
 args = parser.parse_args()
 assert os.environ.get('GITHUB_ACTIONS') == 'true', 'Hosted CI only'
 project = Path(args.project).resolve()
@@ -134,7 +134,7 @@ try:
     plan = json.loads(plan_bytes)
     approval = json.loads((project / f'take-{take_number}-owner-approval.json').read_text(encoding='utf-8'))
     expected_hash = {1: 'd64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',
-                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94'}[take_number]
+                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94', 3: '33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd'}[take_number]
     assert sha(plan_bytes) == approval['planSha256'] == expected_hash
     assert approval['status'] == f'OWNER_APPROVED_SPECIFIC_TAKE_{take_number}'
     assert approval['take'] == plan['take'] == f'TAKE_{take_number}'

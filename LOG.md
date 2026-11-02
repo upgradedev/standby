@@ -1,5 +1,30 @@
 # History
 
+## 2026-11-02T08:21:48.602559+00:00 — Codex — Take2 failed; corrected Take3 source controls prepared
+
+[PRIMARY] https://github.com/upgradedev/standby/actions/runs/41410696835 FAILED after actualTake2 started. Actual copied recorder/cutter positive+deliberaterejection controls pass;22served files/config/health/data/matrix preflight pass. Productproof counts2POST(1coverage/1capacity),1document; S2/S4 completed; failureS5-prepare/transport-fleet-not-baseline at52.256wallmark. NoS5/S6/S7/whatif. Raw54.44s/1536x864/25fps hash5de0e7cad7414f1f26fd4271527f464c8c1d1b3bf46fad02a1b0551b642f528e. Originalreceipt/proof/marks/raw retained; launchreceipt explicitlyconsumedfailed. No re-dispatch. Commands gh run download41410696835 --name standby-pitch-take2; ffprobe/hashlib/JSON.
+
+Source-supportedcause: driver2 clickedBaseline then immediatelyfilledcursor fromstalerender params; Capacity.tsx28-33 rebuild bothqueries fromrender-capturedparams. move checkedt only. Actualframe49 showsCandidatepressed/t150/queue1, provingviewfailure; exactinternalReacttimingnottraced. Frameboundary30.20form→30.24Evaluating failsvisualidleRunproof; toastpartlyoverlaysresult. Root+independentreviewer pixelproofs in review-root/review-agent; diagnostics notcleanfootage.
+
+New SOURCEONLY Take3 mediafiles plan33cfeb5d/driverd7ff23e8/review plusactualexportedhelpers. WaitURL+bothReactpressedcommit beforedependenttime;retainviewafterfill. Center actualidleRun belowtopbar, hold1.2s insideS4/S7; awaitnative6stoastexpiry(pointeraway),3smetricshold. Scenario/editorial/window/APIlimits/oldTake2/narration/timeline preserved. Rootran check_take3_transitions.mjs --help then --outtransition-controls-root.json:9casesPASS,0appcalls; semanticnegative/deadline/noretry+prior675framescheduler controls. Genericworkflow/acquisition/capture/package gain exacttake3mode/pinned33cf; modevalidator6positive/3negative+missingapprovalrefusal PASS .runtime/pitch-take3-source-controls.json. NewsourceCI/review required beforeownerrequest; NO Take3approval/ZIP/launch orpaidvoice.
+
+
+## 2026-11-02T08:07:45.455143+00:00 — Codex — exact Take2 approved and launched once
+
+Owner explicit answer “Εγκρίνω το συγκεκριμένο Take 2” recorded as exclusive approval boundplan3d49/driver88c. Root sole launcher; independent READ-ONLY package review confirms8files/CRC/flatteneddriver/authorization/workflowmode/source/noextraauthority. package_take.py --help then --take2-package sealed32444bytes SHA25629ffc69f743aeea4115aeee65411a2cb164030f9137699dff6486f73eea5f515. Source timing-control rerun attempted immutable output and correctly refused EEXIST; existing hash-bound final-timing-control-current.json is preserved, no false fresh-test claim.
+
+Fresh read-only preflight out/take-project-2-approved/preflight.json verifies actual22servedhashes/db67, backend3802ready, dataset4478, matrixca19/expiryNov27,0POST and disk6303387648bytesfree. Newasset700990455 uploaded to verifieddraft430105045, no overwrite/publicrelease. Exclusive launchreceipt written BEFORE one gh workflow run demo.yml modepitch-take2/approvedwebdb67/asset700990455/ZIP29ffc69f; returned https://github.com/upgradedev/standby/actions/runs/41410696835 at866bc8f. No duplicate dispatch/rerun is authorized. Workflow first exercises actual offline recorder/cutter, then sole take. Voice/additionaltake/publication remain closed.
+
+
+## 2026-11-02T07:02:07.185337+00:00 — Codex — CI blocker closed; Builder draft aligned with deployed Capacity
+
+[PRIMARY] Final source866bc8fe135b7185df665f0975d4b486a93a397b passed https://github.com/upgradedev/standby/actions/runs/41401898023 and push41401889276. validate/routes/towing/aggregate pass; operator intentionallyskipped. Actual offline capture fixtures2pass; towingreceipt1evaluation/6shots/5axe scans/4close barriers and sameinputa1ab0bdf; all86route axe scans0violations. Root downloaded .runtime/towing-viewport-866bc8f and console-qa-866bc8f, inspected all6towing images and both normal/state contact sheets. Human/incomplete judgments remain pending. Commands gh run view --json status,conclusion,jobs; gh run download; Python len/sum over receipts. git diff db67 HEAD -- apps/console packages/domain services/api infrastructure is empty. No app redeploy.
+
+[PRIMARY] Chrome inventory/getTab restored successfully. Updated the existing Builder editor via native controls, preserving4native image blocks and adding2real prior deployed-db67 screenshots through filechooser. Waited for completed filename/size before Insert; one early selector wait reporteddeadline but freshAX showed completed upload, so no duplicate retry. Corrected description/lead, stale future-capacity claim, added7th heading/towing/pairedwhat-if and actual-assumption limits. Fixed inherited italic/header split through native block controls; complete7headings verified. Intentional reload+preview prove6loadedimages/currenttext and isPreviewtrue. Saved DOM/HTML/receipt and actual viewportJPEGs under .runtime/article-final; no Publish/terms/videoURLchange. Original v3 receipts retained.
+
+No Take2 owner answer/receipt/ZIP/launch. The concrete async question remains pending, per user's explicit per-run skill gate. Narration dry-run preparation reports1605characters/9segments/S1=98 and9estimatedFIT, no paidcalls/keyread; provider/voice/batch remains unapproved. OriginalTake1failure/approvedplan/driver unchanged. Root releases claims at final response and stops at this owner gate. No automation or background capture.
+
+
 ## 2026-11-02T06:44:42.892585+00:00 — Codex — retain fractional clipping failure; center QA target
 
 Hosted run https://github.com/upgradedev/standby/actions/runs/41401430043 at3542385 passed both actual offline capture fixtures, then towing evaluator returned the same modeled inputa1ab0bdf. The strict new viewport gate correctly rejected first card x505/y750.390625/width911/height250.046875 against1440x1000: bottom1000.4375. Failure receipt/image retained .runtime/towing-viewport-3542385. No original browser-exception root cause is inferred.
