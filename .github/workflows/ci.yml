@@ -159,6 +159,7 @@ jobs:
           STANDBY_UI_DIST: apps/console/dist
           STANDBY_EXPECTED_RELEASE: 3802d94e5ae5a66b6b7fb8fc67030393d0a276ea
         run: |
+          node --test tests/browser/viewport-shot.test.mjs
           node tools/console-preview/towing.mjs --help
           node --check tools/console-preview/towing.mjs
           STANDBY_UI_SOURCE="$(git rev-parse HEAD)" node tools/console-preview/towing.mjs

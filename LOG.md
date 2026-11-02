@@ -1,5 +1,28 @@
 # History
 
+## 2026-11-02T06:40:00.812103+00:00 — Codex — sequential closure begins with QA capture correction
+
+Owner requested closing pending items one by one. Re-observed judge /capacity HTTP200, integration63b0119 and last standardCI41230759530 failed. Root claimed integration QA/source-control and metadata coordination; independent workers audited failure and Take2 preparation read-only. Existing failure image visibly contains correct preparing/busy/payload0/currentjob001 while oldjob002 is selected; all previous semantic/axe gates passed before locator.screenshot failed. The original exception text was discarded, so exact old browser cause remains unknown.
+
+Prepared instrument-only correction: explicit target scroll/framing, positive fully-in-viewport geometry, actual fullviewport PNG followed by in-memory pixel crop, before/after bounds, one shared25s deadline/no retry. Existing model/map/axe/API/close assertions and product bytes are unchanged. Added hosted offline real-browser fixtures at1440/390 and oversized-target negative before the actual towing evaluator; runtime verification PENDING. Independent source review found no blocker; ETIMEDOUT classification included. Commands node --check for helper/test/towing and git diff --check pass. No local install/build, new capture, paid route, voice or publication. Specific Take2 request is pending actual owner answer; no receipt or launch has been written.
+
+
+## 2026-11-01T09:58:23.344057+00:00 - Codex - user requested transfer; fresh handover and red CI evidence
+
+User requested detailed handover only, NOT Take2 approval. Rechecked actualHTTP200/indexa65500b1, all22frozen servedhashes, backend/config3802healthready, HEAD63b0119/feat-capacity-mvp, PR7OPENDRAFT and draftrelease430105045. Read-only source/media audits confirm plan3d49/driver88c and absent Take2approval/ZIP/launch. New snapshot .runtime/handover-20261101/snapshot.json and live-web.json; no new evaluation/take/model/voice/cloud mutation.
+
+Crucial correction: standardCI41230759530 finished FAILURE after prior handoff left it pending. validate/console_routes pass; towing_qa fails and summaryconsole_qa consequentlyfails; operator skipped. Artifact13053995960 downloaded locally under .runtime/handover-20261101/towing-63b0119. Receipt reports failing method locator.screenshot, not timedout, at towing.mjs33/186 during later-job-does-not-reuse-selected-job-state; currentUIpreparing/payload0/cursor203.2, all5axe scans0violations and3earlier close barriers passed. Underlyingcauseunresolved; never call latestHEADgreen or dismiss asflake. No fix/rerun was undertaken in this handover task.
+
+Official public About rechecked2026-11-01: deadlineNov2 21UTC/23Athens, publicvideoless3minutes/fourcriteria25percent remain. FullRules not reopened. Preserved pre-handover STATE at .runtime/handover-20261101/STATE-before-handover.txt and rewrote existingSTATE as current, removing misleading old5ad/future-Capacity claims while keeping historyinLOG. Appended existingTRAPS with capturetiming/clippedprobe/contactsheet lessons. No newMarkdown file. Metadatachangesremainlocal/uncommitted; no push/CI/deploy/newtake for handover. All writerclaimsreleased, integration/mediahandoffexplicit; nextagentmustclaimscopeandobtain actualspecificTake2approval. ExistingSTATEcontains detailed exact continuation including sourcehashes/commands/gates.
+
+
+## 2026-10-31T18:48:14.775392+00:00 - Codex - final offline review green; waiting for explicit Take2 approval
+
+[PRIMARY] https://github.com/upgradedev/standby/actions/runs/41230789497 PASSED at63b0119, exercising generic wrapper compatibility and spent-only cuts with392px contact sheets; legacy capture/scenes skipped. out/spent-review-r2/receipt.json preserves rawhash eead0f3a and explicitly reports PARTIAL_SOURCE_WINDOWS_ONLY_NOT_A_CLEAN_TAKE,0new product requests/takes for this standalone workflow, not for separate standardCI QA. Root inspected corrected S4 every-second sheet; no final eligibility inferred. StandardCI41230759530 remains in progress at handoff, productcodeunchangedsincefrozenqualifieddb67b6d.
+
+Final proposed Take2 review/source plan3d49af61 and driver88c61f2a are persisted locally and as unbundled assets in unpublished draft430105045, alongside check_take_timing.mjs. No Take2 approval receipt or sourceZIP/launch exists. Missing-approval negative passes before archive creation. All writer claims released; rootintegrationreserved. Next action: owner reviews live/take-2-review.html and approves or changes that specific single fresh anonymous attempt, maximum3POST/480s. Keep Take1 consumed and all voice/publication gates closed.
+
+
 ## 2026-10-31T18:42:55.760646+00:00 - Codex - corrected source and concrete Take2 review ready, no second take
 
 [PRIMARY] Spent-only CI41229630122 at eefbe6f PASSED with0new product requests/takes and extracted the completed S2/S4 windows; rawhash eead0f3aa5a3377d0ddae7f68f3481edb200513680dd1a8c660fcc2afc312568 remains failure evidence. Root inspected decoded boundary frames and every-second stills. S2 has a clipped map/gray-pad recording frame coinciding with the region screenshot geometry; inferred mechanism is documented, not presented as measured cause. The original20frame contact sheet was all gray due padding; a392px caller gives correct every-second images without editing the skill. S4's values were below the heading-visible viewport, so proposed source explicitly frames metric cards.

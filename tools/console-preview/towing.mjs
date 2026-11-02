@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {prepareCandidateUI} from '../../tests/browser/static-overlay.mjs';
 import {analyzeMapRgb} from '../demo/map-render-proof.mjs';
+import {viewportShot,captureErrorCategory} from '../../tests/browser/viewport-shot.mjs';
 
 const HELP=`Standby one-car towing UI proof (hosted CI only)
 Usage: node tools/console-preview/towing.mjs [--out <directory>] [--help]
@@ -29,8 +30,9 @@ let step='initialization',browser,page,axeVersion;
 const check=(value,code)=>{if(!value)throw new Error(code);};
 const exact=name=>({name,exact:true});
 async function shot(page,name,locator){
-  const target=locator??page;
-  await target.screenshot({path:path.join(out,name),animations:'disabled',...(locator?{}:{fullPage:false})});receipt.shots.push(name);
+  receipt.captures??=[];const record={name};receipt.captures.push(record);
+  const bytes=await viewportShot(page,locator,{record});
+  await writeFile(path.join(out,name),bytes);receipt.shots.push(name);
 }
 async function attribute(page,id,name,value){await page.locator(`[data-testid="${id}"][${name}="${value}"]`).waitFor();}
 async function fill(page,name,value){await page.getByRole('spinbutton',exact(name)).fill(String(value));}
@@ -168,7 +170,7 @@ try{
       const region=page.getByTestId('capacity-job-map');await region.scrollIntoViewIfNeeded();
       const bounds=await marker.evaluate(element=>{const map=element.closest('.capacity-job-map'),a=element.getBoundingClientRect(),b=map?.getBoundingClientRect();return !!b&&a.width>0&&a.height>0&&a.left>=b.left-1&&a.right<=b.right+1&&a.top>=b.top-1&&a.bottom<=b.bottom+1;});
       check(bounds,'unit-home-label-clipped');
-      const png=await region.screenshot({animations:'disabled'});
+      receipt.mapCapture={};const png=await viewportShot(page,region,{record:receipt.mapCapture});
       const rgb=execFileSync('ffmpeg',['-v','error','-f','image2pipe','-i','pipe:0','-vf','crop=iw*0.8:ih*0.8:iw*0.1:ih*0.1,scale=96:64:flags=area,format=rgb24','-frames:v','1','-f','rawvideo','pipe:1'],{input:png,timeout:30000,maxBuffer:1048576,stdio:['pipe','pipe','pipe']});
       receipt.towingMap=analyzeMapRgb(rgb);await shot(page,'towing-unit-home-map.png',region);
       await page.setViewportSize({width:390,height:844});await page.getByTestId('capacity-unit-status').scrollIntoViewIfNeeded();
@@ -193,7 +195,8 @@ try{
   const code=error instanceof Error&&/^[a-z][a-z0-9-]+$/.test(error.message)?error.message:'browser-action-or-assertion';
   receipt.status='fail';receipt.failure={step,code};console.error(`FAIL towing:${step}: ${code}`);process.exitCode=1;
   receipt.failure.instrument={method:error instanceof Error?error.message.match(/^(?:locator|keyboard|page)\.[A-Za-z]+/)?.[0]??null:null,
-    timedOut:error instanceof Error&&(/Timeout \d+ms exceeded/.test(error.message)||error.message==='drawer-close-state-timeout'),
+    category:captureErrorCategory(error),
+    timedOut:captureErrorCategory(error)==='timeout'||error instanceof Error&&error.message==='drawer-close-state-timeout',
     frames:error instanceof Error?[...error.stack?.matchAll(/towing\.mjs:\d+:\d+/g)??[]].slice(0,3).map(match=>match[0]):[]};
   if(page&&!page.isClosed()){
     receipt.failure.ui=await page.evaluate(()=>({cursor:new URL(location.href).searchParams.get('t'),
