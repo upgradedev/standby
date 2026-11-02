@@ -81,8 +81,10 @@ try{
     if(hashes[0]!==hashes[2]){
       const images=times.map((time,index)=>job.id+'-seek-'+index+'.png');
       for(let index=0;index<images.length;index++)await fs.writeFile(path.join(out,images[index]),seekFrames[index]);
-      receipt.determinismFailure={id:job.id,times,hashes,images,states:seekStates};
+      (receipt.determinismFailures??=[]).push({id:job.id,times,hashes,images,states:seekStates});
+      receipt.scenes.push({id:job.id,status:'fail',reason:'Seek is not deterministic',seekHashes:hashes});
       await writeReceipt();
+      continue; // Inspect independent scenes; the mandatory all-scenes gate below stays closed.
     }
     check(hashes[0]===hashes[2],'Seek is not deterministic: '+job.id);
     const snapshots=[];
@@ -125,6 +127,7 @@ try{
     receipt.scenes.push({id:job.id,seekHashes:hashes,snapshots,preview:path.basename(preview),renderRecord:record,contact:path.basename(sheet),status:'pass'});
     await writeReceipt();
   }
+  check(receipt.scenes.length===4&&receipt.scenes.every(scene=>scene.status==='pass'),'All four scene checks must pass: '+receipt.scenes.filter(scene=>scene.status!=='pass').map(scene=>scene.id).join(','));
   // Deliberately omit just one required parameter; retain all other raw query bytes.
   const control=config.jobs[0];
   const [scene,query]=control.render.split('?');
