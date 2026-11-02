@@ -15,7 +15,7 @@ REVISION_MODE = 'NARRATIVE_REVISION_1'
 REVISION_NARRATION_SUBSET = '24a9e13b925afcff4b4b0c61db695fbddde8331fa12649a51315d1bf3eed7db1'
 # Fill only from the actual owner-approved new batch. None is a refusal, never a
 # wildcard or permission to reuse the consumed original Polly batch.
-REVISION_VOICE_RECEIPT = 'd0f40d3cbad190360d264fecd9636f0f38286651e31d3980888ef7bfc3763694'
+REVISION_VOICE_RECEIPT = 'fea3a267fab2d5ad60a6cda4a7e91a704b201f4ff61cbb7f0c52a3afb64d2298'
 REVISION_VOICE_PROVIDER = {'service': 'Amazon Polly', 'voice': 'Matthew', 'engine': 'neural'}
 NARRATIVE_FIELDS = ['id', 'window_start', 'window_end', 'audio_offset', 'tail_hold',
                     'captionText', 'speechText', 'caption_margin_v']
