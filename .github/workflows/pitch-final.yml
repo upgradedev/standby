@@ -1,0 +1,108 @@
+name: Standby final video render
+on:
+  push:
+    branches-ignore: [main]
+    paths: ['.github/workflows/pitch-final.yml', 'tools/pitch/final*.py', 'tools/pitch/test_final_contract.py']
+  workflow_dispatch:
+    inputs:
+      draft_release_id:
+        description: Existing unpublished own-repository draft release ID
+        required: true
+        type: string
+      project_asset_id:
+        description: Sealed standby-pitch-final.zip asset ID
+        required: true
+        type: string
+      project_sha256:
+        description: Exact owner-reviewed final input archive SHA256
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  source_controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependency-free final packet and command controls
+        run: python -m unittest discover -s tools/pitch -p 'test_final_contract.py'
+  acquire:
+    needs: source_controls
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    permissions:
+      # Reading an unpublished GitHub draft asset requires this permission.
+      # This separate job validates bytes and never executes packet code.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify draft, one judge-readiness GET, archive and all sealed inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRAFT_RELEASE_ID: ${{ inputs.draft_release_id }}
+          ASSET_ID: ${{ inputs.project_asset_id }}
+          ARCHIVE_SHA256: ${{ inputs.project_sha256 }}
+        run: |
+          python tools/pitch/final-download.py --help
+          python tools/pitch/final-download.py --draft-release-id "$DRAFT_RELEASE_ID" --asset-id "$ASSET_ID" --sha256 "$ARCHIVE_SHA256" --out "$RUNNER_TEMP/standby-final"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standby-final-verified-inputs
+          path: ${{ runner.temp }}/standby-final/
+          retention-days: 7
+  render:
+    needs: acquire
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: standby-final-verified-inputs
+          path: ${{ runner.temp }}/standby-final/
+      - name: Install pinned rendering dependencies in hosted CI only
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+          command -v unshare
+          command -v runuser
+          command -v ip
+      - name: Strict composition without credentials or external network
+        run: |
+          python tools/pitch/final-render.py --help
+          sudo unshare --net -- bash -c 'ip link set lo up; exec "$@"' -- runuser -u "$(id -un)" -- env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 GITHUB_ACTIONS=true CI=true RUNNER_TEMP="$RUNNER_TEMP" PLAYWRIGHT_MODULE="$GITHUB_WORKSPACE/node_modules/playwright" python "$GITHUB_WORKSPACE/tools/pitch/final-render.py" --project "$RUNNER_TEMP/standby-final"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-final-render-for-human-review
+          retention-days: 21
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/standby-final/out/final-render/
+            ${{ runner.temp }}/standby-final/rendered/*.json
+            ${{ runner.temp }}/standby-final/live/*.normalized.json
+            ${{ runner.temp }}/standby-final/audio/timing.json
+            ${{ runner.temp }}/standby-final/captions.ass
+            ${{ runner.temp }}/standby-final/timeline.json
+            ${{ runner.temp }}/standby-final/narration.json
+            ${{ runner.temp }}/standby-final/manifest.json
+            ${{ runner.temp }}/standby-final/final-production-approval.json
+            ${{ runner.temp }}/standby-final/evidence/
