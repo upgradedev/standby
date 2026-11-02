@@ -2,7 +2,7 @@ name: Standby final video render
 on:
   push:
     branches-ignore: [main]
-    paths: ['.github/workflows/pitch-final.yml', 'tools/pitch/final*.py', 'tools/pitch/test_final_contract.py']
+    paths: ['.github/workflows/pitch-final.yml', 'tools/pitch/final*.py', 'tools/pitch/test_final_contract.py', 'tools/pitch/check_final_color.py']
   workflow_dispatch:
     inputs:
       draft_release_id:
