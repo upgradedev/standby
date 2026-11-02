@@ -2,12 +2,15 @@
 
 **Standby helps a roadside assistance shift planner compare where units wait and how overlapping jobs keep them busy, using prepared AWS road times and explicit scenario assumptions.**
 
-[![Standby CI](https://github.com/upgradedev/standby/actions/workflows/ci.yml/badge.svg?branch=feat%2Fcapacity-mvp)](https://github.com/upgradedev/standby/actions/workflows/ci.yml?query=branch%3Afeat%2Fcapacity-mvp)
+[![Standby CI](https://github.com/upgradedev/standby/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/upgradedev/standby/actions/workflows/ci.yml?query=event%3Apull_request)
 [![AWS serverless](https://img.shields.io/badge/AWS-serverless-FF9900?logo=amazonwebservices&logoColor=white)](#architecture)
 [![React and TypeScript](https://img.shields.io/badge/React-TypeScript-53C9D8?logo=react&logoColor=white)](apps/console/package.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-8DD4AB)](LICENSE)
 
 **[Open Capacity lab →](https://d34x1513u5u1qs.cloudfront.net/capacity)** · [Explore coverage](https://d34x1513u5u1qs.cloudfront.net/map) · [Data provenance](https://d34x1513u5u1qs.cloudfront.net/api/v1/public/manifest) · [Documentation](#documentation)
+
+
+**[Watch the 2:45 demo](https://youtu.be/5zMug36G_ko)** · [AWS Builder project](https://builder.aws.com/project/3LPVbxnjerX5pvDmH8FsdDG8uuA/standby-plan-roadside-standby-with-real-road-times)
 
 ![Standby: see the capacity behind the coverage. An original abstract road map connects assumed motorcycle, service van and flatbed home sites. This is an illustration, not GPS.](docs/assets/readme/hero.svg)
 
@@ -110,7 +113,7 @@ Infrastructure is **[Python-generated CloudFormation](infra/template.py)**. Clou
 Use **Node.js 22.12 or newer**, npm and Python 3. The lockfile pins the JavaScript dependencies. These commands run source checks and build artifacts; they do not deploy AWS resources or prepare paid routes.
 
 ```sh
-git clone --branch feat/capacity-mvp https://github.com/upgradedev/standby.git
+git clone https://github.com/upgradedev/standby.git
 cd standby
 npm ci
 npm run check:secrets
@@ -139,10 +142,11 @@ The research index retrieves curated source notes and their limitations with lex
 
 | Evidence | Scope |
 |---|---|
-| [Full CI at `ee0faad`](https://github.com/upgradedev/standby/actions/runs/41425724781) | Completed successfully on 2026-11-02: source/build checks, route and towing QA, and offline capture controls. Optional authenticated-role execution is a separate gate. |
+| [Full CI at `21f09d9`](https://github.com/upgradedev/standby/actions/runs/41517562574) | Completed successfully on 2026-11-02: source/build checks, route and towing QA, and offline capture controls. This qualifies source and tooling; optional authenticated-role execution is a separate gate. |
 | [Post-deployment anonymous acceptance](https://github.com/upgradedev/standby/actions/runs/41200012209) | Actual deployed controlled preview, desktop/tablet/mobile, without a static UI overlay. |
 | [Historical authenticated-role acceptance](https://github.com/upgradedev/standby/actions/runs/41181026025) | Cognito/workspace authorization at its recorded earlier source. It is not a new human role-menu judgment. |
-| [Current delivery state](STATE.md) | Exact deployment evidence and open items. The final public video for the current Capacity release and final Builder submission remain pending. |
+| [Illustrated V4 pitch render](https://github.com/upgradedev/standby/actions/runs/41518347902) | Strict hosted composition passed: 2:45, 1080p, 25 fps, measured narration and captions. Final creative approval and public posting belong to the owner. |
+| [Current delivery state](STATE.md) | Owner reports public video and Builder publication; see the recorded evidence and verification limits. |
 
 The controlled preview serves frontend **`db67b6d0a2455549736be0d6574c184309fe0277`** and API/config **`3802d94e5ae5a66b6b7fb8fc67030393d0a276ea`** as recorded in the [deployment handover](docs/CONSOLE_BRIEF.md#step6-owner-handover---approved-preview-deployed-2026-10-31). These identify different artifacts. A newer source/tooling CI commit does not imply a new application deployment.
 
