@@ -1,6 +1,7 @@
 """Pure validation for the sealed, render-only final video workspace."""
 import hashlib
 import json
+import math
 import re
 import stat
 from pathlib import Path, PurePosixPath
@@ -10,6 +11,14 @@ WEB = 'db67b6d0a2455549736be0d6574c184309fe0277'
 API = '3802d94e5ae5a66b6b7fb8fc67030393d0a276ea'
 INDEX = 'a65500b133912bbfb94db319f976bfa8eebd0ebce82cb33a9427f2c865544423'
 MODE = 'FINAL_VIDEO_RENDER_ONLY_NO_CAPTURE_OR_VOICE_CALLS'
+REVISION_MODE = 'NARRATIVE_REVISION_1'
+REVISION_NARRATION_SUBSET = '24a9e13b925afcff4b4b0c61db695fbddde8331fa12649a51315d1bf3eed7db1'
+# Fill only from the actual owner-approved new batch. None is a refusal, never a
+# wildcard or permission to reuse the consumed original Polly batch.
+REVISION_VOICE_RECEIPT = 'd0f40d3cbad190360d264fecd9636f0f38286651e31d3980888ef7bfc3763694'
+REVISION_VOICE_PROVIDER = {'service': 'Amazon Polly', 'voice': 'Matthew', 'engine': 'neural'}
+NARRATIVE_FIELDS = ['id', 'window_start', 'window_end', 'audio_offset', 'tail_hold',
+                    'captionText', 'speechText', 'caption_margin_v']
 ASSET = 'standby-pitch-final.zip'
 MAX_ARCHIVE = 256 * 1024 * 1024
 MAX_EXPANDED = 512 * 1024 * 1024
@@ -49,6 +58,46 @@ def require(value, message):
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def narrative_subset_sha(narration):
+    subset = [{key: segment.get(key) for key in NARRATIVE_FIELDS} for segment in narration['segments']]
+    return sha(json.dumps(subset, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8'))
+
+
+def validate_revision_authority(manifest, approval, narration, voice_bytes):
+    require(isinstance(REVISION_VOICE_RECEIPT, str) and re.fullmatch(r'[a-f0-9]{64}', REVISION_VOICE_RECEIPT)
+            and isinstance(REVISION_VOICE_PROVIDER, dict) and {'service', 'voice'} <= set(REVISION_VOICE_PROVIDER)
+            and all(isinstance(value, str) and value for value in REVISION_VOICE_PROVIDER.values()),
+            'Revision actual voice bindings are not sealed; no render authorized')
+    require(manifest.get('narrativeSubsetSha256') == approval.get('narrativeSubsetSha256')
+            == narrative_subset_sha(narration) == REVISION_NARRATION_SUBSET, 'Approved revision narration changed')
+    require(sha(voice_bytes) == REVISION_VOICE_RECEIPT, 'Reviewed actual revision voice receipt changed')
+    voice = json.loads(voice_bytes)
+    require(all(voice['provider'].get(key) == value for key, value in REVISION_VOICE_PROVIDER.items()),
+            'Selected actual revision voice mismatch')
+    return voice
+
+
+def revision_audio_density(narration, measured):
+    """Measured revision-only speech coverage; original renders keep their gates."""
+    segments = narration['segments']
+    require([s['id'] for s in segments] == [f'S{i}' for i in range(1, 10)]
+            and set(measured) == {s['id'] for s in segments}, 'Nine revision audio measurements required')
+    durations = [float(measured[s['id']]['duration']) for s in segments]
+    require(all(math.isfinite(d) and d > 0 for d in durations), 'Invalid revision audio duration')
+    total = sum(durations)
+    require(total >= 140, 'Revision measured speech duration is below 140 seconds')
+    starts = [float(s['window_start']) + float(s['audio_offset']) for s in segments]
+    ends = [start + duration for start, duration in zip(starts, durations)]
+    for segment, end in zip(segments, ends):
+        require(end <= float(segment['window_end']) - float(segment['tail_hold']), 'Revision speech overruns its approved window')
+    gaps = [start - previous_end for start, previous_end in zip(starts[1:], ends[:-1])]
+    require(all(0 <= gap <= 3.5 for gap in gaps), 'Revision interwindow speech gap exceeds 3.5 seconds')
+    final_tail = float(segments[-1]['window_end']) - ends[-1]
+    require(2 <= final_tail <= 3.5, 'Revision final tail must be 2 to 3.5 seconds')
+    return {'totalMeasuredAudioSeconds': total, 'interwindowGapsSeconds': gaps, 'finalTailSeconds': final_tail,
+            'minimumTotalSeconds': 140, 'maximumInterwindowGapSeconds': 3.5, 'finalTailBoundsSeconds': [2, 3.5]}
 
 
 def safe_name(name):
@@ -94,7 +143,8 @@ def checked_render_command(command, project, outputs, seen):
 def validate_bodies(bodies):
     require(set(bodies) == FILES | {'manifest.json'}, 'Incomplete final workspace')
     manifest = json.loads(bodies['manifest.json'])
-    require(manifest['mode'] == MODE and manifest['approvedPlanSha256'] == manifest['sourcePlanSha256'] == PLAN, 'Final mode/plan mismatch')
+    require(manifest['mode'] in [MODE, REVISION_MODE] and manifest['approvedPlanSha256'] == manifest['sourcePlanSha256'] == PLAN, 'Final mode/plan mismatch')
+    revision = manifest['mode'] == REVISION_MODE
     require(manifest['webRelease'] == WEB and manifest['backendRelease'] == API, 'Frozen release mismatch')
     require(set(manifest['files']) == FILES, 'Final manifest file set')
     for name, record in manifest['files'].items():
@@ -105,15 +155,20 @@ def validate_bodies(bodies):
         require(sha(bodies['scenes/' + sid + '.html']) == expected, 'Qualified authored scene changed: ' + sid)
     require(sha(bodies['plan-data.json']) == PLAN, 'Original approved text plan changed')
     approval = json.loads(bodies['final-production-approval.json'])
-    require(approval['status'] == 'OWNER_APPROVED_FINAL_RENDER' and approval['sourcePlanSha256'] == PLAN and approval['webRelease'] == WEB, 'Final production approval required')
+    approval_status = 'OWNER_APPROVED_NARRATIVE_REVISION_1' if revision else 'OWNER_APPROVED_FINAL_RENDER'
+    require(approval['status'] == approval_status and approval['sourcePlanSha256'] == PLAN and approval['webRelease'] == WEB, 'Final production approval required')
     for flag in ['compositionApproved', 'syntheticVoiceApproved', 'reuseTake4ClipsApproved', 'minimumCleanTakesExceptionApproved']:
         require(approval.get(flag) is True, 'Specific owner approval required: ' + flag)
     plan = json.loads(bodies['plan-data.json'])
     timeline = json.loads(bodies['timeline.json'])
     narration = json.loads(bodies['narration.json'])
-    voice = json.loads(bodies['evidence/voice-receipt.json'])
-    require(sha(bodies['evidence/voice-receipt.json']) == '7c7dd48482732f198b6ab33cb62444aab4efeef28eb1a5f2519143c0b19696dc', 'Reviewed actual voice receipt changed')
-    require(voice['provider']['service'] == 'Amazon Polly' and voice['provider']['voice'] == 'Matthew' and voice['provider']['engine'] == 'neural', 'Selected actual voice mismatch')
+    if revision:
+        voice = validate_revision_authority(manifest, approval, narration, bodies['evidence/voice-receipt.json'])
+        require(timeline.get('audio', {}).get('bed', {}).get('enabled') is False, 'Revision noise bed must be explicitly disabled')
+    else:
+        voice = json.loads(bodies['evidence/voice-receipt.json'])
+        require(sha(bodies['evidence/voice-receipt.json']) == '7c7dd48482732f198b6ab33cb62444aab4efeef28eb1a5f2519143c0b19696dc', 'Reviewed actual voice receipt changed')
+        require(voice['provider']['service'] == 'Amazon Polly' and voice['provider']['voice'] == 'Matthew' and voice['provider']['engine'] == 'neural', 'Selected actual voice mismatch')
     require([s['id'] for s in voice['segments']] == [f'S{i}' for i in range(1, 10)], 'Nine actual master voice records required')
     for record, segment in zip(voice['segments'], narration['segments']):
         require(record['file'] == 'audio/' + segment['id'] + '.mp3' and record['audioSha256'] == sha(bodies[record['file']]) and record['bytes'] == len(bodies[record['file']]), 'Master audio bytes changed')
@@ -124,7 +179,8 @@ def validate_bodies(bodies):
     require([s['id'] for s in timeline['shots']] == [f'S{i}' for i in range(1, 10)], 'Shot order changed')
     for original, segment, shot in zip(plan['segments'], narration['segments'], timeline['shots']):
         require(original['id'] == segment['id'] == shot['id'], 'Segment identity mismatch')
-        require(original['captionText'] == segment['captionText'] and original['speechText'] == segment['speechText'], 'Approved narration text changed')
+        if not revision:
+            require(original['captionText'] == segment['captionText'] and original['speechText'] == segment['speechText'], 'Approved narration text changed')
         require(original['start'] == segment['window_start'] == shot['start'] and original['end'] == segment['window_end'] == shot['end'], 'Approved shot windows changed')
         require(segment.get('tts', True) is True, 'Every segment must use its approved master narration')
         if shot['id'] in LIVE:

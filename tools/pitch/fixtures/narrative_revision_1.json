@@ -1,0 +1,90 @@
+{
+  "segments": [
+    {
+      "id": "S1",
+      "window_start": 0,
+      "window_end": 12,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "Two stranded drivers. One flatbed. Alex needs to know when a compatible unit can take the next call. Standby makes that capacity problem visible before a shift.",
+      "speechText": "Two stranded drivers. One flatbed. Alex needs to know when a compatible unit can take the next call. Standby makes that capacity problem visible before a shift."
+    },
+    {
+      "id": "S2",
+      "window_start": 12,
+      "window_end": 24,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "Start with real Austin report geography. Standby combines demand zones with prepared Amazon Location road times, so a planner can inspect the reach behind assumed standby sites.",
+      "speechText": "Start with real Austin report geography. Standby combines demand zones with prepared Amazon Location road times, so a planner can inspect the reach behind assumed standby sites.",
+      "caption_margin_v": 30
+    },
+    {
+      "id": "S3",
+      "window_start": 24,
+      "window_end": 36,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "Reports define zones. Amazon Location supplies the road matrix. Editable service assumptions turn travel and job durations into a capacity comparison. Without road times, that comparison stops.",
+      "speechText": "Reports define zones. Amazon Location supplies the road matrix. Editable service assumptions turn travel and job durations into a capacity comparison. Without road times, that comparison stops."
+    },
+    {
+      "id": "S4",
+      "window_start": 36,
+      "window_end": 56,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "Now build the shift Alex actually needs: motorcycles, service vans, and flatbeds, with explicit capabilities and individual working hours. This example starts with three units and two overlapping collision jobs, but only one compatible flatbed. Service, transport, drop-off, and recovery allowances stay visible and editable.",
+      "speechText": "Now build the shift Alex actually needs: motorcycles, service vans, and flatbeds, with explicit capabilities and individual working hours. This example starts with three units and two overlapping collision jobs, but only one compatible flatbed. Service, transport, drop-off, and recovery allowances stay visible and editable.",
+      "caption_margin_v": 30
+    },
+    {
+      "id": "S5",
+      "window_start": 56,
+      "window_end": 83,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "At scenario minute 150, that flatbed is carrying one vehicle. The second collision job waits, even though the fleet contains other units. The detail view connects each modeled job, its assigned unit, and the unit's assumed home on the map. Alex can see the capacity constraint directly: a busy, compatible vehicle cannot accept another tow simply because another call has arrived.",
+      "speechText": "At scenario minute one hundred and fifty, that flatbed is carrying one vehicle. The second collision job waits, even though the fleet contains other units. The detail view connects each modeled job, its assigned unit, and the unit's assumed home on the map. Alex can see the capacity constraint directly: a busy, compatible vehicle cannot accept another tow simply because another call has arrived.",
+      "caption_margin_v": 30
+    },
+    {
+      "id": "S6",
+      "window_start": 83,
+      "window_end": 111,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "Now follow the flatbed's whole busy cycle. The first job clears at scenario minute 191.7. At minute 197, the vehicle slot is empty, but recovery still reserves the flatbed until 201.7. That distinction matters when planning for the next call. Payload is a physical state; dispatch availability determines when Alex can assign work again.",
+      "speechText": "Now follow the flatbed's whole busy cycle. The first job clears at scenario minute one hundred and ninety-one point seven. At minute one hundred and ninety-seven, the vehicle slot is empty, but recovery still reserves the flatbed until two hundred and one point seven. That distinction matters when planning for the next call. Payload is a physical state; dispatch availability determines when Alex can assign work again.",
+      "caption_margin_v": 30
+    },
+    {
+      "id": "S7",
+      "window_start": 111,
+      "window_end": 137,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "Change one decision: add a compatible flatbed to the candidate fleet. The baseline, jobs, and assumptions stay the same. In this two-job illustration, the modeled waiting queue falls from one to zero. Alex can inspect the response and workload changes side by side, instead of comparing different demand. One replication is a transparent what-if, not a staffing benchmark or a forecast.",
+      "speechText": "Change one decision: add a compatible flatbed to the candidate fleet. The baseline, jobs, and assumptions stay the same. In this two-job illustration, the modeled waiting queue falls from one to zero. Alex can inspect the response and workload changes side by side, instead of comparing different demand. One replication is a transparent what-if, not a staffing benchmark or a forecast.",
+      "caption_margin_v": 30
+    },
+    {
+      "id": "S8",
+      "window_start": 137,
+      "window_end": 151,
+      "audio_offset": 0.2,
+      "tail_hold": 0.5,
+      "captionText": "AWS serves the console and evaluator serverlessly. Prepared road times are reused for each scenario, while authorized plan writes stay separate. Planners can explore alternatives without rebuilding paid routes.",
+      "speechText": "A W S serves the console and evaluator serverlessly. Prepared road times are reused for each scenario, while authorized plan writes stay separate. Planners can explore alternatives without rebuilding paid routes."
+    },
+    {
+      "id": "S9",
+      "window_start": 151,
+      "window_end": 165,
+      "audio_offset": 0.2,
+      "tail_hold": 2,
+      "captionText": "Standby helps roadside shift managers plan where units wait, what keeps them busy, and when they return to service. Open the demo, change an assumption, and inspect the consequence.",
+      "speechText": "Standby helps roadside shift managers plan where units wait, what keeps them busy, and when they return to service. Open the demo, change an assumption, and inspect the consequence."
+    }
+  ]
+}
