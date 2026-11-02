@@ -16,7 +16,7 @@ import urllib.request
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--project', required=True)
 parser.add_argument('--instrument-only', action='store_true')
-parser.add_argument('--take', choices=['1', '2', '3'], default='1')
+parser.add_argument('--take', choices=['1', '2', '3', '4'], default='1')
 args = parser.parse_args()
 assert os.environ.get('GITHUB_ACTIONS') == 'true', 'Hosted CI only'
 project = Path(args.project).resolve()
@@ -122,6 +122,19 @@ def instrument():
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+    if take_number == 4:
+        # Exercise the exact source-qualified helper and recorder without product access.
+        source = Path(__file__).resolve().parent
+        assert (project / 'scripts/capture-state.mjs').read_bytes() == (source / 'capture-state.mjs').read_bytes()
+        assert (project / 'scripts/capture_app.mjs').read_bytes() == (source / 'fixtures/capture_app.mjs').read_bytes()
+        run(['node', str(source / 'check-capture-paint.mjs'), '--help'])
+        run(['node', str(source / 'check-capture-paint.mjs'), '--out', str(fixture / 'paint')],
+            timeout=100, log=fixture / 'paint.log')
+        pixels = json.loads((fixture / 'paint/receipt.json').read_text(encoding='utf-8'))
+        assert pixels['status'] == 'pass' and pixels['applicationRequests'] == pixels['productTakes'] == 0
+        receipt['instrument'].append({'name': 'decoded-idle-run-paint', 'status': 'pass',
+                                      'longestGreenRun': pixels['decoded']['longestGreenRun']})
+        save()
 
 
 try:
@@ -134,7 +147,7 @@ try:
     plan = json.loads(plan_bytes)
     approval = json.loads((project / f'take-{take_number}-owner-approval.json').read_text(encoding='utf-8'))
     expected_hash = {1: 'd64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',
-                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94', 3: '33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd'}[take_number]
+                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94', 3: '33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd', 4: '6f31311de3e55896ae97d6d0da5d7a84176ec189416535632b4f56e534258876'}[take_number]
     assert sha(plan_bytes) == approval['planSha256'] == expected_hash
     assert approval['status'] == f'OWNER_APPROVED_SPECIFIC_TAKE_{take_number}'
     assert approval['take'] == plan['take'] == f'TAKE_{take_number}'
@@ -151,7 +164,7 @@ try:
                     ['python', 'scripts/contact_sheet.py', '--help']]:
         run(command)
     instrument()
-    assert len(receipt['instrument']) == 2
+    assert len(receipt['instrument']) == (3 if take_number == 4 else 2)
     if args.instrument_only:
         receipt['status'] = 'INSTRUMENT_PASSED_NO_PRODUCT_TAKE'
         save()

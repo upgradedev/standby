@@ -16,6 +16,37 @@ on:
 permissions:
   contents: read
 jobs:
+  pitch_capture_instrument:
+    if: github.event_name != 'workflow_dispatch' || !inputs.authenticated
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned offline recorder dependencies in hosted CI only
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Decode actual offline recorder pixels before and after Run
+        env:
+          PLAYWRIGHT_MODULE: ${{ github.workspace }}/node_modules/playwright
+          CI: 'true'
+        run: |
+          node tools/pitch/fixtures/capture_app.mjs --help
+          node tools/pitch/check-capture-paint.mjs --help
+          node tools/pitch/check-capture-paint.mjs --out .runtime/pitch-paint
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standby-offline-recorder-paint
+          path: .runtime/pitch-paint/
+          retention-days: 7
   validate:
     if: github.event_name != 'workflow_dispatch' || !inputs.authenticated
     runs-on: ubuntu-latest
