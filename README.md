@@ -9,6 +9,8 @@
 
 **[Open Capacity lab →](https://d34x1513u5u1qs.cloudfront.net/capacity)** · [Explore coverage](https://d34x1513u5u1qs.cloudfront.net/map) · [Data provenance](https://d34x1513u5u1qs.cloudfront.net/api/v1/public/manifest) · [Documentation](#documentation)
 
+**[Watch the 2:45 demo](https://youtu.be/5zMug36G_ko)**
+
 ![Standby: see the capacity behind the coverage. An original abstract road map connects assumed motorcycle, service van and flatbed home sites. This is an illustration, not GPS.](docs/assets/readme/hero.svg)
 
 Built for [AWS Weekend Challenge: Map it](https://builder.aws.com/build/hackathons/e7a301ea-4d84-3b9e-95be-7340a70f7781/weekend-challenge-map-it). The public console runs without an account. Shared placement-plan writes use a separate authenticated workspace.
@@ -143,7 +145,7 @@ The research index retrieves curated source notes and their limitations with lex
 | [Post-deployment anonymous acceptance](https://github.com/upgradedev/standby/actions/runs/41200012209) | Actual deployed controlled preview, desktop/tablet/mobile, without a static UI overlay. |
 | [Historical authenticated-role acceptance](https://github.com/upgradedev/standby/actions/runs/41181026025) | Cognito/workspace authorization at its recorded earlier source. It is not a new human role-menu judgment. |
 | [Illustrated V4 pitch render](https://github.com/upgradedev/standby/actions/runs/41518347902) | Strict hosted composition passed: 2:45, 1080p, 25 fps, measured narration and captions. Final creative approval and public posting belong to the owner. |
-| [Current delivery state](STATE.md) | Final V4 files are ready for owner review/upload; public video and Builder publication remain pending. |
+| [Current delivery state](STATE.md) | Owner-supplied public video URL recorded; final Builder publication remains pending. |
 
 The controlled preview serves frontend **`db67b6d0a2455549736be0d6574c184309fe0277`** and API/config **`3802d94e5ae5a66b6b7fb8fc67030393d0a276ea`** as recorded in the [deployment handover](docs/CONSOLE_BRIEF.md#step6-owner-handover---approved-preview-deployed-2026-10-31). These identify different artifacts. A newer source/tooling CI commit does not imply a new application deployment.
 
