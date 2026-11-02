@@ -265,7 +265,7 @@ flowchart LR
 |---|---|
 | S3 | Ξεχωριστά buckets για web/public aggregates, private source/cohorts και ιδιωτικό προσωρινό route cache |
 | CloudFront | HTTPS, συμπίεση, caching immutable assets, response security headers και OAC πρόσβαση στο S3 |
-| API Gateway HTTP API | Versioned routes, JWT authorization protected λειτουργιών, CORS και throttle targets |
+| API Gateway HTTP API | Versioned routes, JWT authorization protected λειτουργιών και throttle targets· same-origin πρόσβαση μέσω CloudFront `/api/*`, χωρίς `CorsConfiguration` στο HTTP API |
 | Read and evaluate Lambda | Ανάγνωση δημοσίων δεδομένων και bounded stateless υπολογισμός πάνω σε ιδιωτικό matrix |
 | Authorized plan Lambda | Workspace-bound αποθήκευση/review με version checks και audit |
 | Owner controlled builder | Εισαγωγή πηγής και πεπερασμένη παραγωγή επιτρεπόμενων matrices |
@@ -274,7 +274,7 @@ flowchart LR
 | DynamoDB on demand | Δικές μας παράμετροι σχεδίων, references/hashes αποτελεσμάτων, membership, version checks, idempotency και audit |
 | Cognito | Πραγματική ταυτότητα και ρόλοι operator |
 | CloudWatch | Structured logs, request IDs, latency/errors/throttles και alarms |
-| SAM και CloudFormation | Αναπαραγώγιμη υποδομή και έλεγχος αλλαγών |
+| CloudFormation από Python generator | Αναπαραγώγιμη υποδομή και έλεγχος αλλαγών μέσω `infra/template.py`, χωρίς SAM transform |
 
 Ο ανώνυμος κριτής εκτελεί τον differentiator μέσω bounded evaluation endpoint χωρίς λογαριασμό. Ο evaluator έχει μόνο τις απαιτούμενες αναγνώσεις S3 και δεν κατέχει δικαιώματα αποθήκευσης σχεδίων ή παραγωγής νέων route matrices. Επιστρέφει αποτελέσματα κάλυψης και στοιχεία προέλευσης, χωρίς μαζική διάθεση του ιδιωτικού raw matrix. Οι προσωρινές επιλογές του επισκέπτη παραμένουν απομονωμένες στη δική του συνεδρία.
 
@@ -320,7 +320,7 @@ packages/application/ evaluate and compare use cases, ports
 packages/contracts/   validated DTOs and error contracts
 services/api/         HTTP, identity, S3 and DynamoDB adapters
 tools/data/           source normalization and owner-only matrix preparation
-infra/                SAM and CloudFormation
+infra/                Python-generated CloudFormation
 tests/                independent fixtures and end-to-end journeys
 docs/                 this specification and source references
 ```

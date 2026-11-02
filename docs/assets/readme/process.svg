@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="580" viewBox="0 0 1280 580" role="img" aria-labelledby="title description">
+  <title id="title">From a shift question to a paired capacity comparison</title>
+  <desc id="description">Choose a historical context, configure a mixed roster, compare the same seeded workload, inspect the queue and replay, then change a fleet assumption. A flatbed remains busy through preparation, approach, onsite work, transport, drop-off and recovery. It carries one vehicle during transport and drop-off, then zero during recovery; it becomes available only after recovery. Workshop legs and renewal are assumed, not routed.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0c1827"/><stop offset="1" stop-color="#112935"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="m2 1 6 4-6 4" fill="none" stroke="#708d9e" stroke-width="1.7"/></marker>
+  </defs>
+  <rect width="1280" height="580" rx="20" fill="url(#bg)"/>
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="48" y="55" fill="#f0f7fb" font-size="29" font-weight="600">A better question than “How many units?”</text>
+    <text x="48" y="88" fill="#a6bdca" font-size="18">Which capabilities are available, where, and for how long?</text>
+    <g fill="none" stroke="#708d9e" stroke-width="2" marker-end="url(#arrow)"><path d="M254 180h22"/><path d="M498 180h22"/><path d="M742 180h22"/><path d="M986 180h22"/></g>
+    <g fill="#152c3a" stroke="#2e4a5c"><rect x="48" y="126" width="206" height="112" rx="12"/><rect x="292" y="126" width="206" height="112" rx="12"/><rect x="536" y="126" width="206" height="112" rx="12"/><rect x="780" y="126" width="206" height="112" rx="12"/><rect x="1024" y="126" width="208" height="112" rx="12"/></g>
+    <g fill="#78dbe1" font-size="13" font-weight="650" letter-spacing="1.4"><text x="66" y="153">01 / CONTEXT</text><text x="310" y="153">02 / CONFIGURE</text><text x="554" y="153">03 / COMPARE</text><text x="798" y="153">04 / INSPECT</text><text x="1042" y="153">05 / WHAT-IF</text></g>
+    <g fill="#edf4fb" font-size="18" font-weight="600"><text x="66" y="184">Historical context</text><text x="310" y="184">Mixed fleet + shifts</text><text x="554" y="184">Same seeded jobs</text><text x="798" y="184">Queue + map replay</text><text x="1042" y="184">Change the roster</text></g>
+    <g fill="#a6bdca" font-size="14"><text x="66" y="213">Reports and road snapshot</text><text x="310" y="213">Capabilities and durations</text><text x="554" y="213">Baseline versus candidate</text><text x="798" y="213">Trace each modeled delay</text><text x="1042" y="213">See the paired difference</text></g>
+    <path d="M48 274h1184" stroke="#2d4656"/>
+    <text x="48" y="315" fill="#edf4fb" font-size="23" font-weight="600">One flatbed. One vehicle. The whole busy cycle.</text>
+    <path d="M48 346v-10h1000v10" fill="none" stroke="#76d5dd" stroke-width="1.5"/>
+    <rect x="417" y="323" width="263" height="25" rx="12" fill="#0f222e"/>
+    <text x="548" y="340" text-anchor="middle" fill="#8ee2e5" font-size="12" font-weight="600" letter-spacing=".5">ONE ACTIVE JOB · UNIT REMAINS BUSY</text>
+    <g stroke="#325365" fill="#173444"><rect x="48" y="364" width="152" height="69" rx="9"/><rect x="220" y="364" width="152" height="69" rx="9"/><rect x="392" y="364" width="152" height="69" rx="9"/><rect x="564" y="364" width="152" height="69" rx="9"/><rect x="736" y="364" width="152" height="69" rx="9"/></g>
+    <rect x="908" y="364" width="140" height="69" rx="9" fill="#342e21" stroke="#6d5b32"/>
+    <rect x="1080" y="364" width="152" height="69" rx="9" fill="#17382f" stroke="#3d725e"/>
+    <g fill="#edf4fb" font-size="18" font-weight="600" text-anchor="middle"><text x="124" y="406">Prepare</text><text x="296" y="406">Approach</text><text x="468" y="406">On site</text><text x="640" y="406">Transport</text><text x="812" y="406">Drop-off</text><text x="978" y="406" fill="#f0ce80">Recover</text><text x="1156" y="406" fill="#b3e7ca">Available</text></g>
+    <g fill="none" stroke="#708d9e" stroke-width="1.7" marker-end="url(#arrow)"><path d="M203 399h12"/><path d="M375 399h12"/><path d="M547 399h12"/><path d="M719 399h12"/><path d="M891 399h12"/><path d="M1052 399h22"/></g>
+    <g font-size="13" text-anchor="middle"><text x="468" y="463" fill="#a6bdca">Loading instant unknown</text><text x="726" y="463" fill="#8ee2e5">Payload: 1 vehicle</text><text x="978" y="463" fill="#f0ce80">Payload: 0 · still busy</text></g>
+    <text x="48" y="518" fill="#a6bdca" font-size="16">Service, towing, drop-off and recovery durations are editable assumptions.</text>
+    <text x="48" y="546" fill="#7f9caa" font-size="14">Fixed-home renewal model. No live dispatch, workshop destination or routed towing leg.</text>
+  </g>
+</svg>

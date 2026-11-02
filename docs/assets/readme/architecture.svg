@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="740" viewBox="0 0 1280 740" role="img" aria-labelledby="title description">
+  <title id="title">Standby serverless architecture and trust boundaries</title>
+  <desc id="description">The React console reaches CloudFront, which serves private S3 web assets and proxies API requests to API Gateway and the read/evaluate Lambda. That Lambda reads curated source and prepared Car matrices in private S3 without write or routing permissions. Separately, Cognito and workspace checks protect the writer Lambda; placement plan metadata goes to DynamoDB and numerical results to an expiring private S3 cache. An owner-controlled builder calls Amazon Location Routes. EventBridge and the retention Lambda remove expired cache objects; CloudWatch records operational signals. Amazon Location basemap tiles go to the browser. Capacity runs are stateless and are not saved as placement plans.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0c1827"/><stop offset="1" stop-color="#122a35"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="m2 1 6 4-6 4" fill="none" stroke="#75cdd4" stroke-width="1.8"/></marker>
+    <marker id="muted-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="m2 1 6 4-6 4" fill="none" stroke="#9fa7cf" stroke-width="1.8"/></marker>
+  </defs>
+  <rect width="1280" height="740" rx="20" fill="url(#bg)"/>
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="40" y="54" fill="#edf5fb" font-size="29" font-weight="600">AWS does the spatial work. Code owns the boundaries.</text>
+    <text x="40" y="88" fill="#a4bdca" font-size="18">Prepared road times for evaluation; a separate identity and write path for shared plans.</text>
+    <rect x="32" y="123" width="1216" height="206" rx="14" fill="#102633" stroke="#2c5260"/>
+    <text x="52" y="153" fill="#7cdae0" font-size="12" font-weight="650" letter-spacing="1.5">PUBLIC COVERAGE + CAPACITY EVALUATION</text>
+    <g fill="#182f3e" stroke="#365564"><rect x="52" y="175" width="226" height="95" rx="10"/><rect x="320" y="175" width="269" height="95" rx="10"/><rect x="631" y="175" width="269" height="95" rx="10"/><rect x="942" y="175" width="286" height="95" rx="10"/></g>
+    <g fill="none" stroke="#75cdd4" stroke-width="2" marker-end="url(#arrow)"><path d="M278 222h34"/><path d="M589 222h34"/><path d="M900 222h34"/></g>
+    <g fill="#edf5fb" font-size="20" font-weight="600"><text x="70" y="207">React console</text><text x="338" y="207">CloudFront</text><text x="649" y="207" font-size="18">HTTP API → Read Lambda</text><text x="960" y="207">Private S3 snapshots</text></g>
+    <g fill="#a9c2ce" font-size="15"><text x="70" y="237">Anonymous scenario editing</text><text x="338" y="237">Private S3 web · /api/* proxy</text><text x="649" y="237">Bounded, stateless evaluation</text><text x="960" y="237">Curated data + Car matrix</text></g>
+    <text x="52" y="304" fill="#9fb8c7" font-size="15">Amazon Location basemap → browser. Read Lambda has no plan-write or paid-routing permissions.</text>
+    <rect x="32" y="352" width="1216" height="206" rx="14" fill="#182332" stroke="#45506a"/>
+    <text x="52" y="382" fill="#bdc0eb" font-size="12" font-weight="650" letter-spacing="1.5">AUTHENTICATED PLACEMENT WORKFLOW · CAPACITY RUNS ARE NOT SAVED HERE</text>
+    <g fill="#202e42" stroke="#465571"><rect x="52" y="404" width="226" height="95" rx="10"/><rect x="320" y="404" width="269" height="95" rx="10"/><rect x="631" y="404" width="269" height="95" rx="10"/><rect x="942" y="404" width="286" height="95" rx="10"/></g>
+    <g fill="none" stroke="#9fa7cf" stroke-width="2" marker-end="url(#muted-arrow)"><path d="M278 451h34"/><path d="M589 451h34"/><path d="M589 479v39h496v-12"/></g>
+    <g fill="#edf5fb" font-size="20" font-weight="600"><text x="70" y="436">Cognito</text><text x="338" y="436" font-size="18">HTTP API → Writer Lambda</text><text x="649" y="436">DynamoDB</text><text x="960" y="436">Private S3 result cache</text></g>
+    <g fill="#b1bfd3" font-size="15"><text x="70" y="466">Code + PKCE · JWT</text><text x="338" y="466">Workspace + role + version</text><text x="649" y="466">Parameters · hashes · audit</text><text x="960" y="466">Expiring numerical results</text></g>
+    <text x="52" y="537" fill="#aebbd0" font-size="15">Analyst / Planner / Admin permissions are checked on the server, together with workspace membership.</text>
+    <g fill="#152a37" stroke="#304c5c"><rect x="32" y="583" width="390" height="117" rx="12"/><rect x="445" y="583" width="390" height="117" rx="12"/><rect x="858" y="583" width="390" height="117" rx="12"/></g>
+    <g fill="#e2edf4" font-size="18" font-weight="600"><text x="50" y="615">Owner-controlled preparation</text><text x="463" y="615">Expiry and cleanup</text><text x="876" y="615">Operational signals</text></g>
+    <g fill="#a4bdca" font-size="15"><text x="50" y="643">Austin import + Location Routes builder</text><text x="50" y="672">Finite route-pair quota → private S3</text><text x="463" y="643">EventBridge → Retention Lambda</text><text x="463" y="672">Expired cache objects deleted + checked</text><text x="876" y="643">CloudWatch logs + alarms</text><text x="876" y="672">Request IDs · errors · throttles</text></g>
+  </g>
+</svg>
