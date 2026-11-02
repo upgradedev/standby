@@ -21,7 +21,12 @@ export async function viewportShot(page,locator,{timeout=25_000,record={}}={}){
   record.method='viewport-png-then-in-memory-crop';
   try{
     record.stage='frame-target';
-    if(locator)await locator.scrollIntoViewIfNeeded({timeout:remaining()});
+    if(locator){
+      await locator.scrollIntoViewIfNeeded({timeout:remaining()});
+      // The browser can report intersectionRatio=1 with a fractional edge still
+      // below the viewport. Center the target, rather than relaxing its bounds.
+      await locator.evaluate(element=>element.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}),undefined,{timeout:remaining()});
+    }
     const viewport=page.viewportSize();assert.ok(viewport,'viewport-shot-target-no-viewport');
     const box=locator?await locator.boundingBox({timeout:remaining()}):{x:0,y:0,...viewport};
     record.viewport=viewport;record.box=box;

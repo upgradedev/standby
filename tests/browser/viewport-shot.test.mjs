@@ -11,9 +11,9 @@ test('viewport capture frames a scrolled modal card and preserves actual colored
     for(const width of [1440,390]){
       const page=await browser.newPage({viewport:{width,height:844},reducedMotion:'reduce'});
       let requests=0;await page.route('**/*',route=>{requests++;return route.abort();});
-      await page.setContent('<style>dialog{width:85vw;height:700px;padding:0;overflow:auto;border:0} .space{height:1100px} #card{height:250px;background:rgb(210,30,40)}</style><dialog open><div class="space"></div><section id="card">Actual fixture pixels</section><div class="space"></div></dialog>');
+      await page.setContent('<style>dialog{width:85vw;height:700px;padding:0;overflow:auto;border:0} .space{height:1100px} #card{height:250.046875px;background:rgb(210,30,40)}</style><dialog open><div class="space"></div><section id="card">Actual fixture pixels</section><div class="space"></div></dialog>');
       const record={},bytes=await viewportShot(page,page.locator('#card'),{record});
-      assert.equal(record.status,'pass');assert.equal(bytes.readUInt32BE(20),250);
+      assert.equal(record.status,'pass');assert.ok([251,252].includes(bytes.readUInt32BE(20)));
       const rgb=execFileSync('ffmpeg',['-v','error','-f','image2pipe','-i','pipe:0','-vf','crop=20:20:100:100,format=rgb24','-frames:v','1','-f','rawvideo','pipe:1'],{input:bytes,timeout:10_000});
       assert.ok([...rgb].every((value,at)=>Math.abs(value-[210,30,40][at%3])<=1));
       assert.equal(requests,0);await page.close();

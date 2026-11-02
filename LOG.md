@@ -1,5 +1,12 @@
 # History
 
+## 2026-11-02T06:44:42.892585+00:00 — Codex — retain fractional clipping failure; center QA target
+
+Hosted run https://github.com/upgradedev/standby/actions/runs/41401430043 at3542385 passed both actual offline capture fixtures, then towing evaluator returned the same modeled inputa1ab0bdf. The strict new viewport gate correctly rejected first card x505/y750.390625/width911/height250.046875 against1440x1000: bottom1000.4375. Failure receipt/image retained .runtime/towing-viewport-3542385. No original browser-exception root cause is inferred.
+
+Added explicit native center/instant scroll before bounds inspection within the same25s capture deadline, instead of accepting clipped pixels. Fractional-height fixture added; no semantic/map/axe/API/time bound relaxed and no app source change. Reverification required. Commands gh api repos/upgradedev/standby/actions/jobs/125133872237/logs; gh run download41401430043 --name standby-towing-unit-review.
+
+
 ## 2026-11-02T06:40:00.812103+00:00 — Codex — sequential closure begins with QA capture correction
 
 Owner requested closing pending items one by one. Re-observed judge /capacity HTTP200, integration63b0119 and last standardCI41230759530 failed. Root claimed integration QA/source-control and metadata coordination; independent workers audited failure and Take2 preparation read-only. Existing failure image visibly contains correct preparing/busy/payload0/currentjob001 while oldjob002 is selected; all previous semantic/axe gates passed before locator.screenshot failed. The original exception text was discarded, so exact old browser cause remains unknown.
