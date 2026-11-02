@@ -7,7 +7,7 @@ on:
         required: false
         default: legacy
         type: choice
-        options: [legacy, pitch-scenes, pitch-take1, pitch-take2, pitch-take3, pitch-take4, pitch-instrument]
+        options: [legacy, pitch-scenes, pitch-take1, pitch-take2, pitch-take3, pitch-take4, pitch-spent4, pitch-instrument]
       url:
         description: Verified public AWS application
         required: true
@@ -61,7 +61,7 @@ jobs:
           python - <<'PY'
           import os,re
           mode=os.environ['MODE']
-          assert mode in ['legacy','pitch-scenes','pitch-take1','pitch-take2','pitch-take3','pitch-take4','pitch-instrument'], 'Unknown mode must fail closed'
+          assert mode in ['legacy','pitch-scenes','pitch-take1','pitch-take2','pitch-take3','pitch-take4','pitch-spent4','pitch-instrument'], 'Unknown mode must fail closed'
           assert os.environ['URL'].rstrip('/')=='https://d34x1513u5u1qs.cloudfront.net'
           assert re.fullmatch('[a-f0-9]{40}',os.environ['RELEASE'])
           if mode=='legacy':
@@ -69,6 +69,11 @@ jobs:
           else:
               assert re.fullmatch('[1-9][0-9]{0,19}',os.environ['PROJECT_ASSET_ID'])
               assert re.fullmatch('[a-f0-9]{64}',os.environ['PROJECT_SHA256'])
+          if mode=='pitch-spent4':
+              assert os.environ['REUSE_RUN_ID']=='41421976953', 'Only pinned spentTake4 is accepted'
+              assert os.environ['PROJECT_ASSET_ID']=='701225506'
+              assert os.environ['PROJECT_SHA256']=='d72d88b61ca4d74448acc36d6405f4701b829880fae5286ea7e21de47133dd20'
+              assert os.environ['RELEASE']=='db67b6d0a2455549736be0d6574c184309fe0277'
           if mode=='pitch-instrument' and os.environ['REUSE_RUN_ID']:
               assert re.fullmatch('[1-9][0-9]{0,19}',os.environ['REUSE_RUN_ID'])
           print('Validated mode-specific request; no app or voice call.')
@@ -154,7 +159,7 @@ jobs:
             .runtime/demo/project.json
   pitch_project:
     needs: request
-    if: ${{ inputs.mode == 'pitch-scenes' || inputs.mode == 'pitch-take1' || inputs.mode == 'pitch-take2' || inputs.mode == 'pitch-take3' || inputs.mode == 'pitch-take4' || inputs.mode == 'pitch-instrument' }}
+    if: ${{ inputs.mode == 'pitch-scenes' || inputs.mode == 'pitch-take1' || inputs.mode == 'pitch-take2' || inputs.mode == 'pitch-take3' || inputs.mode == 'pitch-take4' || inputs.mode == 'pitch-spent4' || inputs.mode == 'pitch-instrument' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -171,7 +176,7 @@ jobs:
           PROJECT_ASSET_ID: ${{ inputs.project_asset_id }}
           PROJECT_SHA256: ${{ inputs.project_sha256 }}
           RELEASE: ${{ inputs.release }}
-          PROJECT_MODE: ${{ inputs.mode == 'pitch-scenes' && 'scenes' || inputs.mode == 'pitch-take4' && 'take4' || inputs.mode == 'pitch-take3' && 'take3' || inputs.mode == 'pitch-take2' && 'take2' || 'take1' }}
+          PROJECT_MODE: ${{ inputs.mode == 'pitch-scenes' && 'scenes' || (inputs.mode == 'pitch-take4' || inputs.mode == 'pitch-spent4') && 'take4' || inputs.mode == 'pitch-take3' && 'take3' || inputs.mode == 'pitch-take2' && 'take2' || 'take1' }}
         run: |
           python tools/pitch/download-project.py --help
           python tools/pitch/download-project.py --asset-id "$PROJECT_ASSET_ID" --sha256 "$PROJECT_SHA256" --release "$RELEASE" --mode "$PROJECT_MODE" --out "$RUNNER_TEMP/standby-pitch"
@@ -217,7 +222,7 @@ jobs:
           path: ${{ runner.temp }}/standby-pitch/out/scene-review/
   pitch_take1:
     needs: [request, pitch_project]
-    if: ${{ inputs.mode == 'pitch-take1' || inputs.mode == 'pitch-take2' || inputs.mode == 'pitch-take3' || inputs.mode == 'pitch-take4' || inputs.mode == 'pitch-instrument' }}
+    if: ${{ inputs.mode == 'pitch-take1' || inputs.mode == 'pitch-take2' || inputs.mode == 'pitch-take3' || inputs.mode == 'pitch-take4' || inputs.mode == 'pitch-spent4' || inputs.mode == 'pitch-instrument' }}
     runs-on: ubuntu-latest
     timeout-minutes: 18
     permissions:
@@ -240,9 +245,9 @@ jobs:
           npx playwright install --with-deps chromium
           if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
       - uses: actions/download-artifact@v4
-        if: ${{ inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '' }}
+        if: ${{ (inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '') || inputs.mode == 'pitch-spent4' }}
         with:
-          name: standby-pitch-take1
+          name: ${{ inputs.mode == 'pitch-spent4' && 'standby-pitch-take4' || 'standby-pitch-take1' }}
           repository: ${{ github.repository }}
           run-id: ${{ inputs.reuse_run_id }}
           github-token: ${{ github.token }}
@@ -254,7 +259,9 @@ jobs:
           CAPTURE_MODE: ${{ inputs.mode }}
         run: |
           python tools/pitch/capture-take.py --help
-          if [ "$CAPTURE_MODE" = pitch-instrument ]; then
+          if [ "$CAPTURE_MODE" = pitch-spent4 ]; then
+            python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch" --take 4 --instrument-only
+          elif [ "$CAPTURE_MODE" = pitch-instrument ]; then
             python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch" --instrument-only
           elif [ "$CAPTURE_MODE" = pitch-take4 ]; then
             python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch" --take 4
@@ -266,12 +273,12 @@ jobs:
             python tools/pitch/capture-take.py --project "$RUNNER_TEMP/standby-pitch"
           fi
       - name: Review only already-spent source windows
-        if: ${{ inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '' }}
+        if: ${{ (inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '') || inputs.mode == 'pitch-spent4' }}
         run: |
           python tools/pitch/review-spent.py --help
-          python tools/pitch/review-spent.py --project "$RUNNER_TEMP/standby-pitch" --capture "$RUNNER_TEMP/standby-spent" --out "$RUNNER_TEMP/standby-pitch/out/spent-review"
+          python tools/pitch/review-spent.py --project "$RUNNER_TEMP/standby-pitch" --capture "$RUNNER_TEMP/standby-spent" --out "$RUNNER_TEMP/standby-pitch/out/spent-review" --take "${{ inputs.mode == 'pitch-spent4' && '4' || '1' }}"
       - uses: actions/upload-artifact@v4
-        if: ${{ always() && inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '' }}
+        if: ${{ always() && ((inputs.mode == 'pitch-instrument' && inputs.reuse_run_id != '') || inputs.mode == 'pitch-spent4') }}
         with:
           name: standby-pitch-spent-review
           retention-days: 21
@@ -279,6 +286,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: ${{ inputs.mode == 'pitch-take4' && 'standby-pitch-take4' || inputs.mode == 'pitch-take3' && 'standby-pitch-take3' || inputs.mode == 'pitch-take2' && 'standby-pitch-take2' || 'standby-pitch-take1' }}
+          name: ${{ inputs.mode == 'pitch-spent4' && 'standby-pitch-spent-instrument4' || inputs.mode == 'pitch-take4' && 'standby-pitch-take4' || inputs.mode == 'pitch-take3' && 'standby-pitch-take3' || inputs.mode == 'pitch-take2' && 'standby-pitch-take2' || 'standby-pitch-take1' }}
           retention-days: 7
-          path: ${{ runner.temp }}/standby-pitch/out/take${{ inputs.mode == 'pitch-take4' && '4' || inputs.mode == 'pitch-take3' && '3' || inputs.mode == 'pitch-take2' && '2' || '1' }}/
+          path: ${{ runner.temp }}/standby-pitch/out/take${{ (inputs.mode == 'pitch-take4' || inputs.mode == 'pitch-spent4') && '4' || inputs.mode == 'pitch-take3' && '3' || inputs.mode == 'pitch-take2' && '2' || '1' }}/
