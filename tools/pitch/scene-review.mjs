@@ -66,10 +66,23 @@ try{
     await page.waitForFunction(()=>window.READY===true,null,{timeout:10000});
     check(await page.evaluate(()=>document.getAnimations().filter(animation=>animation.playState==='running').length)===0,'Free-running animation');
     const times=[1.5,Math.max(2,job.duration*0.7),1.5];
-    const hashes=[];
+    const hashes=[],seekFrames=[],seekStates=[];
     for(const time of times){
       await page.evaluate(value=>window.seek(value),time);
-      hashes.push(digest(await page.screenshot()));
+      const frame=await page.screenshot();
+      hashes.push(digest(frame));seekFrames.push(frame);
+      seekStates.push(await page.evaluate(()=>({
+        ready:window.READY,duration:window.DURATION,
+        styled:[...document.querySelectorAll('[style]')].map(element=>({id:element.id,style:element.getAttribute('style')})),
+        images:[...document.images].map(element=>({id:element.id,complete:element.complete,width:element.naturalWidth,height:element.naturalHeight})),
+        animations:document.getAnimations().map(animation=>({state:animation.playState,time:animation.currentTime})),
+      })));
+    }
+    if(hashes[0]!==hashes[2]){
+      const images=times.map((time,index)=>job.id+'-seek-'+index+'.png');
+      for(let index=0;index<images.length;index++)await fs.writeFile(path.join(out,images[index]),seekFrames[index]);
+      receipt.determinismFailure={id:job.id,times,hashes,images,states:seekStates};
+      await writeReceipt();
     }
     check(hashes[0]===hashes[2],'Seek is not deterministic: '+job.id);
     const snapshots=[];
