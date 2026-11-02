@@ -25,7 +25,7 @@ SCRIPTS = {
     'render_scene.mjs': '19ad3497e9e1427aeac27c5ba2a1228922be7baa42056edcfc7fafade95facbc',
     'check_timing.py': '765fe139a8cfc23fe0a40b0227a0750af187428b3694374de55594f68d3b702c',
     'make_captions.py': 'cfa0402c4691463dbd7ecc7e04e214ff7b875bcbd02393a4ccb75cbc9f8cdc1b',
-    'compose.py': 'dd1d538a2780815413bf808d15e93c9b691a3f63c49c8890af5a32af34dc929b',
+    'compose.py': '4085302424850fb68b95b7b26cdd4a85b731b35c54f621a2d4990de4c711c082',
     'contact_sheet.py': 'c64545dee5eb70a604dda838fb2f79adae097f68d2a981fe294d49b117a3198b',
     'tts_elevenlabs.py': '11f2de640c807e6b096b7d01c12f88cc71fa80dd4b2dc1c3aa71506a6af144e1',
     'normalize_live.py': '68a8ccf1a75bb17ef2cf6d6f5bb554ed8e25c11b18960c863d74f2d6935f627d',

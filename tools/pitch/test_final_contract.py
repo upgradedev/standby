@@ -6,9 +6,20 @@ import zipfile
 import importlib.util
 from pathlib import Path
 from final_contract import FILES, safe_name, validate_archive, checked_render_command
+from check_final_color import check_pixels
 
 
 class ContractControls(unittest.TestCase):
+    def test_colour_criteria_reject_independent_posterization_and_round_trip_errors(self):
+        check_pixels({'meanAbsoluteRgbError': 0, 'maxChannelError': 0, 'darkGreyRedLevels': 46})
+        for metrics in [
+            {'meanAbsoluteRgbError': 4.2, 'maxChannelError': 23, 'darkGreyRedLevels': 32},
+            {'meanAbsoluteRgbError': 0, 'maxChannelError': 0, 'darkGreyRedLevels': 30},
+            {'meanAbsoluteRgbError': .2, 'maxChannelError': 12, 'darkGreyRedLevels': 46},
+        ]:
+            with self.assertRaisesRegex(ValueError, 'colour preservation'):
+                check_pixels(metrics)
+
     def test_canonical_names_are_closed(self):
         self.assertEqual(len(FILES), 40)
         self.assertIn('live/source/S7.mp4', FILES)

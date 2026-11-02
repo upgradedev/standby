@@ -63,6 +63,12 @@ def render(project):
         return json.loads(result.stdout)
     try:
         save()
+        colour_check = Path(__file__).with_name('check_final_color.py')
+        run(['python', str(colour_check), '--help'], 'help-colour-control')
+        run(['python', str(colour_check), '--composer', str(project / 'scripts/compose.py'),
+             '--out', str(out / 'colour-control')], 'colour-control', timeout=180)
+        receipt['colourControl'] = json.loads((out / 'colour-control/report.json').read_text(encoding='utf-8'))
+        save()
         for name in ['normalize_live.py', 'check_timing.py', 'make_captions.py', 'compose.py', 'contact_sheet.py', 'tts_elevenlabs.py']:
             run(['python', 'scripts/' + name, '--help'], 'help-' + name)
         run(['node', 'scripts/render_scene.mjs', '--help'], 'help-render_scene')
