@@ -16,7 +16,7 @@ import urllib.request
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--project', required=True)
 parser.add_argument('--instrument-only', action='store_true')
-parser.add_argument('--take', choices=['1', '2', '3', '4'], default='1')
+parser.add_argument('--take', choices=['1', '2', '3', '4', '5'], default='1')
 args = parser.parse_args()
 assert os.environ.get('GITHUB_ACTIONS') == 'true', 'Hosted CI only'
 project = Path(args.project).resolve()
@@ -122,19 +122,29 @@ def instrument():
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
-    if take_number == 4:
+    if take_number in [4, 5]:
         # Exercise the exact source-qualified helper and recorder without product access.
         source = Path(__file__).resolve().parent
-        assert (project / 'scripts/capture-state.mjs').read_bytes() == (source / 'capture-state.mjs').read_bytes()
+        helper_name = 'capture-state-5.mjs' if take_number == 5 else 'capture-state.mjs'
+        assert (project / ('scripts/' + helper_name)).read_bytes() == (source / helper_name).read_bytes()
         assert (project / 'scripts/capture_app.mjs').read_bytes() == (source / 'fixtures/capture_app.mjs').read_bytes()
         run(['node', str(source / 'check-capture-paint.mjs'), '--help'])
-        run(['node', str(source / 'check-capture-paint.mjs'), '--out', str(fixture / 'paint')],
+        run(['node', str(source / 'check-capture-paint.mjs'), '--out', str(fixture / 'paint'), '--helper-version', '5' if take_number == 5 else '4'],
             timeout=100, log=fixture / 'paint.log')
         pixels = json.loads((fixture / 'paint/receipt.json').read_text(encoding='utf-8'))
         assert pixels['status'] == 'pass' and pixels['applicationRequests'] == pixels['productTakes'] == 0
         receipt['instrument'].append({'name': 'decoded-idle-run-paint', 'status': 'pass',
                                       'longestGreenRun': pixels['decoded']['longestGreenRun']})
         save()
+        if take_number == 5:
+            run(['node', str(source / 'capability-fixture.mjs'), '--help'])
+            run(['node', str(source / 'capability-fixture.mjs'), '--out', str(fixture / 'capability')],
+                timeout=150, log=fixture / 'capability.log')
+            component = json.loads((fixture / 'capability/receipt.json').read_text(encoding='utf-8'))
+            assert component['status'] == 'passed' and component['applicationRequests'] == component['productTakes'] == 0
+            receipt['instrument'].append({'name': 'actual-react-checkbox-sequence', 'status': 'pass',
+                                          'helperSha256': component['helperSha256']})
+            save()
 
 
 try:
@@ -147,14 +157,16 @@ try:
     plan = json.loads(plan_bytes)
     approval = json.loads((project / f'take-{take_number}-owner-approval.json').read_text(encoding='utf-8'))
     expected_hash = {1: 'd64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',
-                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94', 3: '33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd', 4: '6f31311de3e55896ae97d6d0da5d7a84176ec189416535632b4f56e534258876'}[take_number]
+                     2: '3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94', 3: '33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd', 4: '6f31311de3e55896ae97d6d0da5d7a84176ec189416535632b4f56e534258876', 5: '14d9fafc6a4d866394a1ebfe38537c78c7668d12e66ecaf624a21e8b3b2f08fe'}[take_number]
     assert sha(plan_bytes) == approval['planSha256'] == expected_hash
     assert approval['status'] == f'OWNER_APPROVED_SPECIFIC_TAKE_{take_number}'
     assert approval['take'] == plan['take'] == f'TAKE_{take_number}'
-    assert approval['maximumAttempts'] == 1 and approval['maximumApplicationPostAttempts'] == 3
+    assert approval['maximumAttempts'] == 1 and approval['maximumApplicationPostAttempts'] == (2 if take_number == 5 else 3)
     assert approval['agentDrivenHostedCI'] is True and approval['voiceApproved'] is False
     assert approval['publicPublicationApproved'] is False and approval['maximumSeconds'] == 480
     assert approval['take2Approved' if take_number == 1 else 'additionalTakeApproved'] is False
+    if take_number == 5:
+        assert approval['reuseTake4ClipsApproved'] is True and approval['minimumCleanTakesExceptionApproved'] is True
     receipt['planSha256'] = sha(plan_bytes)
     receipt['webRelease'] = plan['webRelease']
     receipt['backendRelease'] = plan['backendRelease']
@@ -164,7 +176,7 @@ try:
                     ['python', 'scripts/contact_sheet.py', '--help']]:
         run(command)
     instrument()
-    assert len(receipt['instrument']) == (3 if take_number == 4 else 2)
+    assert len(receipt['instrument']) == (4 if take_number == 5 else 3 if take_number == 4 else 2)
     if args.instrument_only:
         receipt['status'] = 'INSTRUMENT_PASSED_NO_PRODUCT_TAKE'
         save()
@@ -207,7 +219,7 @@ try:
     profile = project / f'take{take_number}-profile'
     env = dict(os.environ, STANDBY_TAKE_PLAN=str(plan_file))
     try:
-        run(['node', 'scripts/capture_app.mjs', 'record', '--url', base + '/map', '--driver',
+        run(['node', 'scripts/capture_app.mjs', 'record', '--url', base + ('/capacity' if take_number == 5 else '/map'), '--driver',
              str(project / 'scripts/take-driver.mjs'), '--headless', '--size', '1536x864',
              '--max-seconds', '480', '--out', str(out), '--profile', str(profile)],
             timeout=510, env=env, log=out / 'capture.log')
@@ -216,8 +228,9 @@ try:
     proof = json.loads((out / 'take-proof.json').read_text(encoding='utf-8'))
     assert proof['status'] == 'pass'
     shots = proof['shots']
-    assert [shot['id'] for shot in shots] == ['S2', 'S4', 'S5', 'S6', 'S7']
-    windows = dict(zip(['S2', 'S4', 'S5', 'S6', 'S7'], [12, 20, 27, 28, 26]))
+    windows = {'S7': 26} if take_number == 5 else dict(zip(['S2', 'S4', 'S5', 'S6', 'S7'], [12, 20, 27, 28, 26]))
+    assert [shot['id'] for shot in shots] == list(windows)
+    assert proof['counts'] == {'applicationPostAttempts': 2 if take_number == 5 else 3, 'coverage': 1, 'capacity': 1 if take_number == 5 else 2, 'documents': 1}
     videos = list((out / 'video').glob('*.webm'))
     marks = list(out.glob('marks_*.json'))
     assert len(videos) == len(marks) == 1

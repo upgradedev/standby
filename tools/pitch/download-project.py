@@ -17,7 +17,7 @@ parser.add_argument('--asset-id',required=True)
 parser.add_argument('--sha256',required=True)
 parser.add_argument('--release',required=True)
 parser.add_argument('--out',required=True)
-parser.add_argument('--mode',choices=['scenes','take1','take2','take3','take4'],default='scenes')
+parser.add_argument('--mode',choices=['scenes','take1','take2','take3','take4','take5'],default='scenes')
 args=parser.parse_args()
 assert re.fullmatch(r'[1-9][0-9]{0,19}',args.asset_id)
 assert re.fullmatch(r'[a-f0-9]{64}',args.sha256)
@@ -72,6 +72,7 @@ else:
     allowed={'manifest.json',plan_name,approval_name,'web-manifest.json'}
     allowed.update('scripts/'+name for name in ['capture_app.mjs','take-driver.mjs','cut_clips.py','contact_sheet.py'])
     if take_number==4: allowed.add('scripts/capture-state.mjs')
+    if take_number==5: allowed.add('scripts/capture-state-5.mjs')
 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     entries=archive.infolist()
     assert len(entries)==len(allowed) and {entry.filename for entry in entries}==allowed
@@ -100,17 +101,19 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         assert review['source']['webRelease']==args.release and review['live_capture_allowed'] is False and review['network_allowed'] is False
     else:
         plan_hash=hashlib.sha256(bodies[plan_name]).hexdigest()
-        expected_hash={1:'d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',2:'3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94',3:'33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd',4:'6f31311de3e55896ae97d6d0da5d7a84176ec189416535632b4f56e534258876'}[take_number]
+        expected_hash={1:'d64fe1efdbc7d5b8b56005c7dde2b8202da7c5bc4a12fa7ea19011dc9ca10edb',2:'3d49af61aa174e965bfa9e7aa2503be5100b94ec6c21e9ae5c52452ae5c5ec94',3:'33cfeb5de8e53bf723f78015db9f12742aa09e9c00bc354eb2603cd621182afd',4:'6f31311de3e55896ae97d6d0da5d7a84176ec189416535632b4f56e534258876',5:'14d9fafc6a4d866394a1ebfe38537c78c7668d12e66ecaf624a21e8b3b2f08fe'}[take_number]
         assert plan_hash==manifest['takePlanSha256']==expected_hash
         plan=json.loads(bodies[plan_name])
         approval=json.loads(bodies[approval_name])
         assert approval['status']==f'OWNER_APPROVED_SPECIFIC_TAKE_{take_number}' and approval['planSha256']==plan_hash
         assert approval['take']==plan['take']==f'TAKE_{take_number}' and approval['agentDrivenHostedCI'] is True
         assert approval['maximumAttempts']==plan['proposedExecution']['maximumAttempts']==1
-        assert approval['maximumApplicationPostAttempts']==plan['hardLimits']['allApplicationPostAttempts']==3
+        assert approval['maximumApplicationPostAttempts']==plan['hardLimits']['allApplicationPostAttempts']==(2 if take_number==5 else 3)
         assert approval['maximumSeconds']==plan['proposedExecution']['maximumSeconds']==480
         assert approval['take2Approved' if take_number==1 else 'additionalTakeApproved'] is False
         assert approval['voiceApproved'] is False and approval['publicPublicationApproved'] is False
+        if take_number==5:
+            assert approval['reuseTake4ClipsApproved'] is True and approval['minimumCleanTakesExceptionApproved'] is True
         assert plan['webRelease']==args.release and plan['sourcePlanSha256']==manifest['approvedPlanSha256']
     out.mkdir()
     for name,value in bodies.items():

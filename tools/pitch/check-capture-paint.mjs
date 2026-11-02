@@ -8,14 +8,16 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {spawnSync} from 'node:child_process';
 
 if(process.argv.includes('--help')){
-  console.log('Hosted CI offline recorder paint check. node tools/pitch/check-capture-paint.mjs --out .runtime/pitch-paint\nNo product, provider, voice or external browser access.');
+  console.log('Hosted CI offline recorder paint check. node tools/pitch/check-capture-paint.mjs --out .runtime/pitch-paint [--helper-version 4|5]\nNo product, provider, voice or external browser access.');
   process.exit(0);
 }
 assert.equal(process.env.CI,'true','Hosted CI only');
 const at=process.argv.indexOf('--out');assert(at>=0&&process.argv[at+1]);
 const out=path.resolve(process.argv[at+1]);await mkdir(path.dirname(out),{recursive:true});await mkdir(out,{recursive:false});
 const here=path.dirname(fileURLToPath(import.meta.url));
-const helper=path.join(here,'capture-state.mjs'),recorder=path.join(here,'fixtures/capture_app.mjs');
+const helperAt=process.argv.indexOf('--helper-version'),helperVersion=helperAt<0?'4':process.argv[helperAt+1];
+assert(['4','5'].includes(helperVersion),'Only source-qualified helpers4or5');
+const helper=path.join(here,helperVersion==='5'?'capture-state-5.mjs':'capture-state.mjs'),recorder=path.join(here,'fixtures/capture_app.mjs');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 function requireIdleBeforeOutcome(bytes){
   assert(bytes.length>3*25&&bytes.length%3===0,'Incomplete source pixel decode');

@@ -41,11 +41,17 @@ jobs:
           node tools/pitch/fixtures/capture_app.mjs --help
           node tools/pitch/check-capture-paint.mjs --help
           node tools/pitch/check-capture-paint.mjs --out .runtime/pitch-paint
+          node tools/pitch/check-capture-paint.mjs --out .runtime/pitch-paint5 --helper-version 5
+          node tools/pitch/capability-fixture.mjs --help
+          node tools/pitch/capability-fixture.mjs --out .runtime/pitch-capability
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: standby-offline-recorder-paint
-          path: .runtime/pitch-paint/
+          path: |
+            .runtime/pitch-paint/
+            .runtime/pitch-paint5/
+            .runtime/pitch-capability/
           retention-days: 7
   validate:
     if: github.event_name != 'workflow_dispatch' || !inputs.authenticated
