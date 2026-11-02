@@ -33,9 +33,9 @@ The console also includes historical overview charts, a searchable zone table an
 
 ## Try a scenario
 
-1. Open **[Capacity lab](https://d34x1513u5u1qs.cloudfront.net/capacity)** and expand **Editable assumptions**.
+1. Open **[Capacity lab](https://d34x1513u5u1qs.cloudfront.net/capacity)** and review **Workload, service profiles and rosters**.
 2. Set the workload and configure baseline/candidate motorcycles, service vans and flatbeds: capabilities, home site, availability and duty interval.
-3. Choose **Run paired comparison**. Read the response, queue, unfinished-job and utilization metrics with their sample counts.
+3. Choose **Run paired comparison**. Read the response, queue, completion and overtime metrics with their sample counts.
 4. Scrub the replay, open a modeled job, and inspect its map, timeline and current unit state. Change a roster assumption and run again.
 
 Changing an input marks the old result stale. The comparison summarizes replications; the replay shows the first replication of the selected fleet plan.
@@ -144,7 +144,7 @@ The research index retrieves curated source notes and their limitations with lex
 | [Historical authenticated-role acceptance](https://github.com/upgradedev/standby/actions/runs/41181026025) | Cognito/workspace authorization at its recorded earlier source. It is not a new human role-menu judgment. |
 | [Current delivery state](STATE.md) | Exact deployment evidence and open items. The final public video for the current Capacity release and final Builder submission remain pending. |
 
-The controlled preview serves frontend **`db67b6d0a2455549736be0d6574c184309fe0277`** and API/config **`3802d94e5ae5a66b6b7fb8fc67030393d0a276ea`** as recorded in the [deployment handover](docs/CONSOLE_BRIEF.md#step6-owner-handover---approved-preview-deployed-2026-10-31) `[STATE-FILE]`. These identify different artifacts. A newer source/tooling CI commit does not imply a new application deployment.
+The controlled preview serves frontend **`db67b6d0a2455549736be0d6574c184309fe0277`** and API/config **`3802d94e5ae5a66b6b7fb8fc67030393d0a276ea`** as recorded in the [deployment handover](docs/CONSOLE_BRIEF.md#step6-owner-handover---approved-preview-deployed-2026-10-31). These identify different artifacts. A newer source/tooling CI commit does not imply a new application deployment.
 
 Automated axe, map-pixel and API checks do not constitute whole-app accessibility certification. Human keyboard, native-popup and incomplete-axe judgments remain open in the brief.
 
