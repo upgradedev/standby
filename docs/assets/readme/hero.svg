@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-labelledby="title description">
+  <title id="title">Standby: see the capacity behind the coverage</title>
+  <desc id="description">An original abstract road map with three assumed unit home sites accompanies the Standby name. Real road times, mixed fleets and paired what-if scenarios are the product themes. The map is an illustration, not GPS or a screenshot.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#081421"/><stop offset="1" stop-color="#132b38"/></linearGradient>
+    <linearGradient id="road" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#53c9d8"/><stop offset="1" stop-color="#bded9a"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#53c9d8" stop-opacity=".2"/><stop offset="1" stop-color="#53c9d8" stop-opacity="0"/></radialGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#c5edf0" opacity=".07"/></pattern>
+    <clipPath id="clip"><rect width="1280" height="440" rx="24"/></clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="1280" height="440" fill="url(#bg)"/>
+    <rect width="1280" height="440" fill="url(#dots)"/>
+    <ellipse cx="1030" cy="210" rx="380" ry="330" fill="url(#glow)"/>
+    <g fill="none" stroke="#7eacb5" stroke-width="1" opacity=".13">
+      <path d="M650 450C715 370 668 294 738 231S775 115 881 94 963 9 1104-23"/>
+      <path d="M682 466C755 377 703 305 773 245S808 136 905 116 1001 28 1134-9"/>
+      <path d="M714 482C796 385 739 316 808 259S840 157 929 138 1039 47 1164 5"/>
+      <path d="M746 498C836 393 774 327 843 273S873 178 953 160 1077 66 1194 19"/>
+      <path d="M778 514C877 401 810 338 878 287S905 199 977 182 1115 85 1224 33"/>
+      <path d="M810 530C917 409 845 349 913 301S938 220 1001 204 1153 104 1254 47"/>
+      <path d="M842 546C958 417 881 360 948 315S970 241 1025 226 1191 123 1284 61"/>
+      <path d="M874 562C998 425 916 371 983 329S1003 262 1049 248 1229 142 1314 75"/>
+    </g>
+    <path d="M757 386 790 330 849 311 886 246 959 226 1012 149 1123 142 1183 64" fill="none" stroke="#7aa1ad" stroke-width="13" opacity=".08" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M739 108 831 171 886 246 1016 311 1178 337 1288 399M790 330 780 219 831 171 1012 149M959 226 1080 252 1178 337" fill="none" stroke="#7aa1ad" stroke-width="2" opacity=".25" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M757 386 790 330 849 311 886 246 959 226 1012 149 1123 142 1183 64" fill="none" stroke="url(#road)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="none" stroke="#53c9d8" opacity=".2"><circle cx="886" cy="246" r="69"/><circle cx="886" cy="246" r="94" stroke-dasharray="3 8"/><circle cx="1123" cy="142" r="57"/></g>
+    <g font-family="Inter, Segoe UI, Arial, sans-serif">
+      <g transform="translate(56 48)"><rect width="40" height="40" rx="11" fill="#53c9d8"/><path d="M10 29 19 12h11L21 29Z" fill="none" stroke="#081421" stroke-width="3"/><text x="56" y="25" font-size="13" font-weight="600" letter-spacing="2" fill="#a7c7ce">ROADSIDE CAPACITY PLANNING</text></g>
+      <text x="52" y="196" fill="#f0f7fb" font-size="98" font-weight="650" letter-spacing="-4">Standby</text>
+      <text x="57" y="245" fill="#d0e2e9" font-size="27">See the capacity behind the coverage.</text>
+      <text x="57" y="282" fill="#8daab9" font-size="17">Compare where units wait and when they become free.</text>
+      <g font-size="11" font-weight="650" letter-spacing="1.1">
+        <rect x="56" y="328" width="157" height="35" rx="17.5" fill="#122f3a" stroke="#2b5361"/><text x="134.5" y="350" text-anchor="middle" fill="#91e2e7">REAL ROAD TIMES</text>
+        <rect x="223" y="328" width="135" height="35" rx="17.5" fill="#122f3a" stroke="#2b5361"/><text x="290.5" y="350" text-anchor="middle" fill="#91e2e7">MIXED FLEET</text>
+        <rect x="368" y="328" width="163" height="35" rx="17.5" fill="#122f3a" stroke="#2b5361"/><text x="449.5" y="350" text-anchor="middle" fill="#91e2e7">PAIRED WHAT-IF</text>
+      </g>
+      <g transform="translate(790 330)"><circle r="11" fill="#0a1b28" stroke="#53c9d8" stroke-width="3"/><circle r="3" fill="#53c9d8"/><rect x="-60" y="23" width="121" height="31" rx="7" fill="#142d3b" stroke="#315361"/><text x="0" y="43" fill="#cce5ed" text-anchor="middle" font-size="12">01 · Motorcycle</text></g>
+      <g transform="translate(886 246)"><circle r="13" fill="#0a1b28" stroke="#bded9a" stroke-width="3"/><circle r="4" fill="#bded9a"/><rect x="-64" y="-58" width="128" height="32" rx="7" fill="#142d3b" stroke="#41604d"/><text x="0" y="-37" fill="#d8efcf" text-anchor="middle" font-size="12">02 · Service van</text></g>
+      <g transform="translate(1123 142)"><circle r="11" fill="#0a1b28" stroke="#53c9d8" stroke-width="3"/><circle r="3" fill="#53c9d8"/><rect x="-53" y="25" width="106" height="31" rx="7" fill="#142d3b" stroke="#315361"/><text x="0" y="45" fill="#cce5ed" text-anchor="middle" font-size="12">03 · Flatbed</text></g>
+      <text x="1223" y="405" fill="#7e9daa" text-anchor="end" font-size="10" letter-spacing="1.1">ILLUSTRATION · ASSUMED HOME SITES</text>
+    </g>
+  </g>
+</svg>

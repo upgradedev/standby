@@ -4,14 +4,18 @@
  * The coordinator creates and removes the synthetic identities and workspace.
  */
 import {randomUUID} from 'node:crypto';
+import {createServer} from 'node:http';
 import {chromium} from 'playwright';
+import {prepareCandidateUI} from './static-overlay.mjs';
 
-let step='initialization',browser;
+let step='initialization',browser,installUI=async()=>{};
 const contexts=[];
 const check=(condition,code)=>{if(!condition) throw new Error(code);};
 const exact=(name)=>({name,exact:true});
 const roles=['Analyst','Planner','Admin'];
 const runId=randomUUID().slice(0,12);
+let nextDirectRequestAt=0;
+const expectedCandidateSource=process.env.STANDBY_UI_SOURCE??process.env.GITHUB_SHA;
 
 async function visible(locator,code) {
   await locator.waitFor({state:'visible',timeout:25_000});
@@ -33,6 +37,10 @@ function parseIdentities() {
   return identities;
 }
 async function api(actor,method,path,{data,headers={},token=actor.accessToken,status=200}={}) {
+  // Respect the live stage's 3 requests/second setting without retrying mutations.
+  const wait=Math.max(0,nextDirectRequestAt-Date.now());
+  if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+  nextDirectRequestAt=Date.now()+400;
   const response=await actor.context.request.fetch(`${actor.apiBase}${path}`,{
     method,timeout:30_000,failOnStatusCode:false,
     headers:{Accept:'application/json',...(data===undefined?{}:{'Content-Type':'application/json'}),
@@ -60,9 +68,20 @@ async function signIn(identity,base) {
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',serviceWorkers:'block'});
   contexts.push(context);
   const page=await context.newPage();page.setDefaultTimeout(20_000);
+  const overlay=await installUI(context,page);
   const errors=[];page.on('pageerror',()=>errors.push('uncaught-runtime-error'));
-  const document=await page.goto(`${base}/settings`,{waitUntil:'domcontentloaded',timeout:45_000});
+  let candidateCallback=false;
+  page.on('response',response=>{
+    const url=new URL(response.url());
+    if(url.origin===new URL(base).origin&&url.pathname==='/auth/callback'&&response.request().isNavigationRequest())
+      candidateCallback=!!expectedCandidateSource&&response.headers()['x-standby-qa-source']===expectedCandidateSource;
+  });
+  const entry=new URL('/settings?theme=dark',base);
+  step=`${identity.role}:entry-settings`;
+  const document=await page.goto(entry.href,{waitUntil:'domcontentloaded',timeout:45_000});
+  overlay.assertHealthy();
   check(document?.status()===200,'operator-entry-not-200');
+  if(process.env.STANDBY_UI_DIST)check(document.headers()['x-standby-qa-source']===expectedCandidateSource,'candidate-entry-not-delivered');
   const response=await context.request.get(`${base}/config.json`);
   check(response.status()===200,'auth-config-not-200');
   const config=await response.json();await response.dispose();
@@ -79,8 +98,10 @@ async function signIn(identity,base) {
     new URL(value.url()).pathname==='/oauth2/token'&&value.request().method()==='POST',{timeout:60_000}).catch(()=>null);
   const workspaceResponsePromise=page.waitForResponse(value=>value.url()===`${apiBase}/workspaces`&&value.request().method()==='GET',
     {timeout:60_000}).catch(()=>null);
+  step=`${identity.role}:open-sign-in`;
   await page.locator('.user-menu summary').click();
   await page.locator('.user-dropdown').getByRole('button',exact('Operator sign in')).click();
+  step=`${identity.role}:hosted-ui-redirect`;
   await page.waitForURL(url=>url.hostname===authDomain.hostname,{timeout:30_000});
   const authorization=new URL(page.url());
   check(authorization.searchParams.get('response_type')==='code'&&authorization.searchParams.get('code_challenge_method')==='S256',
@@ -89,11 +110,15 @@ async function signIn(identity,base) {
   const requestedScopes=(authorization.searchParams.get('scope')??'').split(/\s+/);
   check(['openid','profile','standby/access'].every(scope=>requestedScopes.includes(scope)),'operator-scope-not-requested');
   // Grounded on the actual Cognito Hosted UI HTML; it contains two responsive forms.
+  step=`${identity.role}:hosted-ui-credentials`;
   await page.locator('input[name="username"]:visible').first().fill(identity.username);
   await page.locator('input[name="password"]:visible').first().fill(identity.password);
   await page.locator('input[name="signInSubmitButton"]:visible').first().click();
+  step=`${identity.role}:pkce-token-exchange`;
   const tokenResponse=await tokenResponsePromise;
+  overlay.assertHealthy();
   check(tokenResponse&&tokenResponse.status()===200,'real-token-exchange-failed');
+  if(process.env.STANDBY_UI_DIST)check(candidateCallback,'candidate-callback-not-delivered');
   const token=await tokenResponse.json();
   check(typeof token.access_token==='string'&&typeof token.id_token==='string','real-tokens-missing');
   const exchange=new URLSearchParams(tokenResponse.request().postData()??'');
@@ -101,26 +126,41 @@ async function signIn(identity,base) {
     'real-token-exchange-missing-verifier');
   const claims=decodeJwtPayload(token.access_token);
   check(claims.token_use==='access'&&(claims.scope??'').split(/\s+/).includes('standby/access'),'real-access-token-scope-invalid');
-  await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname==='/overview',{timeout:30_000});
+  step=`${identity.role}:sign-in-return-path`;
+  try {
+    await page.waitForURL(url=>url.origin===new URL(base).origin&&url.pathname===entry.pathname&&url.searchParams.get('theme')==='dark',{timeout:30_000});
+  }catch(error){
+    // Only bounded booleans and approved route names; never URL queries, tokens or DOM text.
+    const current=new URL(page.url()),routes=['/settings','/overview','/auth/callback'];
+    const diagnostic=await page.evaluate(()=>({authStored:!!sessionStorage.getItem('standby.auth.v1'),pkceStored:!!sessionStorage.getItem('standby.pkce.v1'),
+      callbackLoading:!!document.querySelector('.loading-state'),callbackError:!!document.querySelector('.error-state'),fatal:!!document.querySelector('.fatal-error')})).catch(()=>null);
+    console.log(JSON.stringify({returnPathDiagnostic:{route:current.origin===new URL(base).origin&&routes.includes(current.pathname)?current.pathname:'other',
+      themePreserved:current.searchParams.get('theme')==='dark',candidateCallback,runtimeErrors:errors.length,...diagnostic}}));
+    throw error;
+  }
   await page.waitForFunction(()=>{
     try {return typeof JSON.parse(sessionStorage.getItem('standby.auth.v1')??'null')?.accessToken==='string';}
     catch {return false;}
   });
   const stored=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('standby.auth.v1')??'null'));
   check(stored?.accessToken===token.access_token,'app-session-token-mismatch');
+  step=`${identity.role}:server-memberships`;
   const workspaceResponse=await workspaceResponsePromise;
   check(workspaceResponse&&workspaceResponse.status()===200,'app-membership-request-failed');
   const memberships=await workspaceResponse.json();
   const membership=memberships.workspaces?.find(value=>value.workspaceId===identity.workspaceId);
   check(membership?.role===identity.role,'server-membership-role-mismatch');
+  step=`${identity.role}:select-authorized-workspace`;
   const select=page.getByRole('combobox',exact('Active workspace'));
   await select.locator(`option[value="${identity.workspaceId}"]`).waitFor({state:'attached'});
   await select.selectOption(identity.workspaceId);
   await visible(page.locator('.workspace-mode .badge').filter({hasText:identity.role}),'authorized-workspace-role-not-shown');
-  const actor={...identity,context,page,apiBase,accessToken:token.access_token,idToken:token.id_token,errors};
+  overlay.assertHealthy();
+  const actor={...identity,context,page,apiBase,accessToken:token.access_token,idToken:token.id_token,errors,overlay};
   const workspaces=await api(actor,'GET','/workspaces');
   check(workspaces.workspaces?.some(value=>value.workspaceId===identity.workspaceId&&value.role===identity.role),'workspace-list-inconsistent');
   await api(actor,'GET',`/workspaces/${identity.workspaceId}/plans`);
+  step=`${identity.role}:authorized-queue`;
   await navigate(actor,'Planning queues');
   await visible(page.getByText('Authorized workspace plans',{exact:true}),'workspace-queue-scope-missing');
   if(identity.role==='Analyst') {
@@ -135,6 +175,22 @@ async function assertAccessBoundaries(actor) {
   await api(actor,'GET','/workspaces',{token:null,status:401});
   await api(actor,'GET','/workspaces',{token:actor.idToken,status:[401,403]});
   await api(actor,'GET',`/workspaces/forbidden-${runId}/plans`,{status:403});
+}
+async function proveRedirectOverlay(base){
+  if(!process.env.STANDBY_UI_DIST)return;
+  step='candidate-overlay-redirect-selftest';
+  const server=createServer((_request,response)=>{response.writeHead(302,{Location:base+'/auth/callback?qa=redirect-probe','Cache-Control':'no-store'});response.end();});
+  const context=await browser.newContext({serviceWorkers:'block'});contexts.push(context);
+  try{
+    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+    const page=await context.newPage(),overlay=await installUI(context,page);
+    const response=await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'commit',timeout:20_000});
+    check(response?.status()===200&&response.headers()['x-standby-qa-source']===expectedCandidateSource,'candidate-redirect-selftest-failed');
+    overlay.assertHealthy();
+    console.log('PASS candidate callback across an actual HTTP redirect before operator sign-in');
+  }finally{
+    await context.close().catch(()=>{});server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
 }
 function assertTrustedEvaluation(plan) {
   check(plan.evaluationStatus==='SUCCEEDED'&&plan.reviewStatus==='NEEDS_REVIEW'&&plan.version>=2,'saved-evaluation-state-invalid');
@@ -154,7 +210,9 @@ try {
   const identities=parseIdentities();
   const base=process.env.STANDBY_LIVE_URL?.replace(/\/$/,'');
   check(base&&new URL(base).protocol==='https:','live-url-must-use-https');
+  installUI=await prepareCandidateUI(base);
   browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+  await proveRedirectOverlay(base);
   const analyst=await signIn(identities.find(value=>value.role==='Analyst'),base);
   await assertAccessBoundaries(analyst);
   const workspaceId=analyst.workspaceId,plansPath=`/workspaces/${workspaceId}/plans`;
@@ -171,6 +229,15 @@ try {
 
   const planner=await signIn(identities.find(value=>value.role==='Planner'),base);
   await assertAccessBoundaries(planner);
+  step='Planner:workspace-history';
+  const workspaceSelect=planner.page.getByRole('combobox',exact('Active workspace'));
+  await planner.page.waitForURL(url=>url.searchParams.get('workspace')===workspaceId);
+  await workspaceSelect.selectOption('public');
+  await planner.page.waitForURL(url=>!url.searchParams.has('workspace'));
+  await visible(planner.page.getByText('Local scenarios',{exact:true}),'public-scope-after-switch-missing');
+  await planner.page.goBack();
+  await planner.page.waitForURL(url=>url.searchParams.get('workspace')===workspaceId);
+  await visible(planner.page.locator('.workspace-mode .badge').filter({hasText:'Planner'}),'workspace-back-did-not-restore-verified-role');
   step='Planner:ui-plan-create';
   const uiPlanName=`UI acceptance ${runId}`;
   await planner.page.getByRole('button',exact('Create workspace plan')).click();
@@ -201,15 +268,30 @@ try {
   const unchanged=await api(planner,'GET',path);
   check(unchanged.version===saved.version&&unchanged.evaluationStatus==='NOT_RUN','forged-result-mutated-plan');
   const evaluated=await api(planner,'POST',`${path}/evaluate`,{data:{expectedVersion:saved.version}});
+  step='Planner:trusted-evaluation-provenance';
   assertTrustedEvaluation(evaluated);
   check(evaluated.input.fleetSize===input.fleetSize&&evaluated.result.input.thresholdMinutes===input.thresholdMinutes,'trusted-evaluation-input-mismatch');
   await api(planner,'POST',`${path}/evaluate`,{data:{expectedVersion:saved.version},status:409});
   const hashes={inputHash:evaluated.inputHash,resultHash:evaluated.resultHash,configHash:evaluated.configHash};
+  step='Planner:denied-role-mutations';
+  await api(analyst,'POST',plansPath,{data:{planId:evaluated.id,expectedVersion:evaluated.version,name:'Denied analyst revision',input:evaluated.input},headers:{'Idempotency-Key':randomUUID()},status:403});
+  await api(analyst,'POST',`${path}/evaluate`,{data:{expectedVersion:evaluated.version},status:403});
+  await api(analyst,'POST',`${path}/review`,{data:{expectedVersion:evaluated.version,...hashes},status:403});
   await api(planner,'POST',`${path}/review`,{data:{expectedVersion:evaluated.version,...hashes},status:403});
   const plannerSettings=await api(planner,'GET',`/workspaces/${workspaceId}/settings`);
   await api(planner,'PATCH',`/workspaces/${workspaceId}/settings`,{data:{expectedVersion:plannerSettings.settings.version,
     defaultThresholdMinutes:15,maxFleetSize:plannerSettings.settings.maxFleetSize,enabledSiteIds:plannerSettings.settings.enabledSiteIds},status:403});
-  console.log('PASS Planner idempotency, trusted evaluation and server-enforced review denial');
+  step='Planner:reload-and-review-menu';
+  await planner.page.reload({waitUntil:'domcontentloaded'});
+  await visible(planner.page.locator('.workspace-mode .badge').filter({hasText:'Planner'}),'workspace-reload-did-not-restore-verified-role');
+  await planner.page.getByRole('tab',{name:/^Needs review/}).click();
+  const plannerCard=planner.page.locator('article.scenario-card').filter({has:planner.page.getByRole('heading',exact(name))});
+  await plannerCard.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
+  const plannerDetail=planner.page.getByRole('dialog',exact(name));
+  await visible(plannerDetail,'planner-detail-missing');
+  check(await plannerDetail.getByRole('button',exact('Mark exact result reviewed')).count()===0,'planner-sees-admin-review-menu');
+  await planner.page.keyboard.press('Escape');await plannerDetail.waitFor({state:'hidden'});
+  console.log('PASS Planner workspace history/reload, idempotency, trusted evaluation and server-enforced review denial');
 
   const admin=await signIn(identities.find(value=>value.role==='Admin'),base);
   await assertAccessBoundaries(admin);
@@ -219,7 +301,7 @@ try {
   await admin.page.getByRole('tab',{name:/^Needs review/}).click();
   const card=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
   await visible(card,'evaluated-plan-not-in-admin-review-queue');
-  await card.getByRole('button',exact('Inspect')).click();
+  await card.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
   const details=admin.page.getByRole('dialog',exact(name));
   await visible(details,'admin-plan-detail-missing');
   await visible(details.getByRole('heading',exact('Server-calculated proposal')),'admin-trusted-result-not-visible');
@@ -267,6 +349,8 @@ try {
   const updated=await changedResponse.json();
   check(updated.settings.version===before.settings.version+1&&updated.settings.defaultThresholdMinutes===nextThreshold&&updated.configHash!==before.configHash,
     'settings-version-or-config-hash-unchanged');
+  await visible(admin.page.getByRole('status').filter({hasText:`Workspace defaults confirmed by the server at version ${updated.settings.version}.`}),
+    'settings-confirmed-version-not-shown');
   step='Admin:settings-stale-version-conflict';
   const staleSettings=await api(admin,'PATCH',settingsPath,{data:{expectedVersion:before.settings.version,
     defaultThresholdMinutes:nextThreshold,maxFleetSize:before.settings.maxFleetSize,enabledSiteIds:before.settings.enabledSiteIds},status:409});
@@ -280,17 +364,31 @@ try {
   await admin.page.getByRole('tab',{name:/^Draft/}).click();
   const staleCard=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
   await visible(staleCard,'stale-plan-not-in-ui-draft-queue');
-  await staleCard.getByRole('button',exact('Inspect')).click();
+  await staleCard.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
   const staleDetail=admin.page.getByRole('dialog',exact(name));
   await visible(staleDetail.getByText('No fresh result is available. Re-evaluate this plan before reviewing its coverage.',{exact:true}),
     'stale-plan-ui-reason-missing');
   check(await staleDetail.getByRole('button',exact('Mark exact result reviewed')).count()===0,'stale-plan-can-be-reviewed-in-ui');
-  for(const actor of [analyst,planner,admin]) check(actor.errors.length===0,'authenticated-browser-runtime-error');
+  step='Admin:client-session-expiry';
+  await admin.page.keyboard.press('Escape');await staleDetail.waitFor({state:'hidden'});
+  // Shorten only the browser's session lifetime; the real JWT and server membership remain unchanged.
+  await admin.page.evaluate(()=>{const key='standby.auth.v1',value=JSON.parse(sessionStorage.getItem(key));value.expiresAt=Date.now()+15_000;sessionStorage.setItem(key,JSON.stringify(value));});
+  await admin.page.reload({waitUntil:'domcontentloaded'});
+  await visible(admin.page.locator('.workspace-mode .badge').filter({hasText:'Admin'}),'workspace-reload-role-missing-before-expiry');
+  const expiringCard=admin.page.locator('article.scenario-card').filter({has:admin.page.getByRole('heading',exact(name))});
+  await expiringCard.getByRole('button',exact(`Inspect workspace plan ${name}`)).click();
+  await visible(admin.page.getByRole('dialog',exact(name)),'private-detail-not-open-before-expiry');
+  await admin.page.waitForFunction(()=>document.querySelector('select[aria-label="Active workspace"]')?.value==='public'&&!document.querySelector('dialog[open]'));
+  check(await admin.page.getByRole('heading',exact(name)).count()===0,'private-plan-remained-after-client-expiry');
+  check(await admin.page.evaluate(()=>sessionStorage.getItem('standby.auth.v1')===null),'expired-session-storage-retained');
+  check(await admin.page.locator('.workspace-mode').count()===0,'private-role-marker-retained-after-expiry');
+  console.log('PASS client session expiry clears private detail, role scope and stored session');
+  for(const actor of [analyst,planner,admin]) {actor.overlay.assertHealthy();check(actor.errors.length===0,'authenticated-browser-runtime-error');}
   console.log('PASS Admin exact-result review, settings CAS and stale-review invalidation');
   console.log('PASS real Cognito authorization acceptance. No credentials, provider payloads or media artifacts retained.');
 } catch(error) {
   // Browser/library errors can quote inputs, DOM values and HTTP headers: never print them.
-  const symbolic=error instanceof Error&&/^[a-z][a-z-]+$/.test(error.message)?error.message:'browser-action-or-timeout';
+  const symbolic=error instanceof Error&&/^[a-z][a-z0-9-]+$/.test(error.message)?error.message:'browser-action-or-timeout';
   console.error(`FAIL ${step}: ${symbolic}`);process.exitCode=1;
 } finally {
   for(const context of contexts) await context.close().catch(()=>{});

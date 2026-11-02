@@ -1,11 +1,11 @@
 import type { LocalScenario, Preferences } from './types';
-export const defaults: Preferences = {version:1, collapsed:false, pageSize:10, timezone:'America/Chicago', distanceUnit:'mi', layer:'coverage'};
+export const defaults: Preferences = {version:1, collapsed:false, shortcuts:true, pageSize:10, timezone:'America/Chicago', distanceUnit:'mi', layer:'coverage'};
 const PREFS = 'standby.preferences.v1';
 const SCENARIOS = 'standby.scenarios.v1';
 export function readPreferences(): Preferences {
   try { const value = JSON.parse(localStorage.getItem(PREFS) ?? 'null');
     if (!value || value.version !== 1) return defaults;
-    return {version:1, collapsed: value.collapsed === true, pageSize:[10,20,50].includes(value.pageSize) ? value.pageSize : 10, timezone:value.timezone === 'UTC' ? 'UTC' : 'America/Chicago', distanceUnit:value.distanceUnit === 'km' ? 'km' : 'mi', layer:['coverage','demand','difference'].includes(value.layer) ? value.layer : 'coverage'};
+    return {version:1, collapsed: value.collapsed === true, shortcuts: value.shortcuts !== false, pageSize:[10,20,50].includes(value.pageSize) ? value.pageSize : 10, timezone:value.timezone === 'UTC' ? 'UTC' : 'America/Chicago', distanceUnit:value.distanceUnit === 'km' ? 'km' : 'mi', layer:['coverage','demand','difference'].includes(value.layer) ? value.layer : 'coverage'};
   } catch { return defaults; }
 }
 export function savePreferences(value: Preferences) { localStorage.setItem(PREFS, JSON.stringify(value)); }

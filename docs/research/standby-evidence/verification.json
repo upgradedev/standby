@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-30",
+  "sourceRecords": 26,
+  "questions": 12,
+  "checks": [
+    {
+      "check": "representative source recall",
+      "question": 2,
+      "expectedSource": "D01",
+      "pass": true
+    },
+    {
+      "check": "representative source recall",
+      "question": 4,
+      "expectedSource": "M04",
+      "pass": true
+    },
+    {
+      "check": "representative source recall",
+      "question": 8,
+      "expectedSource": "D07",
+      "pass": true
+    },
+    {
+      "check": "representative source recall",
+      "question": 9,
+      "expectedSource": "D06",
+      "pass": true
+    },
+    {
+      "check": "representative source recall",
+      "question": 10,
+      "expectedSource": "L01",
+      "pass": true
+    },
+    {
+      "check": "representative source recall",
+      "question": 11,
+      "expectedSource": "D05",
+      "pass": true
+    },
+    {
+      "check": "unrelated question returns no evidence",
+      "pass": true
+    },
+    {
+      "check": "explicit cross-domain analogue filter",
+      "pass": true
+    },
+    {
+      "check": "study-kind filter",
+      "pass": true
+    },
+    {
+      "check": "tampered record hash",
+      "pass": true
+    },
+    {
+      "check": "private record rejected",
+      "pass": true
+    },
+    {
+      "check": "shipped-status mismatch rejected",
+      "pass": true
+    }
+  ],
+  "result": "PASS",
+  "externalCalls": 0,
+  "limits": "Curated-note smoke checks only; no independent retrieval quality score or staffing/forecast validation"
+}

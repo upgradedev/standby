@@ -1,5 +1,19 @@
 # Standby Operations Console MVP
 
+## Τρέχουσα υλοποίηση — 31 Οκτωβρίου 2026
+
+[STATE-FILE] Το owner-approved controlled preview λειτουργεί στο [δημόσιο Capacity lab](https://d34x1513u5u1qs.cloudfront.net/capacity), με frontend `db67b6d0a2455549736be0d6574c184309fe0277` και read API `3802d94e5ae5a66b6b7fb8fc67030393d0a276ea`. Τα δύο identifiers αφορούν διαφορετικά deployed artifacts· το `config.release` δεν ταυτοποιεί το frontend. Το [STATE.md](../STATE.md) κρατά την τρέχουσα κατάσταση και τις αποδείξεις deployment/ελέγχων, ενώ το [CONSOLE_BRIEF.md](CONSOLE_BRIEF.md) περιγράφει το συμφωνημένο console scope και τα ανοιχτά release gates.
+
+Το Capacity lab συγκρίνει baseline/candidate μικτούς στόλους από motorcycles, service vans και flatbeds απέναντι στο ίδιο seeded workload. Περιλαμβάνει ταυτόχρονα μοντελοποιημένα περιστατικά, συμβατές αναθέσεις και ουρές, βάρδιες, διαφορετικές παραδοχές χρόνου ανά τύπο, preparation/approach/on-site/transport/drop-off/recovery, paired what-if και χρονικό replay με detail/map. Η σύγκριση συνοψίζει τις replications, ενώ το replay και η λίστα περιστατικών δείχνουν την πρώτη replication της επιλεγμένης πολιτικής. Η άδεια πλατφόρμα μετά το drop-off μπορεί να παραμένει busy κατά το recovery· η ολοκλήρωση περιστατικού δεν ισοδυναμεί με άμεση διαθεσιμότητα μονάδας.
+
+Πραγματικά είναι η γεωγραφία Austin, οι συγκεντρωτικές ιστορικές αναφορές και το προετοιμασμένο directional Car road-time snapshot του Amazon Location. Workload, incident mix, στόλος, βάρδιες και service/recovery durations είναι ορατές επεξεργάσιμες παραδοχές. Δεν συνδέονται insured/driver records, live GPS, συνεργεία/διαδρομές ή ουρές συνεργείων, calendar/holiday forecasts, anomaly detection ή AI copilot. Η προσομοίωση δεν αποτελεί πραγματικό dispatch, πρόβλεψη ή εγγύηση επάρκειας προσωπικού.
+
+Η οπτική έγκριση και η έγκριση του controlled preview έχουν δοθεί. Human keyboard/role/native-popup και axe-incomplete judgments παραμένουν ανοικτά πριν από final release. Η έγκριση preview δεν αποτελεί έγκριση video ή δημόσιας υποβολής. Το παλιό footage `5ad96cc` προηγείται του deployed Capacity lab και δεν αποδεικνύει την τρέχουσα έκδοση· νέο video απαιτεί ξεχωριστή έγκριση shot list/κειμένου και publication.
+
+Το υπόλοιπο έγγραφο διατηρεί την αρχική pre-build σχεδιαστική πρόταση, εκτός από τις ρητές σημειώσεις «Τρέχουσα υλοποίηση». Μελλοντικοί χρόνοι, αρχικά όρια και χρονοδιαγράμματα σε αυτές τις ιστορικές ενότητες δεν αποτελούν ισχυρισμό ότι παραδόθηκαν όλες οι σχεδιασμένες λειτουργίες. Για τα πραγματικά διαθέσιμα όρια ισχύει το ενεργό manifest και η runtime validation του αντίστοιχου endpoint.
+
+## Αρχικό πλαίσιο — ιστορική σχεδιαστική πρόταση
+
 Το Standby βοηθά τον υπεύθυνο βάρδιας οδικής βοήθειας να συγκρίνει θέσεις αναμονής ενός περιορισμένου στόλου και να βλέπει ποιες περιοχές παραμένουν ακάλυπτες. Η πρώτη έκδοση χρησιμοποιεί πραγματικές αναφορές ακινητοποιημένων οχημάτων στο Austin και σαφώς επισημασμένο υποθετικό στόλο. Το αποτέλεσμα είναι ιστορική αξιολόγηση κάλυψης με μοντελοποιημένους χρόνους οδικής προσέγγισης.
 
 Ο ιδιοκτήτης επέλεξε το προϊόν και το stack React, TypeScript, Tailwind και TanStack Table στις 29 Οκτωβρίου 2026 και ενέκρινε USD 25 συνολικό AWS budget. Η υλοποίηση ξεκινά μετά την επίσημη έναρξη στις 30/10, με σειρά application shell, χάρτης πραγματικών δεδομένων και coverage evaluation. Η προδιαγραφή καλύπτει το MVP, το application shell, τα δεδομένα, τα όρια πρόσβασης, την αρχιτεκτονική AWS, το demo και το χρονοδιάγραμμα παράδοσης. Περιγράφει προγραμματισμένη υλοποίηση, όχι λειτουργίες ήδη σε παραγωγή.
@@ -8,15 +22,17 @@
 
 Ο βασικός κύκλος είναι: επιλογή ιστορικού και βάρδιας, επιθεώρηση υφιστάμενης κάλυψης, υπολογισμός εναλλακτικών θέσεων, σύγκριση, αφαίρεση διαθέσιμης μονάδας και επανυπολογισμός. Ο χρήστης καταλαβαίνει τόσο τη βελτίωση όσο και τα κενά που παραμένουν.
 
-Η πρώτη επαληθευμένη αξιολόγηση χρησιμοποιεί μία γενική κατηγορία τεχνικής βοήθειας με ένα δηλωμένο προφίλ οδικής διαδρομής. Το domain υποστηρίζει τύπο μονάδας και ικανότητες, ώστε μηχανές, service vehicles και πλατφόρμες να μην εξισώνονται. Η πραγματική κατηγορία απαιτούμενης βοήθειας δεν υπάρχει στην πηγή Austin. Ένα μικτό σενάριο στόλου θα φέρει ανεξάρτητη ένδειξη υποθετικής σύνθεσης αναγκών και θα προστεθεί μόνο αφού λειτουργήσει η βασική αξιολόγηση.
+Τρέχουσα υλοποίηση: η ιστορική αξιολόγηση Coverage παραμένει ξεχωριστή από το Capacity lab. Το Coverage συγκρίνει υποθετικές τοποθετήσεις με κοινό Car road-time profile. Το Capacity lab υποστηρίζει μικτό στόλο και capabilities, με υποθετικό incident mix για battery, tyre, breakdown και collision, μαζί με συμβατές ουρές και παραδοχές χρόνου ανά τύπο. Η πηγή Austin δεν παρέχει τις πραγματικές κατηγορίες απαιτούμενης οδικής βοήθειας ή service durations· οι προσομοιωμένες κατηγορίες δεν παρουσιάζονται ως εμπλουτισμός των ιστορικών αναφορών.
 
-| Μέσα στην πρώτη παράδοση | Μελλοντική επέκταση |
+| Τρέχουσα υλοποίηση | Εκτός του παρόντος MVP |
 |---|---|
 | Αναμονή στην αρχή βάρδιας και σενάριο μη διαθέσιμης μονάδας | Συνεχής περιπολία και δυναμική αναδρομολόγηση |
 | Ιστορικές αναφορές ακινητοποιημένων οχημάτων | Πρόβλεψη μελλοντικών βλαβών |
 | Μικρό διακριτό σύνολο υποθετικών θέσεων αναμονής | Πραγματικές εγκεκριμένες βάσεις εταιρείας |
-| Σύγκριση σταθερού στόλου με ίδιο matrix | Διαχείριση ταυτόχρονων εργασιών, ουρών και service duration |
-| Ανώνυμη εκτέλεση σεναρίων και ιδιωτική αποθήκευση εξουσιοδοτημένων σχεδίων | Live dispatch, τηλεματική και επικοινωνία με οδηγούς |
+| Ιστορική σύγκριση τοποθετήσεων και ανεξάρτητο mixed-fleet Capacity lab | Εκτίμηση πραγματικής στελέχωσης από επιχειρησιακά arrival/service logs |
+| Ταυτόχρονα μοντελοποιημένα περιστατικά, συμβατές ουρές, βάρδιες και διαφοροποιημένα service cycles | Workshop routing/queues, live GPS και dispatch από συνεργείο |
+| Ανώνυμη εκτέλεση και ιδιωτική αποθήκευση εξουσιοδοτημένων placement plans | Αποθήκευση ή admin review των Capacity runs ως workspace plans |
+| Capacity draft/result στη μνήμη της τρέχουσας συνεδρίας | Calendar/holiday forecast, anomaly detection και AI copilot |
 
 Η επιτυχία του MVP κρίνεται από μια επαναλήψιμη δημόσια διαδρομή που εκτελεί τον βασικό υπολογισμό χωρίς λογαριασμό. Δεν απαιτείται να εκθέσουμε εταιρικά δεδομένα ή υπηρεσία πραγματικής ανάθεσης.
 
@@ -95,21 +111,24 @@ $limit=10000
 
 Τα πραγματικά NoRoute αποτελέσματα διατηρούνται ως unreachable. Έλλειψη κελιών, λάθος μονάδες, ασυμφωνία IDs, άγνωστο provider error και ληγμένο matrix αποτυγχάνουν με σαφή ένδειξη. Κανένα από αυτά δεν γίνεται μηδέν δευτερόλεπτα ή ευθεία απόσταση. Τα μη πεπερασμένα quantiles μεταφέρονται ως διακριτές καταστάσεις συμβολαίου, όχι JSON NaN ή πλασματικός αριθμός.
 
-Η στατική σύγκριση υποθέτει διαθεσιμότητα των μονάδων. Χρόνοι κλήσης, ανάθεσης, προετοιμασίας, εργασίας και ουρών χρειάζονται εταιρικό ιστορικό και ξεχωριστή προσομοίωση. Τα KPIs του demo δεν ονομάζονται πραγματικός χρόνος αναμονής πελάτη ή επιτευγμένο SLA.
+Τρέχουσα υλοποίηση: η στατική σύγκριση Coverage υποθέτει διαθεσιμότητα των μονάδων. Το ξεχωριστό Capacity lab προσομοιώνει arrival/assignment, preparation, approach, on-site service, flatbed transport/drop-off και recovery με παραμετροποιήσιμες παραδοχές. Για πραγματική βαθμονόμηση αυτών των χρόνων και των αφίξεων χρειάζονται εξουσιοδοτημένα επιχειρησιακά δεδομένα. Τα KPIs του demo δεν ονομάζονται πραγματικός χρόνος αναμονής πελάτη ή επιτευγμένο SLA.
 
 ## Application shell και πλοήγηση
 
 Η αναφορά FrontBox χρησιμοποιείται για συμπεριφορές και εργονομία. Η νέα υλοποίηση θα είναι πρωτότυπη και δεν θα αντιγράψει πηγαίο κώδικα, πελατειακά fixtures, tenant IDs, authentication configuration ή AWS ρόλους.
 
+Τρέχουσα υλοποίηση: η πλοήγηση έχει τους εξής έξι προορισμούς.
+
 | Route | Όνομα πλοήγησης | Σκοπός |
 |---|---|---|
 | `/overview` | Overview | Κατάσταση επιλεγμένου dataset και σεναρίου |
 | `/incidents` | Incident history | Αναζήτηση και επιθεώρηση δημόσιων ζωνών αναφορών |
-| `/queues` | Planning queues | Σχέδια προς έλεγχο, σφάλματα μοντέλου και ποιότητα δεδομένων |
+| `/capacity` | Capacity lab | Μικτοί στόλοι, υποθετικό workload/service, paired what-if, ουρές και replay περιστατικών |
+| `/queues` | Planning queues | Τοπικά ή εξουσιοδοτημένα workspace placement plans ανά evaluation/review status |
 | `/map` | Coverage map | Σύγκριση τοποθετήσεων και σενάριο μη διαθέσιμης μονάδας |
 | `/settings` | Settings | Προτιμήσεις, στόχοι, προέλευση, δικαιώματα και ρυθμίσεις workspace |
 
-Το sidebar επεκτείνεται ή γίνεται navigation rail. Η κατάστασή του αποθηκεύεται ως έκδοση τοπικής προτίμησης. Labels, ενεργή σελίδα και badges παραμένουν προσβάσιμα με πληκτρολόγιο και screen reader. Οι μετρητές έχουν σαφές scope και επαναϋπολογίζονται από το ίδιο query/scenario state: public zone count στο History, σχέδια του ενεργού store προς review στο Queues και uncovered zones της επιλεγμένης αξιολόγησης στο Map. Μη υπολογισμένο count εμφανίζεται ως unavailable, όχι ως μηδέν. Το rail διατηρεί compact counters και περιγραφές.
+Τρέχουσα υλοποίηση: το sidebar επεκτείνεται ή γίνεται navigation rail και κρατά έκδοση τοπικής προτίμησης. Το μοναδικό nav badge αφορά placement plans που χρειάζονται review στο ενεργό store, στη σελίδα Planning queues· εμφανίζεται μόνο όταν ο μετρητής είναι θετικός. History και Coverage map δεν φέρουν συνολικούς zone/uncovered counters στην πλοήγηση. Το rail διατηρεί το ίδιο scope και accessible name του review badge. Human keyboard/role judgments παραμένουν ξεχωριστό ανοικτό release gate.
 
 Η top bar περιέχει workspace switcher, global search, `/` shortcut, ένδειξη dataset freshness και user menu. Το `/` δεν ενεργοποιείται κατά την πληκτρολόγηση σε input, textarea, select, contenteditable ή dialog και αγνοεί modifier shortcuts. Το Escape κλείνει το ανώτερο ενεργό overlay και επιστρέφει focus. Το user menu έχει πραγματική ταυτότητα/ρόλο, link προφίλ ή τοπικών προτιμήσεων και sign out όταν υπάρχει σύνδεση.
 
@@ -144,7 +163,7 @@ Focus trap, accessible dialog name, keyboard tabs, Escape, επαναφορά fo
 
 ## Planning queues
 
-Οι ουρές αφορούν σχέδια και θέματα ποιότητας. Η πηγή ARCHIVED δεν μετατρέπεται σε «ολοκληρωμένη οδική βοήθεια».
+Τρέχουσα υλοποίηση: η σελίδα Planning queues αφορά placement plans, όχι προσομοιωμένα Capacity jobs ή cloud-saved Capacity runs. Η συμβατή ουρά περιστατικών του Capacity lab ανήκει στο in-memory αποτέλεσμα της αντίστοιχης προσομοίωσης. Το protected placement evaluate/review δεν αποθηκεύει ή εγκρίνει Capacity αποτελέσματα. Η πηγή ARCHIVED δεν μετατρέπεται σε «ολοκληρωμένη οδική βοήθεια».
 
 Το αποθηκευμένο σενάριο έχει ξεχωριστά `evaluationStatus = NOT_RUN | SUCCEEDED | FAILED` και `reviewStatus = NOT_READY | NEEDS_REVIEW | REVIEWED`. Το Computing είναι μόνο η κατάσταση πραγματικού in-flight request στον client, δεν παραμένει ως μόνιμη εργασία αν κλείσει το tab. Σε μικρή σύγχρονη αξιολόγηση δεν χρειάζεται υποδομή message queue μόνο για να υπάρχει σελίδα με αυτό το όνομα.
 
@@ -246,7 +265,7 @@ flowchart LR
 |---|---|
 | S3 | Ξεχωριστά buckets για web/public aggregates, private source/cohorts και ιδιωτικό προσωρινό route cache |
 | CloudFront | HTTPS, συμπίεση, caching immutable assets, response security headers και OAC πρόσβαση στο S3 |
-| API Gateway HTTP API | Versioned routes, JWT authorization protected λειτουργιών, CORS και throttle targets |
+| API Gateway HTTP API | Versioned routes, JWT authorization protected λειτουργιών και throttle targets· same-origin πρόσβαση μέσω CloudFront `/api/*`, χωρίς `CorsConfiguration` στο HTTP API |
 | Read and evaluate Lambda | Ανάγνωση δημοσίων δεδομένων και bounded stateless υπολογισμός πάνω σε ιδιωτικό matrix |
 | Authorized plan Lambda | Workspace-bound αποθήκευση/review με version checks και audit |
 | Owner controlled builder | Εισαγωγή πηγής και πεπερασμένη παραγωγή επιτρεπόμενων matrices |
@@ -255,7 +274,7 @@ flowchart LR
 | DynamoDB on demand | Δικές μας παράμετροι σχεδίων, references/hashes αποτελεσμάτων, membership, version checks, idempotency και audit |
 | Cognito | Πραγματική ταυτότητα και ρόλοι operator |
 | CloudWatch | Structured logs, request IDs, latency/errors/throttles και alarms |
-| SAM και CloudFormation | Αναπαραγώγιμη υποδομή και έλεγχος αλλαγών |
+| CloudFormation από Python generator | Αναπαραγώγιμη υποδομή και έλεγχος αλλαγών μέσω `infra/template.py`, χωρίς SAM transform |
 
 Ο ανώνυμος κριτής εκτελεί τον differentiator μέσω bounded evaluation endpoint χωρίς λογαριασμό. Ο evaluator έχει μόνο τις απαιτούμενες αναγνώσεις S3 και δεν κατέχει δικαιώματα αποθήκευσης σχεδίων ή παραγωγής νέων route matrices. Επιστρέφει αποτελέσματα κάλυψης και στοιχεία προέλευσης, χωρίς μαζική διάθεση του ιδιωτικού raw matrix. Οι προσωρινές επιλογές του επισκέπτη παραμένουν απομονωμένες στη δική του συνεδρία.
 
@@ -274,6 +293,7 @@ flowchart LR
 | `GET /v1/public/zones/{id}` | Συνεπές detail χωρίς source IDs/addresses |
 | `GET /v1/public/search` | Αναζήτηση σε όλο το bounded public snapshot με δηλωμένο scope |
 | `POST /v1/public/evaluations` | Strict allowlisted inputs, πραγματικός bounded υπολογισμός, κανένα paid route lookup |
+| `POST /v1/public/capacity-evaluations` | Τρέχουσα υλοποίηση: ανώνυμο bounded paired mixed-fleet simulation πάνω στο προετοιμασμένο matrix· χωρίς paid route lookup ή αποθήκευση Capacity run |
 | `GET /v1/workspaces` | Memberships συνδεδεμένου χρήστη |
 | `GET /v1/workspaces/{id}/plans` | Workspace-scoped list με role check |
 | `GET /v1/workspaces/{id}/plans/{planId}` | Plan metadata και μόνο μη ληγμένο αποτέλεσμα, με workspace check |
@@ -287,6 +307,8 @@ flowchart LR
 
 Οι DTOs ελέγχονται runtime στα σύνορα. Σφάλματα επιστρέφουν code, message, requestId και retryable. Validation, expired matrix, forbidden, version conflict και upstream unavailable έχουν διαφορετική έννοια. Οι query παράμετροι δεν γίνονται arbitrary SQL, εξωτερικά URLs ή ανεξέλεγκτες συντεταγμένες προς AWS.
 
+Τρέχουσα υλοποίηση: τα `/workspaces/.../plans` endpoints παραπάνω αφορούν placement plans. Το public Capacity endpoint δεν χρησιμοποιεί operator token, δεν γράφει workspace plans και δεν έχει αντίστοιχη λειτουργία save/review. Το Capacity draft και το επαληθευμένο αποτέλεσμα παραμένουν στη μνήμη, με ακύρωση ή απόρριψη παλιών responses σε αλλαγή inputs/scope και με έλεγχο λήξης του matrix.
+
 Βασικές έννοιες: SourceSnapshot, IncidentCohort, DemandZone, StandbySite, FleetUnit, MatrixSnapshot, StandbyScenario και CoverageResult. Τα αποτελέσματα περιλαμβάνουν dataset hash, matrix hash, solver version, input hash, evaluation period και assumptions.
 
 Ελάχιστα ports: CohortRepository, MatrixRepository, ScenarioRepository και Clock. Το domain δεν εισάγει React, AWS SDK, HTTP ή DynamoDB. Οι pure functions εφαρμόζουν τις invariants. Δεν απαιτείται interface ή service class για κάθε helper.
@@ -298,7 +320,7 @@ packages/application/ evaluate and compare use cases, ports
 packages/contracts/   validated DTOs and error contracts
 services/api/         HTTP, identity, S3 and DynamoDB adapters
 tools/data/           source normalization and owner-only matrix preparation
-infra/                SAM and CloudFormation
+infra/                Python-generated CloudFormation
 tests/                independent fixtures and end-to-end journeys
 docs/                 this specification and source references
 ```
@@ -336,7 +358,7 @@ docs/                 this specification and source references
 
 Clean Architecture και DDD ορίζουν ownership στα source history, coverage planning και access/persistence. SOLID εφαρμόζεται στα εξωτερικά adapters και τις ευθύνες. DRY διατηρεί έναν υπολογισμό κάλυψης, ένα permission model και κοινά contracts. KISS και YAGNI κρατούν τον πυρήνα σύγχρονο και bounded. Πρόσθετη orchestration εισάγεται όταν υπάρχει μετρημένη ανάγκη retry/long-running job.
 
-## Έλεγχοι αποδοχής
+## Αρχικοί έλεγχοι αποδοχής — στόχοι, όχι βεβαίωση ολοκλήρωσης
 
 ### Domain και δεδομένα
 
@@ -363,7 +385,7 @@ Clean Architecture και DDD ορίζουν ownership στα source history, co
 - Ανώνυμος χρήστης ανοίγει Overview, κάνει drill από chart, φιλτράρει/ταξινομεί/σελιδοποιεί, ανοίγει drawer, συγκρίνει χάρτη και αφαιρεί μονάδα.
 - Global search βρίσκει εγγραφή εκτός της τρέχουσας σελίδας και το `/` αγνοείται σε editable fields.
 - Workspace switch ακυρώνει pending requests, κλείνει προηγούμενο drawer και δεν εμφανίζει αποτελέσματα ή counts άλλου workspace.
-- Expanded sidebar και navigation rail έχουν σωστά entity/scope badges, με unavailable αντί πλασματικού μηδενός.
+- Τρέχουσα υλοποίηση: expanded sidebar και navigation rail δείχνουν μόνο το θετικό Needs review count των placement plans του ενεργού store, χωρίς History/Map total badges.
 - Role-based menus συμφωνούν με το API, ενώ direct protected-route πρόσβαση χωρίς το αντίστοιχο δικαίωμα απορρίπτεται.
 - Public local queue και authenticated workspace queue διατηρούν ξεχωριστή προέλευση· φίλτρα, retry, review και reload εφαρμόζουν το ορισμένο state contract.
 - Settings local save/reset και protected save/reload/version conflict/forbidden συμπεριφέρονται όπως ορίζεται. Δεν αλλάζουν role ή route coordinates από τον browser.
@@ -376,7 +398,7 @@ Clean Architecture και DDD ορίζουν ownership στα source history, co
 
 Εγκαταστάσεις, build και browser dependencies τρέχουν σε hosted CI. Το τοπικό C: έχει περιορισμένο χώρο· δεν δημιουργείται node_modules. Τα snippets και fixtures της νέας εφαρμογής δεν αντιγράφουν εμπορικά δεδομένα ή κώδικα FrontBox.
 
-## Χρονοδιάγραμμα Europe Athens
+## Αρχικό χρονοδιάγραμμα Europe Athens — ιστορική πρόταση
 
 Τα ακόλουθα είναι στόχοι παράδοσης και εκτίμηση προγραμματισμού. Η ακριβής έκταση περιορίζεται από τα λειτουργικά gates, όχι από την επιθυμία να προστεθούν υπηρεσίες.
 
@@ -394,11 +416,11 @@ Clean Architecture και DDD ορίζουν ownership στα source history, co
 | 01/11 23:00 | Τελικό εσωτερικό backstop υποβολής |
 | 02/11 έως 23:00 | Μόνο διορθώσεις υποχρεωτικού παραδοτέου, ψευδούς ισχυρισμού ή κανόνα |
 
-Αν στο πρώτο λειτουργικό gate λείπει έγκυρο AWS matrix, η αποκατάστασή του προηγείται επιπλέον UI. Αν ο πυρήνας λειτουργεί αλλά καθυστερεί επιπλέον μικτό fleet scenario ή πλούσια settings, παραμένουν τεκμηριωμένη επόμενη έκδοση. Η λειτουργική Cognito πρόσβαση, τα server permissions, οι πέντε βασικές σελίδες και οι καταστάσεις τους παραμένουν μέρος της συμφωνημένης κονσόλας.
+Ιστορική πρόταση delivery gates: αν στο πρώτο λειτουργικό gate έλειπε έγκυρο AWS matrix, η αποκατάστασή του θα προηγούνταν επιπλέον UI. Η αρχική προτεραιοποίηση άφηνε το μικτό fleet scenario για επόμενο increment αν καθυστερούσε ο πυρήνας. Τρέχουσα υλοποίηση: το Capacity lab έχει προστεθεί ως έκτος προορισμός. Η λειτουργική Cognito πρόσβαση και τα server permissions αφορούν τις προστατευμένες placement λειτουργίες· δεν απαιτούνται για την ανώνυμη Capacity προσομοίωση.
 
 Η υπηρεσία παραμένει διαθέσιμη σε όλη την περίοδο αξιολόγησης. Το matrix παράγεται ώστε η επιτρεπόμενη διάρκεια χρήσης του να καλύπτει την περίοδο. Δεν εκτελείται teardown βάσει παλιάς ημερομηνίας χωρίς επαλήθευση διοργανωτή και εξαρτήσεων.
 
-## Demo περίπου δυόμισι λεπτών
+## Αρχική πρόταση demo περίπου δυόμισι λεπτών — ιστορικό πλάνο
 
 | Διάστημα στόχος | Εικόνα και μήνυμα |
 |---|---|
